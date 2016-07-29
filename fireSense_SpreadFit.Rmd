@@ -5,6 +5,10 @@ date: "16 July 2016"
 output: pdf_document
 ---
 
+## inputs
+SIZE: fire size expressed in the pixel size
+TIME: for time series, starting date of fire
+
 # Overview
 
 Provide an overview of what the module does / how to use the module.

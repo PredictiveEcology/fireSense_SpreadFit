@@ -15,7 +15,7 @@ defineModule(sim, list(
   reqdPkgs = list("data.table", "DEoptim", "kSamples", "magrittr", "raster"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
-    defineParameter(name = "formula", class = "formula", default = NULL,
+    defineParameter(name = "formula", class = "formula", default = NA,
       desc = 'an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided'),
     defineParameter(name = "data", class = "character", default = NA,
       desc = "optional. A character vector indicating the names of objects present in the sim environment, in which to look for variables
@@ -25,7 +25,7 @@ defineModule(sim, list(
     defineParameter(name = "mapping", class = "character", default = NA, 
       desc = "optional. Named character vector to map variable names in the formula to those in the data objects.
         Names of unmapped variables are used directly to look for variables in data objects or in the sim environment."),
-    defineParameter(name = "control", class = "list", default = NULL,
+    defineParameter(name = "control", class = "list", default = NA,
       desc = 'optional. List of control parameters to be passed to DEoptim. see DEoptim.control')),
   inputObjects = data.frame(
     objectName = c("landscape", "fireSense_SpreadFitFireLocation", "fireSense_SpreadFitStack"),
@@ -41,6 +41,17 @@ defineModule(sim, list(
     stringsAsFactors = FALSE
   )
 ))
+
+## Toolbox: set of functions used internally by the module
+  ## Raster predict function
+    fireSense_SpreadFitRaster <- function(model, data, par) {
+
+      model %>%
+        model.matrix(data) %>%
+        `%*%` (par) %>%
+        drop
+
+    }
 
 ## event types
 #   - type `init` is required for initialiazation
@@ -80,19 +91,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SpreadFit", "save")
 
     # ! ----- STOP EDITING ----- ! #
-  } else if (eventType == "fit") {
-    # ! ----- EDIT BELOW ----- ! #
-    # do stuff for this event
-
-    # e.g., call your custom functions/methods here
-    # you can define your own methods below this `doEvent` function
-
-    # schedule future event(s)
-
-    # e.g.,
-    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SpreadFit", "templateEvent")
-
-    # ! ----- STOP EDITING ----- ! #
+  } else if (eventType == "run") {
+    
+    sim <- sim$fireSense_SpreadFitRun(sim)
+    
   } else if (eventType == "event2") {
     # ! ----- EDIT BELOW ----- ! #
     # do stuff for this event
@@ -119,7 +121,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 #   - keep event functions short and clean, modularize by calling subroutines from section below.
 
 ### template initialization
-fireSense_SpreadFitInit <- function(sim) scheduleEvent(sim, time(sim), "fireSense_SpreadFit", "fit", 0)
+fireSense_SpreadFitInit <- function(sim) {
+  
+  sim <- scheduleEvent(sim, time(sim), "fireSense_SpreadFit", "run")
+  
+  invisible(sim)
+} 
 
 ### template for save events
 fireSense_SpreadFitSave <- function(sim) {
@@ -141,10 +148,7 @@ fireSense_SpreadFitPlot <- function(sim) {
   return(invisible(sim))
 }
 
-fireSense_SpreadFitFit <- function(sim) {
-  
-  ## Get the corresponding loci from raster landscape for the locations in input$location
-  loci <- raster::extract(sim$landscape, sim$fireSense_SpreadFitFireLocation, cellnumbers = TRUE)[,"cells"]
+fireSense_SpreadFitRun <- function(sim) {
 
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
@@ -167,37 +171,61 @@ fireSense_SpreadFitFit <- function(sim) {
     }
     
   }
-  
-  formula <- reformulate(terms, intercept = attr(terms, "intercept"))
-  
 
-
+  formula <- reformulate(attr(terms, "term.labels"), intercept = attr(terms, "intercept"))
+  allVars <- all.vars(formula)
   
-  objFun <- function(par, formula, envData) {
+  if (all(unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer"))))) {
     
-    model.matrix(formula, envData)
-    
-    sim$fireSense_SizePredictTheta <- mget(varsTheta, envir = envir(sim), inherits = FALSE) %>%
+  } else if (all(unlist(lapply(allVars, function(x) is(envData[[x]], "RasterStack"))))) {
+  
+    timeSeries <- mget(allVars, envir = envData, inherits = FALSE) %>%
       lapply(unstack) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
-      do.call("mapply", args = .) %>%
-      lapply(function(x, sim)
-        predict(x, model = formulaTheta, fun = fireSense_SizePredictThetaRaster, 
-                na.rm = TRUE, sim = sim), sim = sim) %>%
-      stack
+      do.call("mapply", args = .)
     
-    res <- lapply(1:10, function(i) {
-      tabulate(SpaDES::spread(sim$landscape, loci = locis[[Y]], spreadProb=rt, mask=NULL, persistence=0L,
-                              maxSize=rep_len(2e5L, length(locis[[Y]])), directions=8L, iterations=Inf, mapID=TRUE, 
-                              returnIndices = TRUE)[["eventID"]])
-    })
+    ## Get the corresponding loci from the raster sim$landscape for the fire locations
+    loci <- raster::extract(timeSeries[[1L]], sim$firesLocations, cellnumbers = TRUE, df = TRUE)[,"cells"]
+
+    if (anyDuplicated(loci)) stop("fireSense_SpreadFit> Several fires share the same starting location (raster cell).")
     
-    apply(do.call("rbind", res), 2, median)    
+    loci %<>% split(sim$firesLocations$time)
+    
+    objFun <- function(par, formula) {
+
+      browser()
+      
+      timeSeries %>%
+        mapply(FUN = function(x, loci) {
+          
+          r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
+            calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])))
+          
+          ## 10 replicates to better an estimate of the median
+          lapply(1:10, function(i) tabulate(spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+            do.call("rbind", .) %>%
+            apply(2, median)
+        }, loci = loci, SIMPLIFY = FALSE)
+    }
+      
+  } else {
+    
+    varsExist <- allVars %in% ls(envData)
+    varsClass <- unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer") || is(envData[[x]], "RasterStack")))
+    
+    if (any(!varsExist)) {
+      stop(paste0("fireSense_SizePredict> Variable '", allVars[which(!varsExist)[1L]], "' not found."))
+    } else if (any(varsClass)) {
+      stop("fireSense_SizePredict> Variables are not of the same class.")
+    } else {
+      stop(paste0("fireSense_SizePredict> Variable '", allVars[which(!varsClass)[1L]], "' is not a RasterLayer or a RasterStack."))
+    }
   }
   
-  DEop <- DEoptim(fOptim, lower=c(.2, .1, .01, .3, 0.0001, 0.001), upper=c(.5, 5, .2, 4, .4, .3),
-                  control = DEoptim::DEoptim.control(itermax = 2000, trace = TRUE, parallelType = 1, packages = c("kSamples", "raster", "magrittr", "data.table"),
-                                                     parVar = c("locis", "IDs", "v", "rt", "ad.test", "obsFS", "wrapLoad", ".data.dir")))
+  DEop <- DEoptim(objFun, lower = c(.2, .1, .01, .3, 0.0001, 0.001), upper = c(.5, 5, .2, 4, .4, .3),
+                  control = DEoptim::DEoptim.control(itermax = 2000, trace = TRUE), formula = formula)
+                  #, parallelType = 0, packages = c("kSamples", "raster", "magrittr", "data.table"),
+                  #                                   parVar = c("locis", "IDs", "v", "rt", "ad.test", "obsFS", "wrapLoad", ".data.dir")))
   
   
   invisible(sim)
