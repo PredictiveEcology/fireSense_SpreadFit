@@ -94,19 +94,19 @@ fireSense_SpreadFitRun <- function(sim) {
   on.exit(rm(envData))
   list2env(as.list(envir(sim)), envir = envData)
   
-  if (!is.na(params(sim)$fireSense_SpreadFit$data[1]))
-    lapply(params(sim)$fireSense_SpreadFit$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
+  if (!is.na(p(sim)$data[1]))
+    lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
   
   ## In case there is a response in the formula remove it
-  terms <- params(sim)$fireSense_SpreadFit$formula %>% terms.formula %>% delete.response
+  terms <- p(sim)$formula %>% terms.formula %>% delete.response
   
   ## Mapping variables names to data
-  if (!is.na(params(sim)$fireSense_SpreadFit$mapping[1])) {
+  if (!is.na(p(sim)$mapping[1])) {
     
-    for (i in 1:length(params(sim)$fireSense_SpreadFit$mapping)) {
+    for (i in 1:length(p(sim)$mapping)) {
       
-      attr(terms, "term.labels") <- gsub(pattern = names(params(sim)$fireSense_SpreadFit$mapping[i]),
-                                         replacement = params(sim)$fireSense_SpreadFit$mapping[i], x = attr(terms, "term.labels"))
+      attr(terms, "term.labels") <- gsub(pattern = names(p(sim)$mapping[i]),
+                                         replacement = p(sim)$mapping[i], x = attr(terms, "term.labels"))
       
     }
     
