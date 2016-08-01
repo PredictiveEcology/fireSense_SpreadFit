@@ -31,8 +31,8 @@ defineModule(sim, list(
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")),
   inputObjects = data.frame(
-    objectName = c("landscape", "firesLocations", "fireSense_SpreadFitStack"),
-    objectClass = c("RasterLayer", "SpatialPoints", "RasterStack"),
+    objectName = "fires",
+    objectClass = "SpatialPointsDataFrame",
     sourceURL = "",
     other = NA_character_,
     stringsAsFactors = FALSE
@@ -120,11 +120,11 @@ fireSense_SpreadFitRun <- function(sim) {
     rasters <- mget(allVars, envir = envData, inherits = FALSE) %>% stack
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters, sim$firesLocations, cellnumbers = TRUE, df = TRUE)[,"cells"]
+    loci <- raster::extract(rasters, sim$fires, cellnumbers = TRUE, df = TRUE)[,"cells"]
     
     if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
     
-    sizes <- sim$firesLocations$size
+    sizes <- sim$fires$size
     
     objFun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
 
@@ -149,12 +149,12 @@ fireSense_SpreadFitRun <- function(sim) {
       do.call("mapply", args = .)
 
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters[[1L]], sim$firesLocations, cellnumbers = TRUE, df = TRUE)[,"cells"]
+    loci <- raster::extract(rasters[[1L]], sim$fires, cellnumbers = TRUE, df = TRUE)[,"cells"]
 
     if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
     
-    loci %<>% split(sim$firesLocations$date)
-    sizes <- sim$firesLocations$size
+    loci %<>% split(sim$fires$date)
+    sizes <- sim$fires$size
     
     objFun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
 
