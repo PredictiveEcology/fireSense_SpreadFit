@@ -18,13 +18,13 @@ defineModule(sim, list(
     defineParameter(name = "formula", class = "formula", default = NA,
       desc = 'an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided'),
     defineParameter(name = "data", class = "character", default = NA,
-      desc = "optional. A character vector indicating the names of objects present in the sim environment, in which to look for variables
-      with which to predict. Objects can be named lists of RasterLayers, or RasterStacks (for time series). However, objects of different 
-      classes cannot be mixed. For example, variables cannot be searched simultaneously within an object of class RasterLayer and within an
-      object of class RasterStack. If omitted, or if variables are not found in the data objects, variables are searched in the sim environment."),
+      desc = "optional. A character vector indicating the names of objects present in the sim environment, in which to look for variables with which
+              to predict. Objects can be named lists of RasterLayers, or RasterStacks (for time series). However, objects of different classes cannot
+              be mixed. For example, variables cannot be searched simultaneously within an object of class RasterLayer and within an object of class
+              RasterStack. If omitted, or if variables are not found in the data objects, variables are searched in the sim environment."),
     defineParameter(name = "mapping", class = "character", default = NA, 
-      desc = "optional. Named character vector to map variable names in the formula to those in the data objects.
-        Names of unmapped variables are used directly to look for variables in data objects or in the sim environment."),
+      desc = "optional. Named character vector to map variable names in the formula to those in the data objects. Names of
+              unmapped variables are used directly to look for variables in data objects or in the sim environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
@@ -75,7 +75,7 @@ fireSense_SpreadFitInit <- function(sim) {
   
   sim <- scheduleEvent(sim, eventTime = if (is.na(p(sim)$initialRunTime)) start(sim) else p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
   
-  invisible(sim)
+  sim
 } 
 
 fireSense_SpreadFitRun <- function(sim) {
@@ -180,11 +180,11 @@ fireSense_SpreadFitRun <- function(sim) {
     varsClass <- unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer") || is(envData[[x]], "RasterStack")))
     
     if (any(!varsExist)) {
-      stop(paste0("fireSense_SizePredict> Variable '", allVars[which(!varsExist)[1L]], "' not found."))
+      stop(paste0("fireSense_SpreadFit> Variable '", allVars[which(!varsExist)[1L]], "' not found."))
     } else if (any(varsClass)) {
-      stop("fireSense_SizePredict> Variables are not of the same class.")
+      stop("fireSense_SpreadFit> Variables are not of the same class.")
     } else {
-      stop(paste0("fireSense_SizePredict> Variable '", allVars[which(!varsClass)[1L]], "' is not a RasterLayer or a RasterStack."))
+      stop(paste0("fireSense_SpreadFit> Variable '", allVars[which(!varsClass)[1L]], "' is not a RasterLayer or a RasterStack."))
     }
   }
   
@@ -209,5 +209,5 @@ fireSense_SpreadFitRun <- function(sim) {
   if (!is.na(p(sim)$intervalRunModule))
     sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SpreadFit", "run")
   
-  invisible(sim)
+  sim
 }

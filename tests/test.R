@@ -10,10 +10,10 @@ library(SpaDES)
   #                                            upper = c(.5, 10, .2, 4, .3, .3),
   #                                            parallel = TRUE)),
   #   inputs = data.frame(
-  #     files = c("Z:/firesLocations.shp", "Z:/beta.tif", "Z:/theta.tif"),
+  #     files = c("Z:/fires.shp", "Z:/beta.tif", "Z:/theta.tif"),
   #     functions = c("shapefile", "raster", "raster"),
   #     package = c("raster", "raster", "raster"),
-  #     objectName = c("firesLocations", "beta", "theta"),
+  #     objectName = c("fires", "beta", "theta"),
   #     stringsAsFactors = FALSE)
   # )
 
@@ -27,10 +27,10 @@ library(SpaDES)
                                              upper = c(.5, 10, .2, 4, .3, .3),
                                              parallel = TRUE)),
     inputs = data.frame(
-      files = c("Z:/firesLocations.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
+      files = c("Z:/fires.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
       functions = c("shapefile", "stack", "stack"),
       package = c("raster", "raster", "raster"),
-      objectName = c("firesLocations", "beta", "theta"),
+      objectName = c("fires", "beta", "theta"),
       stringsAsFactors = FALSE)
   )
 
