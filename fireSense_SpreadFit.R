@@ -3,8 +3,8 @@
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
   description = "This module use Pattern Oriented Modelling (POM) to fit a fire landscape model where the probability of spread is heteregeneous, i.e. vary among pixels.",
-  keywords = c("fire", "POM", "percolation"),
-  authors=c(person("Jean", "Marchal", email="jean.d.marchal@gmail.com", role=c("aut", "cre"))),
+  keywords = c("fire spread", "POM", "percolation"),
+  authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
   version = numeric_version("1.2.0.9000"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
