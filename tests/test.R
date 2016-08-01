@@ -2,7 +2,7 @@ library(SpaDES)
 
 ## RasterLayer
   # mySim <- simInit(
-  #   times = list(start = 1, end = 2, timeunit = "year"),
+  #   times = list(start = 1, end = 1, timeunit = "year"),
   #   modules = list("fireSense_SpreadFit"),
   #   paths = list(modulePath = " # replace with empty string instead"),
   #   params = list(fireSense_SpreadFit = list(formula = formula(~ beta + theta - 1),
@@ -19,7 +19,7 @@ library(SpaDES)
 
 ## RasterStack
   mySim <- simInit(
-    times = list(start = 1, end = 2, timeunit = "year"),
+    times = list(start = 1, end = 1, timeunit = "year"),
     modules = list("fireSense_SpreadFit"),
     paths = list(modulePath = " # replace with empty string instead"),
     params = list(fireSense_SpreadFit = list(formula = formula(~ beta + theta - 1),
