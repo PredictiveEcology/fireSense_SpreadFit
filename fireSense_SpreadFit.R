@@ -27,7 +27,9 @@ defineModule(sim, list(
         Names of unmapped variables are used directly to look for variables in data objects or in the sim environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
-    defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?')),
+    defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
+    defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
+    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")),
   inputObjects = data.frame(
     objectName = c("landscape", "firesLocations", "fireSense_SpreadFitStack"),
     objectClass = c("RasterLayer", "SpatialPoints", "RasterStack"),
@@ -48,10 +50,7 @@ defineModule(sim, list(
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
   if (eventType == "init") {
-    ### check for more detailed object dependencies:
-    ### (use `checkObject` or similar)
 
-    # do stuff for this event
     sim <- sim$fireSense_SpreadFitInit(sim)
 
   } else if (eventType == "run") {
@@ -73,7 +72,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 ### template initialization
 fireSense_SpreadFitInit <- function(sim) {
   
-  sim <- scheduleEvent(sim, time(sim), "fireSense_SpreadFit", "run")
+  sim <- scheduleEvent(sim, eventTime = if (is.na(p(sim)$initialRunTime)) start(sim) else p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
   
   invisible(sim)
 } 
@@ -205,6 +204,9 @@ fireSense_SpreadFitRun <- function(sim) {
   
   sim$fireSense_SpreadFitted <- val %>% as.list %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels")))
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
+  
+  if (!is.na(p(sim)$intervalRunModule))
+    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SpreadFit", "run")
   
   invisible(sim)
 }
