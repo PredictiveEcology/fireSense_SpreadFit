@@ -74,8 +74,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 fireSense_SpreadFitInit <- function(sim) {
   
   sim <- scheduleEvent(sim, eventTime = if (is.na(p(sim)$initialRunTime)) start(sim) else p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
-  
   sim
+  
 } 
 
 fireSense_SpreadFitRun <- function(sim) {
@@ -203,7 +203,9 @@ fireSense_SpreadFitRun <- function(sim) {
                  rasters = rasters, formula = formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
     `[[` ("optim") %>% `[[` ("bestmem")
   
-  sim$fireSense_SpreadFitted <- val %>% as.list %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels")))
+  sim$fireSense_SpreadFitted <- 
+    list(formula = formula,
+         coef = val %>% as.list %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))))
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
   if (!is.na(p(sim)$intervalRunModule))
