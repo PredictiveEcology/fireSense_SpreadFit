@@ -29,7 +29,8 @@ defineModule(sim, list(
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
-    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")),
+    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
+  ),
   inputObjects = data.frame(
     objectName = "fires",
     objectClass = "SpatialPointsDataFrame",
