@@ -24,6 +24,9 @@ defineModule(sim, list(
               RasterStack. If omitted, or if variables are not found in the data objects, variables are searched in the sim environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
+    defineParameter(name = "trace", class = "numeric", default = 0,
+      desc = "non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration.
+              Defaults to 0 which indicates no trace information is to be printed."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
@@ -172,8 +175,7 @@ fireSense_SpreadFitRun <- function(sim) {
   }
   
   
-  control <- list(itermax = 2000)
-  #control$trace <- TRUE ## debug
+  control <- list(itermax = 2000, trace = p(sim)$trace)
   
   if (p(sim)$parallel) {
     
