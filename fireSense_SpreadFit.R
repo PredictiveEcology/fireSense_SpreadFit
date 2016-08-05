@@ -22,9 +22,6 @@ defineModule(sim, list(
               to predict. Objects can be named lists of RasterLayers, or RasterStacks (for time series). However, objects of different classes cannot
               be mixed. For example, variables cannot be searched simultaneously within an object of class RasterLayer and within an object of class
               RasterStack. If omitted, or if variables are not found in the data objects, variables are searched in the sim environment."),
-    defineParameter(name = "mapping", class = "character", default = NA, 
-      desc = "optional. Named character vector to map variable names in the formula to those in the data objects. Names of
-              unmapped variables are used directly to look for variables in data objects or in the sim environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
@@ -100,21 +97,7 @@ fireSense_SpreadFitRun <- function(sim) {
   
   ## In case there is a response in the formula remove it
   terms <- p(sim)$formula %>% terms.formula %>% delete.response
-  
-  ## Mapping variables names to data
-  if (!is.na(p(sim)$mapping[1])) {
-    
-    for (i in 1:length(p(sim)$mapping)) {
-      
-      attr(terms, "term.labels") <- gsub(pattern = names(p(sim)$mapping[i]),
-                                         replacement = p(sim)$mapping[i], x = attr(terms, "term.labels"))
-      
-    }
-    
-  }
-
-  formula <- reformulate(attr(terms, "term.labels"), intercept = attr(terms, "intercept"))
-  allVars <- all.vars(formula)
+  allVars <- all.vars(terms)
   
   if (all(unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer"))))) {
     
@@ -200,11 +183,11 @@ fireSense_SpreadFitRun <- function(sim) {
   }
   
   val <- DEoptim(objFun, lower = p(sim)$lower, upper = p(sim)$upper, control = do.call("DEoptim.control", control),
-                 rasters = rasters, formula = formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
+                 rasters = rasters, formula = p(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
     `[[` ("optim") %>% `[[` ("bestmem")
   
   sim$fireSense_SpreadFitted <- 
-    list(formula = formula,
+    list(formula = p(sim)$formula,
          coef = val %>% as.list %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))))
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
