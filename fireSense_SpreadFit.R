@@ -28,7 +28,8 @@ defineModule(sim, list(
       desc = "non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration.
               Defaults to 0 which indicates no trace information is to be printed."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
-    defineParameter(name = "initialRunTime", class = "numeric", default = NA, desc = "optional. Simulation time at which to start this module. If omitted, start at start(sim)."),
+    defineParameter(name = "initialRunTime", class = "numeric", default = NA, 
+      desc = "optional. Simulation time at which to start this module. If omitted, start at start(simList)."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
   ),
   inputObjects = data.frame(
@@ -57,7 +58,21 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   } else if (eventType == "run") {
     
     sim <- sim$fireSense_SpreadFitRun(sim)
+
+  } else if (eventType == "save") {
+    # ! ----- EDIT BELOW ----- ! #
+    # do stuff for this event
     
+    # e.g., call your custom functions/methods here
+    # you can define your own methods below this `doEvent` function
+    
+    # schedule future event(s)
+    
+    # e.g.,
+    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SizeFit", "save")
+    
+    # ! ----- STOP EDITING ----- ! #
+      
   } else {
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
@@ -97,7 +112,10 @@ fireSense_SpreadFitRun <- function(sim) {
   
   if (!is.na(p(sim)$data[1]))
     lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
-  
+
+  if (is.empty.model(p(sim)$formula))
+    stop("fireSense_SpreadFit> The formula describes an empty model.")
+    
   ## In case there is a response in the formula remove it
   terms <- p(sim)$formula %>% terms.formula %>% delete.response
   allVars <- all.vars(terms)
