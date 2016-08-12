@@ -2,7 +2,11 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
-  description = "This module use Pattern Oriented Modelling (POM) to fit a fire landscape model where the probability of spread is heteregeneous, i.e. vary among pixels.",
+  description = "Fit statistical models that can be used to parametrize (calibrate) 
+                 the fire spread component of simulation models (e.g. fireSense).
+                 This module make use of Pattern Oriented Modelling (POM) to derive
+                 spread probabilities that can vary among pixels, i.e. reflecting
+                 heterogeneity in local environmental conditions.",
   keywords = c("fire spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
