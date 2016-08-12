@@ -63,11 +63,9 @@ defineModule(sim, list(
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
   if (eventType == "init") {
-
     sim <- sim$fireSense_SpreadFitInit(sim)
 
   } else if (eventType == "run") {
-    
     sim <- sim$fireSense_SpreadFitRun(sim)
 
   } else if (eventType == "save") {
