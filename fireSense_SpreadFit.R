@@ -4,7 +4,7 @@ defineModule(sim, list(
   name = "fireSense_SpreadFit",
   description = "Fit statistical models that can be used to parametrize (calibrate) 
                  the fire spread component of simulation models (e.g. fireSense).
-                 This module make use of Pattern Oriented Modelling (POM) to derive
+                 This module makes use of Pattern Oriented Modelling (POM) to derive
                  spread probabilities that can vary among pixels, i.e. reflecting
                  heterogeneity in local environmental conditions.",
   keywords = c("fire spread", "POM", "percolation"),
@@ -20,21 +20,28 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(name = "formula", class = "formula", default = NA,
-      desc = 'an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided'),
+      desc = 'an object of class formula: a symbolic description of the model to be fitted. Only
+              the RHS needs to be provided.'),
     defineParameter(name = "data", class = "character", default = NA,
-      desc = "optional. A character vector indicating the names of objects present in the sim environment, in which to look for variables with which
-              to predict. Objects can be named lists of RasterLayers, or RasterStacks (for time series). However, objects of different classes cannot
-              be mixed. For example, variables cannot be searched simultaneously within an object of class RasterLayer and within an object of class
-              RasterStack. If omitted, or if variables are not found in the data objects, variables are searched in the sim environment."),
+      desc = "optional. A character vector indicating the names of objects present in the simList
+              environment, in which to look for variables with which to predict. Objects can be 
+              named lists of RasterLayers, or RasterStacks (for time series). However, objects of
+              different classes cannot be mixed. For example, variables cannot be searched 
+              simultaneously within an object of class RasterLayer and within an object of class
+              RasterStack. If omitted, or if variables are not found in data objects, variables
+              are searched in the simList environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "trace", class = "numeric", default = 0,
-      desc = "non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration.
-              Defaults to 0 which indicates no trace information is to be printed."),
-    defineParameter(name = "parallel", class = "logical", default = FALSE, desc = 'Should the optimization be parallelized ?'),
+      desc = "non-negative integer. If > 0, tracing information on the progress of the 
+              optimization is produced every trace iteration. Defaults to 0 which indicates no
+              trace information is to be printed."),
+    defineParameter(name = "parallel", class = "logical", default = FALSE, 
+      desc = 'Should the optimization be parallelized ?'),
     defineParameter(name = "initialRunTime", class = "numeric", default = NA, 
       desc = "optional. Simulation time at which to start this module. If omitted, start at start(simList)."),
-    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, desc = "optional. Interval in simulation time units between two module runs.")
+    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
+      desc = "optional. Interval in simulation time units between two runs of this module.")
   ),
   inputObjects = data.frame(
     objectName = "fires",
@@ -81,7 +88,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   }
-  return(invisible(sim))
+  invisible(sim)
 }
 
 ## event functions
