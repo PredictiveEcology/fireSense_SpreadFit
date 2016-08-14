@@ -127,20 +127,20 @@ fireSense_SpreadFitRun <- function(sim) {
     
   ## In case there is a response in the formula remove it
   terms <- p(sim)$formula %>% terms.formula %>% delete.response
-  allVars <- all.vars(terms)
+  allxy <- all.vars(terms)
   
-  if (all(unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer"))))) {
+  if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer"))))) {
     
-    rasters <- mget(allVars, envir = envData, inherits = FALSE) %>% stack
+    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters, sim$fires, cellnumbers = TRUE, df = TRUE)[,"cells"]
+    loci <- raster::extract(rasters, sim$fires, cellnumbers = TRUE, df = TRUE)[["cells"]]
     
     if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
     
     sizes <- sim$fires$size
     
-    objFun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
+    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
 
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
         calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L]))) ## Logistic 5p
@@ -155,22 +155,22 @@ fireSense_SpreadFitRun <- function(sim) {
       
     }
     
-  } else if (all(unlist(lapply(allVars, function(x) is(envData[[x]], "RasterStack"))))) {
+  } else if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterStack"))))) {
 
-    rasters <- mget(allVars, envir = envData, inherits = FALSE) %>%
+    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
       lapply(unstack) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
 
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters[[1L]], sim$fires, cellnumbers = TRUE, df = TRUE)[,"cells"]
+    loci <- raster::extract(rasters[[1L]], sim$fires, cellnumbers = TRUE, df = TRUE)[["cells"]]
 
     if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
     
     loci %<>% split(sim$fires$date)
     sizes <- sim$fires$size
     
-    objFun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
+    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
 
       (rasters %>%
         mapply(FUN = function(x, loci) {
@@ -189,15 +189,15 @@ fireSense_SpreadFitRun <- function(sim) {
       
   } else {
     
-    varsExist <- allVars %in% ls(envData)
-    varsClass <- unlist(lapply(allVars, function(x) is(envData[[x]], "RasterLayer") || is(envData[[x]], "RasterStack")))
+    varsExist <- allxy %in% ls(envData)
+    varsClass <- unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer") || is(envData[[x]], "RasterStack")))
     
     if (any(!varsExist)) {
-      stop(paste0("fireSense_SpreadFit> Variable '", allVars[which(!varsExist)[1L]], "' not found."))
+      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!varsExist)[1L]], "' not found."))
     } else if (any(varsClass)) {
-      stop("fireSense_SpreadFit> Variables are not of the same class.")
+      stop("fireSense_SpreadFit> Data objects are not of the same class (e.g. data.frames).")
     } else {
-      stop(paste0("fireSense_SpreadFit> Variable '", allVars[which(!varsClass)[1L]], "' is not a RasterLayer or a RasterStack."))
+      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!varsClass)[1L]], "' is not a RasterLayer or a RasterStack."))
     }
   }
   
@@ -211,7 +211,7 @@ fireSense_SpreadFitRun <- function(sim) {
     
   }
   
-  val <- DEoptim(objFun, lower = p(sim)$lower, upper = p(sim)$upper, control = do.call("DEoptim.control", control),
+  val <- DEoptim(objfun, lower = p(sim)$lower, upper = p(sim)$upper, control = do.call("DEoptim.control", control),
                  rasters = rasters, formula = p(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
     `[[` ("optim") %>% `[[` ("bestmem")
   
@@ -224,4 +224,16 @@ fireSense_SpreadFitRun <- function(sim) {
     sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SpreadFit", "run")
   
   sim
+  
+}
+
+
+### template for save events
+fireSense_FrequencyPredictSave <- function(sim) {
+  # ! ----- EDIT BELOW ----- ! #
+  # do stuff for this event
+  sim <- saveFiles(sim)
+  
+  # ! ----- STOP EDITING ----- ! #
+  return(invisible(sim))
 }
