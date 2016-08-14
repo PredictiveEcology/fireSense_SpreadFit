@@ -78,7 +78,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     # schedule future event(s)
     
     # e.g.,
-    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SizeFit", "save")
+    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SpreadFit", "save")
     
     # ! ----- STOP EDITING ----- ! #
       
@@ -229,7 +229,7 @@ fireSense_SpreadFitRun <- function(sim) {
 
 
 ### template for save events
-fireSense_FrequencyPredictSave <- function(sim) {
+fireSense_SpreadFitSave <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
