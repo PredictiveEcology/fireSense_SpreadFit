@@ -10,7 +10,7 @@ defineModule(sim, list(
   keywords = c("fire spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("1.2.0.9000"),
+  version = numeric_version("0.0.1"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -38,8 +38,8 @@ defineModule(sim, list(
               trace information is to be printed."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, 
       desc = 'Should the optimization be parallelized ?'),
-    defineParameter(name = "initialRunTime", class = "numeric", default = NA, 
-      desc = "optional. Simulation time at which to start this module. If omitted, start at start(simList)."),
+    defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
+      desc = "optional. Simulation time at which to start this module. Defaults to simulation start time."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
       desc = "optional. Interval in simulation time units between two runs of this module.")
   ),
@@ -97,7 +97,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 ### template initialization
 fireSense_SpreadFitInit <- function(sim) {
   
-  sim <- scheduleEvent(sim, eventTime = if (is.na(p(sim)$initialRunTime)) start(sim) else p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
+  sim <- scheduleEvent(sim, eventTime = p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
   sim
   
 } 
