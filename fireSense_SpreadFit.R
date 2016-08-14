@@ -51,8 +51,8 @@ defineModule(sim, list(
     stringsAsFactors = FALSE
   ),
   outputObjects = data.frame(
-    objectName = NA_character_,
-    objectClass = NA_character_,
+    objectName = "fireSense_SpreadFitted",
+    objectClass = "fireSense_SpreadFit",
     other = NA_character_,
     stringsAsFactors = FALSE
   )
@@ -128,7 +128,7 @@ fireSense_SpreadFitRun <- function(sim) {
   ## In case there is a response in the formula remove it
   terms <- p(sim)$formula %>% terms.formula %>% delete.response
   allxy <- all.vars(terms)
-  
+
   if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer"))))) {
     
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
