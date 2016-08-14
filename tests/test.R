@@ -8,6 +8,7 @@ library(SpaDES)
   #   params = list(fireSense_SpreadFit = list(formula = formula(~ beta + theta - 1),
   #                                            lower = c(.2, .1, .01, .3, 0.001, 0.001),
   #                                            upper = c(.5, 10, .2, 4, .3, .3),
+  #                                            trace = 5,
   #                                            parallel = TRUE)),
   #   inputs = data.frame(
   #     files = c("Z:/fires.shp", "Z:/beta.tif", "Z:/theta.tif"),
@@ -25,6 +26,7 @@ library(SpaDES)
     params = list(fireSense_SpreadFit = list(formula = formula(~ beta + theta - 1),
                                              lower = c(.2, .1, .01, .3, 0.001, 0.001),
                                              upper = c(.5, 10, .2, 4, .3, .3),
+                                             trace = 5,
                                              parallel = TRUE)),
     inputs = data.frame(
       files = c("Z:/fires.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
