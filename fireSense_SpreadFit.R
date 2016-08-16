@@ -129,33 +129,7 @@ fireSense_SpreadFitRun <- function(sim) {
   terms <- p(sim)$formula %>% terms.formula %>% delete.response
   allxy <- all.vars(terms)
 
-  if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer"))))) {
-    
-    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
-    
-    ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters, sim$fires, cellnumbers = TRUE, df = TRUE)[["cells"]]
-    
-    if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
-    
-    sizes <- sim$fires$size
-    
-    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
-
-      r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-        calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L]))) ## Logistic 5p
-      
-      ## 10 replicates to better estimate the median
-      (lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
-        do.call("rbind", .) %>%
-        apply(2L, median) %>%
-        list(sizes) %>%
-        ad.test %>%
-        `[[` ("ad"))[1L, 1L]
-      
-    }
-    
-  } else if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterStack"))))) {
+  if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterStack"))))) {
 
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
       lapply(unstack) %>%
@@ -171,20 +145,46 @@ fireSense_SpreadFitRun <- function(sim) {
     sizes <- sim$fires$size
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
-
+      
       (rasters %>%
-        mapply(FUN = function(x, loci) {
-
-          r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-            calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## Logistic 5p
-          
-          ## 10 replicates to better estimate the median
-          lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
-            do.call("rbind", .) %>%
-            apply(2L, median)
-        }, loci = loci, SIMPLIFY = FALSE) %>%
-        unlist %>% list(sizes) %>% ad.test %>% `[[` ("ad"))[1L, 1L]
-
+         mapply(FUN = function(x, loci) {
+           
+           r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
+             calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## Logistic 5p
+           
+           ## 10 replicates to better estimate the median
+           lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+             do.call("rbind", .) %>%
+             apply(2L, median)
+         }, loci = loci, SIMPLIFY = FALSE) %>%
+         unlist %>% list(sizes) %>% ad.test %>% `[[` ("ad"))[1L, 1L]
+      
+    }
+    
+  } else if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer"))))) {
+    
+    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
+    
+    ## Get the corresponding loci from the raster sim$landscape for the fire locations
+    loci <- raster::extract(rasters, sim$fires, cellnumbers = TRUE, df = TRUE)[["cells"]]
+    
+    if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
+    
+    sizes <- sim$fires$size
+    
+    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
+      
+      r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
+        calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L]))) ## Logistic 5p
+      
+      ## 10 replicates to better estimate the median
+      (lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+          do.call("rbind", .) %>%
+          apply(2L, median) %>%
+          list(sizes) %>%
+          ad.test %>%
+          `[[` ("ad"))[1L, 1L]
+      
     }
       
   } else {
