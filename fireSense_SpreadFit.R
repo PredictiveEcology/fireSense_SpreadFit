@@ -24,12 +24,12 @@ defineModule(sim, list(
               the RHS needs to be provided.'),
     defineParameter(name = "data", class = "character", default = NA,
       desc = "optional. A character vector indicating the names of objects present in the simList
-              environment, in which to look for variables with which to predict. Objects can be 
-              named lists of RasterLayers, or RasterStacks (for time series). However, objects of
-              different classes cannot be mixed. For example, variables cannot be searched 
-              simultaneously within an object of class RasterLayer and within an object of class
-              RasterStack. If omitted, or if variables are not found in data objects, variables
-              are searched in the simList environment."),
+              environment, in which to look for variables present in the model formula. Objects
+              can be named lists of RasterLayers, or RasterStacks (for time series). However, 
+              objects of different classes cannot be mixed. For example, variables cannot be
+              searched simultaneously within an object of class RasterLayer and within an object
+              of class RasterStack. If omitted, or if variables are not found in data objects,
+              variables are searched in the simList environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "trace", class = "numeric", default = 0,
