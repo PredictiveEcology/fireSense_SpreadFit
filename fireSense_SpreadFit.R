@@ -2,11 +2,12 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
-  description = "Fit statistical models that can be used to parametrize (calibrate) 
-                 the fire spread component of simulation models (e.g. fireSense).
-                 This module makes use of Pattern Oriented Modelling (POM) to derive
-                 spread probabilities that can vary among pixels, i.e. reflecting
-                 heterogeneity in local environmental conditions.",
+  description = "Fit statistical models that can be used to parametrize 
+                 (calibrate)  the fire spread component of simulation models
+                 (e.g. fireSense). This module makes use of Pattern Oriented
+                 Modelling (POM) to derive spread probabilities that can vary 
+                 among pixels, i.e. reflecting heterogeneity in local
+                 environmental conditions.",
   keywords = c("fire spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
@@ -30,6 +31,12 @@ defineModule(sim, list(
               searched simultaneously within an object of class RasterLayer and within an object
               of class RasterStack. If omitted, or if variables are not found in data objects,
               variables are searched in the simList environment."),
+      desc = "optional. A character vector indicating the names of objects in the
+              simList environment in which to look for variables in the model. 
+              Data objects can be named lists of RasterLayers or RasterStacks
+              (for time series), but should all be of one unique class, e.g. 
+              RasterLayer. If omitted, or if variables are not found in data
+              objects, variables are searched in the simList environment."),
     defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
     defineParameter(name = "trace", class = "numeric", default = 0,
