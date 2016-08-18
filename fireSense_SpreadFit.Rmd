@@ -77,6 +77,5 @@ If `sourceURL` is specified, `downloadData("fireSense_Spread", "path/to/modules/
 Description of the module outputs.
 
 # Links to other modules
-
-Describe any anticipated linkages to other modules.
+This module can be used in conjunction of fireSense_SizePredict to predict which contain useful info about the fire size distribution, from there one can use fireSense_SpreadFit and fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environemtnal conditions, thus varying temporally and spatially.
 
