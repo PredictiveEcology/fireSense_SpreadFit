@@ -3,11 +3,10 @@
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
   description = "Fit statistical models that can be used to parametrize 
-                 (calibrate)  the fire spread component of simulation models
-                 (e.g. fireSense). This module makes use of Pattern Oriented
-                 Modelling (POM) to derive spread probabilities that can vary 
-                 among pixels, i.e. reflecting heterogeneity in local
-                 environmental conditions.",
+                 (calibrate) the fire spread component of simulation models (e.g.
+                 fireSense). This module makes use of Pattern Oriented Modelling
+                 (POM) to derive spread probabilities that can vary among pixels,
+                 i.e. reflecting heterogeneity in local environmental conditions.",
   keywords = c("fire spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
@@ -24,13 +23,6 @@ defineModule(sim, list(
       desc = 'an object of class formula: a symbolic description of the model to be fitted. Only
               the RHS needs to be provided.'),
     defineParameter(name = "data", class = "character", default = NA,
-      desc = "optional. A character vector indicating the names of objects present in the simList
-              environment, in which to look for variables present in the model formula. Objects
-              can be named lists of RasterLayers, or RasterStacks (for time series). However, 
-              objects of different classes cannot be mixed. For example, variables cannot be
-              searched simultaneously within an object of class RasterLayer and within an object
-              of class RasterStack. If omitted, or if variables are not found in data objects,
-              variables are searched in the simList environment."),
       desc = "optional. A character vector indicating the names of objects in the
               simList environment in which to look for variables in the model. 
               Data objects can be named lists of RasterLayers or RasterStacks
