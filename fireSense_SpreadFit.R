@@ -39,7 +39,7 @@ defineModule(sim, list(
               optimization is produced every trace iteration. Defaults to 0 which indicates no
               trace information is to be printed."),
     defineParameter(name = "parallel", class = "logical", default = FALSE, 
-      desc = 'Should the optimization be parallelized ?'),
+      desc = 'Should the optimization be parallelized ? (all detected cores will be used)'),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
       desc = "optional. Simulation time at which to start this module. Defaults 
               to simulation start time."),

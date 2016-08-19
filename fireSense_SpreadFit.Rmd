@@ -31,7 +31,7 @@ upper|NULL|see ?DEoptim.
 data|NULL|optional. A character vector indicating the names of objects in the simList environment in which to look for variables in the model. Data objects can be named lists of RasterLayers or RasterStacks (for time series), but should all be of one unique class, e.g. RasterLayer. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
 mapping|NULL|optional. Named character vector or list mapping the names of data objects required by the module to those in the simList environment.
 trace|0|non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no trace information is to be printed.
-parallel|FALSE|Should the optimization be parallelized ?
+parallel|FALSE|Should the optimization be parallelized ? (all detected cores will be used)
 initialRunTime|start(sim)|optional. Simulation time at which to start this module. Defaults to simulation start time.
 intervalRunModule|NA|optional. Interval in simulation time units between two runs of this module.
 |||
@@ -59,8 +59,8 @@ fires_mapping_example <- SpatialPointsDataFrame(coords, data)
 
 # Create a random map of weather
 nx <- ny <- 100L
-r <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2)
-weather <- gaussMap(r, scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
+weather <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
+  gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
 
 #outputDir <- file.path(tempdir(), "outputs")
 times <- list(start = 1, end = 1)
@@ -71,12 +71,12 @@ parameters <- list(
     upper = c(.5, 10, .2, 4, .3),
     mapping = c(fires = "fires_mapping_example"),
     trace = 5, # Print progress every 5 iterations
-    parallel = TRUE # Use parallel processing for the optimization
+    parallel = TRUE # Use parallel processing
   )
 )
 
 modules <- list("fireSense_SpreadFit")
-objects <- c("fires_mapping_example", "weather")
+objects <- c("fires_mapping_example", "weather") # Pass objects found in the global environment to the simList environment
 
 paths <- list(
   # cachePath = file.path(outputDir, "cache"),
@@ -84,7 +84,9 @@ paths <- list(
   # inputPath = inputDir,
   # outputPath = outputDir
 )
- 
+
+#TODO: RasterStacks
+
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
 
 spades(mySim)
@@ -101,7 +103,7 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 
 # Data dependencies
 ## Input data
-- An object of class RasterLayer or RasterStack or named lists of RasterLayers or RasterStacks, in which to look for variables with which to predict. RasterStacks are useful in cases where fires didn't start the same year (for example), and should not be spread at the same time.
+An object of class RasterLayer or RasterStack or named lists of RasterLayers or RasterStacks, in which to look for variables with which to predict. RasterStacks are useful in cases where fires didn't start the same year (for example), should not be spread at the same time but describe a single fire size distribution.
 
 ## Output data
 An object of class "fireSense_SpreadFit", i.e. a list containing the following components:
