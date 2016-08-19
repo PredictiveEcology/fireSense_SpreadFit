@@ -136,9 +136,8 @@ fireSense_SpreadFitRun <- function(sim) {
   
   if (is.empty.model(p(sim)$formula))
     stop("fireSense_SpreadFit> The formula describes an empty model.")
-    
-  ## In case there is a response in the formula remove it
-  terms <- p(sim)$formula %>% terms.formula %>% delete.response
+
+  terms <- p(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
 
   if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterStack"))))) {
@@ -162,7 +161,7 @@ fireSense_SpreadFitRun <- function(sim) {
          mapply(FUN = function(x, loci) {
            
            r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-             calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## Logistic 5p
+             calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
            
            ## 10 replicates to better estimate the median
            lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
@@ -187,7 +186,7 @@ fireSense_SpreadFitRun <- function(sim) {
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
       
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-        calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L]))) ## Logistic 5p
+        calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L]))) ## 5-parameters logistic
       
       ## 10 replicates to better estimate the median
       (lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
