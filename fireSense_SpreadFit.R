@@ -22,6 +22,8 @@ defineModule(sim, list(
     defineParameter(name = "formula", class = "formula", default = NULL,
       desc = 'an object of class formula: a symbolic description of the model to
               be fitted. Only the RHS needs to be provided.'),
+    defineParameter(name = "lower", class = "numeric", default = NULL, desc = "see ?DEoptim."),
+    defineParameter(name = "upper", class = "numeric", default = NULL, desc = "see ?DEoptim."),
     defineParameter(name = "data", class = "character", default = NULL,
       desc = "optional. A character vector indicating the names of objects in the
               simList environment in which to look for variables in the model. 
@@ -29,8 +31,9 @@ defineModule(sim, list(
               (for time series), but should all be of one unique class, e.g. 
               RasterLayer. If omitted, or if variables are not found in data
               objects, variables are searched in the simList environment."),
-    defineParameter(name = "lower", class = "numeric", default = NULL, desc = "see ?DEoptim."),
-    defineParameter(name = "upper", class = "numeric", default = NULL, desc = "see ?DEoptim."),
+    defineParameter(name = "mapping", class = "character, list", default = NULL,
+      desc = "optional. Named character vector or list mapping the names of data
+              objects required by the module to those in the simList environment."),
     defineParameter(name = "trace", class = "numeric", default = 0,
       desc = "non-negative integer. If > 0, tracing information on the progress of the 
               optimization is produced every trace iteration. Defaults to 0 which indicates no
