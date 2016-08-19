@@ -225,10 +225,10 @@ fireSense_SpreadFitRun <- function(sim) {
   val <- DEoptim(objfun, lower = p(sim)$lower, upper = p(sim)$upper, control = do.call("DEoptim.control", control),
                  rasters = rasters, formula = p(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
     `[[` ("optim") %>% `[[` ("bestmem")
-  
+
   sim$fireSense_SpreadFitted <- 
     list(formula = p(sim)$formula,
-         coef = val %>% as.list %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))))
+         coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))))
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
   if (!is.na(p(sim)$intervalRunModule))
