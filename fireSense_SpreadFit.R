@@ -19,18 +19,18 @@ defineModule(sim, list(
   reqdPkgs = list("data.table", "DEoptim", "kSamples", "magrittr", "parallel", "raster"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
-    defineParameter(name = "formula", class = "formula", default = NA,
-      desc = 'an object of class formula: a symbolic description of the model to be fitted. Only
-              the RHS needs to be provided.'),
-    defineParameter(name = "data", class = "character", default = NA,
+    defineParameter(name = "formula", class = "formula", default = NULL,
+      desc = 'an object of class formula: a symbolic description of the model to
+              be fitted. Only the RHS needs to be provided.'),
+    defineParameter(name = "data", class = "character", default = NULL,
       desc = "optional. A character vector indicating the names of objects in the
               simList environment in which to look for variables in the model. 
               Data objects can be named lists of RasterLayers or RasterStacks
               (for time series), but should all be of one unique class, e.g. 
               RasterLayer. If omitted, or if variables are not found in data
               objects, variables are searched in the simList environment."),
-    defineParameter(name = "lower", class = "numeric", default = NA, desc = "see DEoptim."),
-    defineParameter(name = "upper", class = "numeric", default = NA, desc = "see DEoptim."),
+    defineParameter(name = "lower", class = "numeric", default = NULL, desc = "see ?DEoptim."),
+    defineParameter(name = "upper", class = "numeric", default = NULL, desc = "see ?DEoptim."),
     defineParameter(name = "trace", class = "numeric", default = 0,
       desc = "non-negative integer. If > 0, tracing information on the progress of the 
               optimization is produced every trace iteration. Defaults to 0 which indicates no
@@ -38,9 +38,11 @@ defineModule(sim, list(
     defineParameter(name = "parallel", class = "logical", default = FALSE, 
       desc = 'Should the optimization be parallelized ?'),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
-      desc = "optional. Simulation time at which to start this module. Defaults to simulation start time."),
+      desc = "optional. Simulation time at which to start this module. Defaults 
+              to simulation start time."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
-      desc = "optional. Interval in simulation time units between two runs of this module.")
+      desc = "optional. Interval in simulation time units between two runs of 
+              this module.")
   ),
   inputObjects = data.frame(
     objectName = "fires",
@@ -118,7 +120,7 @@ fireSense_SpreadFitRun <- function(sim) {
   on.exit(rm(envData))
   list2env(as.list(envir(sim)), envir = envData)
   
-  if (!is.na(p(sim)$data[1]))
+  if (!is.null(p(sim)$data)) ## Handling data arg
     lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
 
   if (is.empty.model(p(sim)$formula))
