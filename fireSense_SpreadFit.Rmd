@@ -1,81 +1,119 @@
 ---
-title: "fireSense_Spread"
-author: "Module Author"
-date: "16 July 2016"
-output: pdf_document
+title: "fireSense_SpreadFit"
+author: "Jean Marchal"
+date: "August 2016"
+output:
+  html_document: default
+  pdf_document: default
 ---
+
 
 ## inputs
 SIZE: fire size expressed in the pixel size
 TIME: for time series, starting date of fire
 
 # Overview
+Fit statistical models that can be used to parametrize (calibrate) the fire spread component of simulation models (e.g. fireSense). This module makes use of Pattern Oriented Modelling (POM) to derive spread probabilities that can vary among pixels, i.e. reflecting heterogeneity in local environmental conditions.
 
-Provide an overview of what the module does / how to use the module.
+# Download the module
+```{r download module, eval = FALSE, echo = TRUE}
+library(SpaDES)
 
-Module documentation should be written so that others can use your module.
-This is a template for module documentation, and should be changed to reflect your module.
+moduleName <- "fireSense_SpreadFit"
 
-## RMarkdown
+workingDirectory <- tempdir() # Change this to a place you would like to put the model, if desired.
 
-RMarkdown syntax allows R code, outputs, and figures to be rendered in the documentation.
-
-For help writing in RMarkdown, see http://rmarkdown.rstudio.com/.
+downloadModule(moduleName, path = workingDirectory)
+```
 
 # Usage
+## Module parameters
+Name|Default|Description
+----|:-------:|---------------------------------------------------------------------
+formula|NULL|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
+lower|NULL|see ?DEoptim.
+upper|NULL|see ?DEoptim.
+data|NULL|optional. A character vector indicating the names of objects in the simList environment in which to look for variables in the model. Data objects can be named lists of RasterLayers or RasterStacks (for time series), but should all be of one unique class, e.g. RasterLayer. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
+mapping|NULL|optional. Named character vector or list mapping the names of data objects required by the module to those in the simList environment.
+trace|0|non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no trace information is to be printed.
+parallel|FALSE|Should the optimization be parallelized ?
+initialRunTime|start(sim)|optional. Simulation time at which to start this module. Defaults to simulation start time.
+intervalRunModule|NA|optional. Interval in simulation time units between two runs of this module.
+|||
 
-```{r module_usage}
+## Usage example
+```{r module_usage_example, eval = FALSE}
 library(SpaDES)
+library(PtProcess)
+
+# Packages required by the module
+library(data.table)
+library(DEoptim)
+library(kSamples)
 library(magrittr)
+library(parallel)
+library(raster)
 
-inputDir <- file.path(tempdir(), "inputs") %>% checkPath(create = TRUE)
-outputDir <- file.path(tempdir(), "outputs")
-times <- list(start = 0, end = 10)
+set.seed(1)
+
+# Create an SpatialPointsDataFrame containing fire locations, start dates, and final sizes data
+coords <- data.frame(x_coord = runif(1000, -100, 100),
+                     y_coord = runif(1000, -100, 100))
+data <- data.frame(date = 1, sizes = rtappareto(1000, .3, 1e4, 1))
+fires_mapping_example <- SpatialPointsDataFrame(coords, data)
+
+# Create a random map of weather
+nx <- ny <- 100L
+r <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2)
+weather <- gaussMap(r, scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
+
+#outputDir <- file.path(tempdir(), "outputs")
+times <- list(start = 1, end = 1)
 parameters <- list(
-  .globals = list(burnStats = "nPixelsBurned"),
-  #.progress = list(type = "text", interval = 1), # for a progress bar
-  ## If there are further modules, each can have its own set of parameters:
-  #module1 = list(param1 = value1, param2 = value2),
-  #module2 = list(param1 = value1, param2 = value2)
-)
-modules <- list("fireSense_Spread")
-objects <- list()
-paths <- list(
-  cachePath = file.path(outputDir, "cache"),
-  modulePath = file.path(".."),
-  inputPath = inputDir,
-  outputPath = outputDir
+  fireSense_FrequencyFit = list(
+    formula = ~ weather - 1,
+    lower = c(.2, .1, .01, .3, 0.001),
+    upper = c(.5, 10, .2, 4, .3),
+    mapping = c(fires = "fires_mapping_example"),
+    trace = 5, # Print progress every 5 iterations
+    parallel = TRUE # Use parallel processing for the optimization
+  )
 )
 
-mySim <- simInit(times = times, params = parameters, modules = modules,
-                 objects = objects, paths = paths)
+modules <- list("fireSense_SpreadFit")
+objects <- c("fires_mapping_example", "weather")
+
+paths <- list(
+  # cachePath = file.path(outputDir, "cache"),
+  modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to tempdir()
+  # inputPath = inputDir,
+  # outputPath = outputDir
+)
+ 
+mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
 
 spades(mySim)
 ```
 
 # Events
+Events are scheduled as follows:
 
-Describe what happens for each event type.
-
-## Plotting
-
-Write what is plotted.
+- Module initiation
+- Model fitting
 
 ## Saving
-
-Write what is saved.
+TODO: Write what is saved. (there is currently nothing saved, but this may change in the future)
 
 # Data dependencies
-
 ## Input data
-
-How to obtain input data, and a description of the data required by the module.
-If `sourceURL` is specified, `downloadData("fireSense_Spread", "path/to/modules/dir")` may be sufficient.
+- An object of class RasterLayer or RasterStack or named lists of RasterLayers or RasterStacks, in which to look for variables with which to predict. RasterStacks are useful in cases where fires didn't start the same year (for example), and should not be spread at the same time.
 
 ## Output data
+An object of class "fireSense_SpreadFit", i.e. a list containing the following components:
 
-Description of the module outputs.
+- formula
+- coef (A, B, D, G are parameters of the logistic function)
 
 # Links to other modules
-This module can be used in conjunction of fireSense_SizePredict to predict which contain useful info about the fire size distribution, from there one can use fireSense_SpreadFit and fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environemtnal conditions, thus varying temporally and spatially.
+This module can be used in association with fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environmental conditions.
 
