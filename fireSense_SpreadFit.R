@@ -126,6 +126,14 @@ fireSense_SpreadFitRun <- function(sim) {
   if (!is.null(p(sim)$data)) ## Handling data arg
     lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
 
+  ## Mapping data objects required by the module to those in the simList environment
+  if (!is.null(p(sim)$mapping)) {
+
+    envData[["fires"]] <- envData[[p(sim)$mapping[["fires"]]]]
+    rm(list = p(sim)$mapping[["fires"]], envir = envData)
+    
+  }
+  
   if (is.empty.model(p(sim)$formula))
     stop("fireSense_SpreadFit> The formula describes an empty model.")
     
