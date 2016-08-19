@@ -25,19 +25,19 @@ downloadModule(moduleName, path = workingDirectory)
 ## Module parameters
 Name|Default|Description
 ----|:-------:|---------------------------------------------------------------------
-formula|NULL|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
-lower|NULL|see ?DEoptim.
-upper|NULL|see ?DEoptim.
-data|NULL|optional. A character vector indicating the names of objects in the simList environment in which to look for variables in the model. Data objects can be named lists of RasterLayers or RasterStacks (for time series), but should all be of one unique class, e.g. RasterLayer. If omitted, or if variables are not found in data objects, variables are searched in the simList environment.
-mapping|NULL|optional. Named character vector or list mapping the names of data objects required by the module to those in the simList environment.
-trace|0|non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no trace information is to be printed.
-parallel|FALSE|Should the optimization be parallelized ? (all detected cores will be used)
-initialRunTime|start(sim)|optional. Simulation time at which to start this module. Defaults to simulation start time.
-intervalRunModule|NA|optional. Interval in simulation time units between two runs of this module.
+`formula`|`NULL`|an object of class `formula`: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
+`lower`|`NULL`|see `?DEoptim`.
+`upper`|`NULL`|see `?DEoptim`.
+`data`|`NULL`|optional. A character vector indicating the names of objects in the `simList` environment in which to look for variables in the model. Data objects can be named lists of `RasterLayer` or `RasterStack` (for time series), but should all be of one unique class, e.g. `RasterLayer`. If omitted, or if variables are not found in data objects, variables are searched in the `simList` environment.
+`mapping`|`NULL`|optional. Named character vector or `list` mapping the names of data objects required by the module to those in the `simList` environment.
+`trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization is produced every trace iteration. Defaults to 0 which indicates no trace information is to be printed.
+`parallel`|`FALSE`|Should the optimization be parallelized ? (all detected cores will be used)
+`initialRunTime`|`start(sim)`|optional. Simulation time at which to start this module. Defaults to simulation start time.
+`intervalRunModule`|`NA`|optional. Interval in simulation time units between two runs of this module.
 |||
 
 ## Usage example
-```{r module_usage_example, eval = FALSE}
+```{r module usage example, eval = FALSE}
 library(SpaDES)
 library(PtProcess)
 
@@ -63,20 +63,23 @@ weather <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, 
   gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
 
 #outputDir <- file.path(tempdir(), "outputs")
-times <- list(start = 1, end = 1)
+times <- list(start = 1, end = 1, timeunit = "year")
 parameters <- list(
   fireSense_FrequencyFit = list(
     formula = ~ weather - 1,
     lower = c(.2, .1, .01, .3, 0.001),
     upper = c(.5, 10, .2, 4, .3),
-    mapping = c(fires = "fires_mapping_example"),
+    mapping = c(fires = "fires_mapping_example"), # One can use mapping to map data objects (in the
+                                                  # simList environment) to data required by the module
+                                                  # Here "fires_mapping_example" is mapped to "fires".
     trace = 5, # Print progress every 5 iterations
     parallel = TRUE # Use parallel processing
   )
 )
 
 modules <- list("fireSense_SpreadFit")
-objects <- c("fires_mapping_example", "weather") # Pass objects found in the global environment to the simList environment
+objects <- c("fires_mapping_example", 
+             "weather") # Pass objects found in the global environment to the simList environment
 
 paths <- list(
   # cachePath = file.path(outputDir, "cache"),
@@ -103,13 +106,13 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 
 # Data dependencies
 ## Input data
-An object of class RasterLayer or RasterStack or named lists of RasterLayers or RasterStacks, in which to look for variables with which to predict. RasterStacks are useful in cases where fires didn't start the same year (for example), should not be spread at the same time but describe a single fire size distribution.
+An object of class `RasterLayer` or `RasterStack` or named lists of `RasterLayer` or `RasterStack`, in which to look for variables with which to predict. `RasterStacks` are useful in cases where fires didn't start the same year (for example), should not be spread at the same time but describe a single fire size distribution.
 
 ## Output data
-An object of class "fireSense_SpreadFit", i.e. a list containing the following components:
+An object of class `fireSense_SpreadFit`, i.e. a `list` containing the following components:
 
-- formula
-- coef (A, B, D, G are parameters of the logistic function)
+- `formula`
+- `coef` (A, B, D, G are parameters of the logistic function)
 
 # Links to other modules
 This module can be used in association with fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environmental conditions.
