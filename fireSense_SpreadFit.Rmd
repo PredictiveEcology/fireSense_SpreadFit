@@ -7,11 +7,6 @@ output:
   pdf_document: default
 ---
 
-
-## inputs
-SIZE: fire size expressed in the pixel size
-TIME: for time series, starting date of fire
-
 # Overview
 Fit statistical models that can be used to parametrize (calibrate) the fire spread component of simulation models (e.g. fireSense). This module makes use of Pattern Oriented Modelling (POM) to derive spread probabilities that can vary among pixels, i.e. reflecting heterogeneity in local environmental conditions.
 
