@@ -150,9 +150,8 @@ fireSense_SpreadFitRun <- function(sim) {
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
     loci <- raster::extract(rasters[[1L]], sim$fires, cellnumbers = TRUE, df = TRUE)[["cells"]]
 
-    if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
-    
     loci %<>% split(sim$fires$date)
+    lapply(loci, function(x) if (anyDuplicated(x)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel."))
     sizes <- sim$fires$size
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
