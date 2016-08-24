@@ -51,16 +51,32 @@ library(raster)
 
 set.seed(1)
 
-# Create an SpatialPointsDataFrame containing fire locations, start dates, and final sizes data
-coords <- data.frame(x_coord = runif(1000, -100, 100),
-                     y_coord = runif(1000, -100, 100))
-data <- data.frame(date = 1, sizes = rtappareto(1000, .3, 1e4, 1))
-fires_mapping_example <- SpatialPointsDataFrame(coords, data)
+# Example where all fires are spread at the same time:
+  # Create an SpatialPointsDataFrame containing fire locations and final sizes data
+  coords <- data.frame(x_coord = runif(1000, -100, 100),
+                       y_coord = runif(1000, -100, 100))
+  data <- data.frame(sizes = rtappareto(1000, .3, 1e4, 1))
+  firesMappingExample <- SpatialPointsDataFrame(coords, data)
+  
+  # Create a random map of weather
+  nx <- ny <- 100L
+  weather <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
+    gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
 
-# Create a random map of weather
-nx <- ny <- 100L
-weather <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
-  gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
+# Example for times series, i.e. where fires are spread at different times:
+  # Create an SpatialPointsDataFrame containing fire locations, starting dates, and final sizes data
+  coords <- data.frame(x_coord = runif(1000, -100, 100),
+                       y_coord = runif(1000, -100, 100))
+  data <- data.frame(date = sample(2000:2003, size = 1000, replace = TRUE),
+                     sizes = rtappareto(1000, .3, 1e4, 1))
+  firesMappingExample <- SpatialPointsDataFrame(coords, data)
+  
+  # Create a time series of random maps of weather
+  nx <- ny <- 100L
+  weather <- lapply(2000:2003, function(x) {
+    raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
+      gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
+  }) %>% stack
 
 #outputDir <- file.path(tempdir(), "outputs")
 times <- list(start = 1, end = 1, timeunit = "year")
@@ -69,16 +85,16 @@ parameters <- list(
     formula = ~ weather - 1,
     lower = c(.2, .1, .01, .3, 0.001),
     upper = c(.5, 10, .2, 4, .3),
-    mapping = c(fires = "fires_mapping_example"), # One can use mapping to map data objects (in the
-                                                  # simList environment) to data required by the module
-                                                  # Here "fires_mapping_example" is mapped to "fires".
+    mapping = c(fires = "firesMappingExample"), # One can use mapping to map data required by the
+                                                # module to data objects in the simList environment.
+                                                # Here "fires" is mapped to "firesMappingExample".
     trace = 5, # Print progress every 5 iterations
     parallel = TRUE # Use parallel processing
   )
 )
 
 modules <- list("fireSense_SpreadFit")
-objects <- c("fires_mapping_example", 
+objects <- c("firesMappingExample", 
              "weather") # Pass objects found in the global environment to the simList environment
 
 paths <- list(
@@ -87,8 +103,6 @@ paths <- list(
   # inputPath = inputDir,
   # outputPath = outputDir
 )
-
-#TODO: RasterStacks
 
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
 
@@ -106,7 +120,8 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 
 # Data dependencies
 ## Input data
-An object of class `RasterLayer` or `RasterStack` or named `lists` of `RasterLayers` or `RasterStacks`, in which to look for variables with which to predict. `RasterStacks` are useful in cases where fires didn't start the same year (for example), and thus should not be spread at the same time but are used to describe a single fire size distribution.
+- An object of class `RasterLayer` or `RasterStack` or named `lists` of `RasterLayers` or `RasterStacks`, in which to look for variables with which to predict. `RasterStacks` are useful in cases where fires started at different dates, and thus should not be spread at the same time; but are used to describe a single fire size distribution.
+- An object of class `SpatialPointsDataFrame` describing fire starting locations, starting dates (column **date**), and final sizes (column **size**).
 
 ## Output data
 An object of class `fireSense_SpreadFit`, i.e. a `list` containing the following components:
