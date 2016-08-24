@@ -208,7 +208,7 @@ fireSense_SpreadFitRun <- function(sim) {
     } else if (any(class)) {
       stop("fireSense_SpreadFit> Data objects are not of the same class (e.g. data.frames).")
     } else {
-      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!class)[1L]], "' is not a RasterLayer or a RasterStack."))
+      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!class)[1L]], "' does not match a RasterLayer or a RasterStack."))
     }
   }
   
