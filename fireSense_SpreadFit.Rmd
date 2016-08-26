@@ -55,7 +55,7 @@ set.seed(1)
   # Create an SpatialPointsDataFrame containing fire locations and final sizes data
   coords <- data.frame(x_coord = runif(1000, -100, 100),
                        y_coord = runif(1000, -100, 100))
-  data <- data.frame(sizes = rtappareto(1000, .3, 1e4, 1))
+  data <- data.frame(size = rtappareto(1000, .3, 1e4, 1))
   firesMappingExample <- SpatialPointsDataFrame(coords, data)
   
   # Create a random map of weather
@@ -68,7 +68,7 @@ set.seed(1)
   coords <- data.frame(x_coord = runif(1000, -100, 100),
                        y_coord = runif(1000, -100, 100))
   data <- data.frame(date = sample(2000:2003, size = 1000, replace = TRUE),
-                     sizes = rtappareto(1000, .3, 1e4, 1))
+                     size = rtappareto(1000, .3, 1e4, 1))
   firesMappingExample <- SpatialPointsDataFrame(coords, data)
   
   # Create a time series of random maps of weather
@@ -81,7 +81,7 @@ set.seed(1)
 #outputDir <- file.path(tempdir(), "outputs")
 times <- list(start = 1, end = 1, timeunit = "year")
 parameters <- list(
-  fireSense_FrequencyFit = list(
+  fireSense_SpreadFit = list(
     formula = ~ weather - 1,
     lower = c(.2, .1, .01, .3, 0.001),
     upper = c(.5, 10, .2, 4, .3),
