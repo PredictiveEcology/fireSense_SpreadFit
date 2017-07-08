@@ -2,15 +2,16 @@
 # are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
-  description = "Fit statistical models that can be used to parametrize 
-                 (calibrate) the fire spread component of simulation models (e.g.
-                 fireSense). This module makes use of Pattern Oriented Modelling
-                 (POM) to derive spread probabilities that can vary among pixels,
-                 i.e. reflecting heterogeneity in local environmental conditions.",
-  keywords = c("fire spread", "POM", "percolation"),
+  description = "Fit statistical models that can be used to parameterize the 
+                 fire spread component of simulation models (e.g. fireSense).
+                 This module implement a Pattern Oriented Modelling (POM) 
+                 approach to derive spread probabilities from final fire sizes.
+                 Spread probabilities can vary between pixels, and thus reflect
+                 local heterogeneity in environmental conditions.",
+  keywords = c("fire", "spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("0.0.1"),
+  version = numeric_version("0.1.0"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -20,45 +21,70 @@ defineModule(sim, list(
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(name = "formula", class = "formula", default = NULL,
-      desc = 'an object of class formula: a symbolic description of the model to
-              be fitted. Only the RHS needs to be provided.'),
-    defineParameter(name = "lower", class = "numeric", default = NULL, desc = "see ?DEoptim."),
-    defineParameter(name = "upper", class = "numeric", default = NULL, desc = "see ?DEoptim."),
-    defineParameter(name = "data", class = "character", default = NULL,
-      desc = "optional. A character vector indicating the names of objects in the
-              simList environment in which to look for variables in the model. 
-              Data objects can be named lists of RasterLayers or RasterStacks
-              (for time series), but should all be of one unique class, e.g. 
-              RasterLayer. If omitted, or if variables are not found in data
-              objects, variables are searched in the simList environment."),
-    defineParameter(name = "mapping", class = "character, list", default = NULL,
-      desc = "optional. Named character vector or list mapping the names of data
-              objects required by the module to those in the simList environment."),
+                    desc = 'an object of class formula: a symbolic description 
+                            of the model to be fitted. Only the RHS needs to be 
+                            provided.'),
+    defineParameter(name = "lower", class = "numeric", default = NULL, desc = "see `?DEoptim`."),
+    defineParameter(name = "upper", class = "numeric", default = NULL, desc = "see `?DEoptim`."),
+    defineParameter(name = "data", class = "character", default = "dataFireSense_SpreadFit",
+                    desc = "a character vector indicating the names of objects 
+                            in the `simList` environment in which to look for
+                            variables in the model. `data` objects can be
+                            RasterLayers or RasterStacks (for time series), or
+                            named list of either several RasterLayers or several
+                            RasterStacks, but RasterLayers and RasterStack can not
+                            be mixed together. If omitted, or if variables are
+                            not found in `data` objects, variables are searched
+                            in the `simList` environment."),
+    defineParameter(name = "fires", class = "SpatialPointsDataFrame", default = "fires",
+                    desc = "a character vector indicating the name of a 
+                            SpatialPointsDataFrame describing fires starting
+                            dates and locations, and final sizes. The 
+                            SpatialPointsDataFrame must have a column called
+                            'date' and one called 'size'."),
     defineParameter(name = "trace", class = "numeric", default = 0,
-      desc = "non-negative integer. If > 0, tracing information on the progress of the 
-              optimization is produced every trace iteration. Defaults to 0 which indicates no
-              trace information is to be printed."),
-    defineParameter(name = "parallel", class = "logical", default = FALSE, 
-      desc = 'Should the optimization be parallelized ? (all detected cores will be used)'),
+                    desc = "non-negative `integer`. If > 0, tracing information
+                            on the progress of the optimization are printed
+                            every `trace` iteration. Default is 0, which turns off
+                            tracing."),
+    defineParameter(name = "nCores", class = "integer", default = 0, 
+                    desc = "non-negative `integer`. Defines the number of 
+                            logical cores to be used for parallel computation.
+                            The default value is 0, which disables parallel
+                            computing."),
     defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
-      desc = "optional. Simulation time at which to start this module. Defaults 
-              to simulation start time."),
+                    desc = "when to start this module? By default, the start 
+                            time of the simulation."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
-      desc = "optional. Interval in simulation time units between two runs of 
-              this module.")
+                    desc = "optional. Interval between two runs of this module,
+                            expressed in units of simulation time.")
   ),
-  inputObjects = data.frame(
-    objectName = "fires",
-    objectClass = "SpatialPointsDataFrame",
-    sourceURL = "",
-    other = NA_character_,
-    stringsAsFactors = FALSE
+  inputObjects = rbind(
+    expectsInput(
+      objectName = "fires",
+      objectClass = "SpatialPointsDataFrame",
+      sourceURL = NA_character_,
+      desc = "An object of class SpatialPointsDataFrame describing fires
+              starting dates and locations, and final sizes. It must have a 
+              'date' column and a 'size' column."
+    ),
+    expectsInput(
+      objectName = "dataFireSense_SpreadFit",
+      objectClass = "RasterLayer, RasterStack, list",
+      sourceURL = NA_character_,
+      desc = "An object of class RasterLayer or RasterStack or named lists of 
+              RasterLayers or RasterStacks, in which to look for variables with
+              which to predict. RasterLayers and RasterStacks can not be mixed
+              together. RasterStacks can be used in cases where fires have
+              started at different years and should not be spread in the same
+              year of simulation, but are still used to describe a single fire
+              size distribution."
+    )
   ),
-  outputObjects = data.frame(
+  outputObjects = createsOutput(
     objectName = "fireSense_SpreadFitted",
     objectClass = "fireSense_SpreadFit",
-    other = NA_character_,
-    stringsAsFactors = FALSE
+    desc = "A fitted model object of class fireSense_SpreadFit."
   )
 ))
 
@@ -101,45 +127,60 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 ### template initialization
 fireSense_SpreadFitInit <- function(sim) {
   
-  sim <- scheduleEvent(sim, eventTime = p(sim)$initialRunTime, "fireSense_SpreadFit", "run")
+  # Checking parameters
+  stopifnot(P(sim)$trace >= 0)
+  stopifnot(P(sim)$nCores >= 0)
+  
+  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
   sim
   
 } 
 
 fireSense_SpreadFitRun <- function(sim) {
+  
+  moduleName <- current(sim)$moduleName
 
   ## Toolbox: set of functions used internally by fireSense_SpreadFitRun
     ## Raster predict function
-      fireSense_SpreadFitRaster <- function(model, data, par) {
-        
-        model %>%
-          model.matrix(data) %>%
-          `%*%` (par) %>%
-          drop
-        
-      }
+    fireSense_SpreadFitRaster <- function(model, data, par) {
+      
+      model %>%
+        model.matrix(data) %>%
+        `%*%` (par) %>%
+        drop
+      
+    }
 
+  # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
+
+  # Load data in the container
   list2env(as.list(envir(sim)), envir = envData)
   
-  if (!is.null(p(sim)$data)) ## Handling data arg
-    lapply(p(sim)$data, function(x, envData) if (is.list(sim[[x]])) list2env(sim[[x]], envir = envData), envData = envData)
-
-  ## Mapping data objects required by the module to those in the simList environment
-  if (!is.null(p(sim)$mapping)) {
-
-    envData[["fires"]] <- envData[[p(sim)$mapping[["fires"]]]]
-    rm(list = p(sim)$mapping[["fires"]], envir = envData)
+  lapply(P(sim)$data, function(x, envData) {
     
-  }
-  
-  if (is.empty.model(p(sim)$formula))
-    stop("fireSense_SpreadFit> The formula describes an empty model.")
+    if (!is.null(sim[[x]])) {
+      
+      if (is.list(sim[[x]]) && !is.null(names(sim[[x]]))) {
+        
+        list2env(sim[[x]], envir = envData)
+        
+      } else stop(paste0(moduleName, "> '", x, "' is not a named list."))
+      
+    }
+    
+  }, envData = envData)
 
-  terms <- p(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
+  ## Mapping required object "fires" to one in the simList environment
+  envData[["fires"]] <- envData[[P(sim)$fires]]
+
+  if (is.empty.model(P(sim)$formula))
+    stop(paste0(moduleName, "> The formula describes an empty model."))
+
+  terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
-
+  
   if (all(unlist(lapply(allxy, function(x) is(envData[[x]], "RasterStack"))))) {
 
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
@@ -151,7 +192,7 @@ fireSense_SpreadFitRun <- function(sim) {
     loci <- raster::extract(rasters[[1L]], envData[["fires"]], cellnumbers = TRUE, df = TRUE)[["cells"]]
 
     loci %<>% split(envData[["fires"]][["date"]]) %>% lapply(na.omit)
-    lapply(loci, function(x) if (anyDuplicated(x)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel."))
+    lapply(loci, function(x) if (anyDuplicated(x)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel.")) )
     sizes <- envData[["fires"]][["size"]]
 
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
@@ -178,7 +219,7 @@ fireSense_SpreadFitRun <- function(sim) {
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
     loci <- raster::extract(rasters, envData[["fires"]], cellnumbers = TRUE, df = TRUE)[["cells"]]
     
-    if (anyDuplicated(loci)) stop("fireSense_SpreadFit> No more than one fire can start in a given pixel.")
+    if (anyDuplicated(loci)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel."))
     
     sizes <- envData[["fires"]][["size"]]
     
@@ -203,35 +244,38 @@ fireSense_SpreadFitRun <- function(sim) {
     class <- unlist(lapply(allxy, function(x) is(envData[[x]], "RasterLayer") || is(envData[[x]], "RasterStack")))
     
     if (any(!exist)) {
-      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!exist)[1L]], "' not found."))
+      stop(paste0(moduleName, "> Variable '", allxy[which(!exist)[1L]], "' not found."))
     } else if (any(class)) {
-      stop("fireSense_SpreadFit> Data objects are not of the same class (e.g. data.frames).")
+      stop(paste0(moduleName, "> Data objects are not of the same class (e.g. data.frames)."))
     } else {
-      stop(paste0("fireSense_SpreadFit> Variable '", allxy[which(!class)[1L]], "' does not match a RasterLayer or a RasterStack."))
+      stop(paste0(moduleName, "> Variable '", allxy[which(!class)[1L]], "' does not match a RasterLayer or a RasterStack."))
     }
   }
   
   
-  control <- list(itermax = 2000, trace = p(sim)$trace)
+  control <- list(itermax = 2000, trace = P(sim)$trace)
   
-  if (p(sim)$parallel) {
+  if (P(sim)$parallel) {
     
-    control$parallelType <- 1
-    control$packages <- c("data.table", "kSamples", "magrittr", "raster")
+    packages <- c("data.table", "kSamples", "magrittr", "raster")
+    
+    cl <- parallel::makeCluster(P(sim)$parallel)
+    clusterEvalQ(cl, for (i in packages) library(i, character.only = TRUE))
+    control$cluster <- cl
     
   }
   
-  val <- DEoptim(objfun, lower = p(sim)$lower, upper = p(sim)$upper, control = do.call("DEoptim.control", control),
-                 rasters = rasters, formula = p(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
+  val <- DEoptim(objfun, lower = P(sim)$lower, upper = P(sim)$upper, control = do.call("DEoptim.control", control),
+                 rasters = rasters, formula = P(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster) %>%
     `[[` ("optim") %>% `[[` ("bestmem")
 
   sim$fireSense_SpreadFitted <- 
-    list(formula = p(sim)$formula,
+    list(formula = P(sim)$formula,
          coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))))
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
-  if (!is.na(p(sim)$intervalRunModule))
-    sim <- scheduleEvent(sim, time(sim) + p(sim)$intervalRunModule, "fireSense_SpreadFit", "run")
+  if (!is.na(P(sim)$intervalRunModule))
+    sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
   
   sim
   
