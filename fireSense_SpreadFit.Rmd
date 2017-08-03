@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit"
 author: "Jean Marchal"
-date: "July 2017"
+date: "August 2017"
 output:
   html_document: default
   pdf_document: default
@@ -16,9 +16,9 @@ library(SpaDES)
 
 moduleName <- "fireSense_SpreadFit"
 
-workingDirectory <- tempdir() # Location where the module will be downloaded
+spadesModulesDirectory <- tempdir() # Location where the module will be downloaded
 
-downloadModule(moduleName, path = workingDirectory)
+downloadModule(moduleName, path = spadesModulesDirectory)
 ```
 
 # Usage
@@ -26,12 +26,13 @@ downloadModule(moduleName, path = workingDirectory)
 Name|Default|Description
 ----|:-------|---------------------------------------------------------------------
 `formula`|`NULL`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
+`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers or RasterStacks (for time series). If variables are not found in `data` objects, they are searched in the `simList` environment.
+`fires`|`"fires"`|an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 `lower`|`NULL`|see `?DEoptim`.
 `upper`|`NULL`|see `?DEoptim`.
-`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables in the model. `data` objects can be RasterLayers or RasterStacks (for time series), or named list of either several RasterLayers or several RasterStacks, but RasterLayers and RasterStack can not be mixed together. If omitted, or if variables are not found in `data` objects, variables are searched in the `simList` environment.
-`fires`|`"fires"`|a character vector indicating the name of a SpatialPointsDataFrame describing fires starting dates and locations, and final sizes. The SpatialPointsDataFrame must have a "date" column and a "size" column.
-`trace`|`0`|non-negative `integer`. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
-`nCores`|`0`|non-negative `integer`. Defines the number of logical cores to be used for parallel computation. The default value is 0, which disables parallel computing.
+`itermax`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
+`nCores`|`1`|non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.
+`trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
 `initialRunTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
 `intervalRunModule`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time.
 |||
@@ -39,75 +40,62 @@ Name|Default|Description
 ## Usage example
 ```{r module usage example, eval = FALSE}
 library(SpaDES)
-library(PtProcess)
 
-# Packages required by the module
-library(data.table)
-library(DEoptim)
-library(kSamples)
-library(magrittr)
-library(parallel)
-library(raster)
-
-set.seed(1)
-
-# Example where all fires are spread at the same time:
-  # Create an SpatialPointsDataFrame containing fire locations and final sizes data
-  coords <- data.frame(x_coord = runif(1000, -100, 100),
-                       y_coord = runif(1000, -100, 100))
-  data <- data.frame(size = rtappareto(1000, .3, 1e4, 1))
-  firesMappingExample <- SpatialPointsDataFrame(coords, data)
-  
-  # Create a random map of weather
-  nx <- ny <- 100L
-  weather <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
-    gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
-
-# Example for times series, i.e. where fires are spread at different times:
-  # Create an SpatialPointsDataFrame containing fire locations, starting dates, and final sizes data
-  coords <- data.frame(x_coord = runif(1000, -100, 100),
-                       y_coord = runif(1000, -100, 100))
-  data <- data.frame(date = sample(2000:2003, size = 1000, replace = TRUE),
-                     size = rtappareto(1000, .3, 1e4, 1))
-  firesMappingExample <- SpatialPointsDataFrame(coords, data)
-  
-  # Create a time series of random maps of weather
-  nx <- ny <- 100L
-  weather <- lapply(2000:2003, function(x) {
-    raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2) %>%
-      gaussMap(scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE)
-  }) %>% stack
-
-#outputDir <- file.path(tempdir(), "outputs")
+# Define simulation parameters
 times <- list(start = 1, end = 1, timeunit = "year")
+modules <- list("fireSense_SpreadFit")
+paths <- list(
+  modulePath = spadesModulesDirectory
+)
+
+# Define module parameters
 parameters <- list(
   fireSense_SpreadFit = list(
-    formula = ~ weather - 1,
-    lower = c(.2, .1, .01, .3, 0.001),
-    upper = c(.5, 10, .2, 4, .3),
-    fires = "firesMappingExample", # Map data required by the module to data objects in the simList environment.
-    # Here "fires" is mapped to "firesMappingExample".
-    trace = 5, # Print progress every 5 iterations
-    nCores = 2 # Use parallel processing  
+    formula = ~ beta + theta - 1,
+    lower = c(.2, .1, .01, .3, 0.001, 0.001),
+    upper = c(.5, 10, .2, 4, .3, .3),
+    trace = 5,
+    nCores = 8,
+    itermax = 5
   )
 )
 
-modules <- list("fireSense_SpreadFit")
-objects <- c( # Pass objects found in the global environment to the simList environment
-  "firesMappingExample", 
-  "weather"
+# Define from where and how data will be loaded in the simList environment
+inputs <- data.frame(
+  objectName = c("fires", "beta", "theta"),
+  file = c("Z:/fires.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
+  fun = c("shapefile", "stack", "stack"),
+  package = c("raster", "raster", "raster"),
+  loadTime = 1
 )
 
-paths <- list(
-  # cachePath = file.path(outputDir, "cache"),
-  modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to tempdir()
-  # inputPath = inputDir,
-  # outputPath = outputDir
+# Create the simList
+sim <- simInit(
+  times = times,
+  modules = modules,
+  paths = paths,
+  params = parameters,
+  inputs = inputs
 )
 
-mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects, paths = paths)
+tweakSimList <- function(sim) {
+  loadFiles(sim)
+  sim[["fires"]][["date"]] <- NULL
+  sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
+  sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
+  inputs(sim) <- list()
+  sim
+}
 
-spades(mySim)
+# Fires spread at different times
+sim2 <- spades(sim)
+sim2$fireSense_SpreadFitted
+
+# All fires at the same time
+sim <- tweakSimList(sim)
+
+sim3 <- spades(sim)
+sim3$fireSense_SpreadFitted
 ```
 
 # Events
@@ -121,14 +109,15 @@ TODO: Write what is saved. (there is currently nothing saved, but this may chang
 
 # Data dependencies
 ## Input data
-- **dataFireSense_SpreadFit**: a RasterLayer or RasterStack or a named list containing either several RasterLayers or several RasterStacks, in which to look for variables with which to predict. RasterLayers and RasterStacks can not be mixed together. RasterStacks can be used in cases where fires have started at different years and should not be spread in the same year of simulation, but are still used to describe a single fire size distribution.
-- **fires**: an object of class SpatialPointsDataFrame describing fires starting dates and locations, and final sizes. It must have a "date" column and a "size" column.
+- **dataFireSense_SpreadFit**: One or more objects of class 'RasterLayer' or 'RasterStack', in which to look for variables present in the model formula. RasterStacks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
+- **fires**: an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 
 ## Output data
 - **fireSense_SpreadFitted**: an object of class `fireSense_SpreadFit`, i.e. a list containing the following components:
 
     - formula
     - coef (A, B, D, G are parameters of the logistic function)
+    - AD (Two-samples Anderson-Darling statistic)
 
 # Links to other modules
 This module can be used in association with fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environmental conditions.
