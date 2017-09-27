@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit"
-author: "Jean Marchal"
+author: "Jean Marchal (jean.d.marchal@gmail.com)"
 date: "August 2017"
 output:
   html_document: default

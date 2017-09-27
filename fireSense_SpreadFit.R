@@ -101,30 +101,29 @@ defineModule(sim, list(
 #   - type `init` is required for initialiazation
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
-  if (eventType == "init") {
-    sim <- sim$fireSense_SpreadFitInit(sim)
 
-  } else if (eventType == "run") {
-    sim <- sim$fireSense_SpreadFitRun(sim)
-
-  } else if (eventType == "save") {
-    # ! ----- EDIT BELOW ----- ! #
-    # do stuff for this event
-    
-    # e.g., call your custom functions/methods here
-    # you can define your own methods below this `doEvent` function
-    
-    # schedule future event(s)
-    
-    # e.g.,
-    # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SpreadFit", "save")
-    
-    # ! ----- STOP EDITING ----- ! #
+  switch(
+    eventType,
+    init = { sim <- sim$fireSense_SpreadFitInit(sim) },
+    run = { sim <- sim$fireSense_SpreadFitRun(sim) },
+    save = {
+      # ! ----- EDIT BELOW ----- ! #
+      # do stuff for this event
       
-  } else {
+      # e.g., call your custom functions/methods here
+      # you can define your own methods below this `doEvent` function
+      
+      # schedule future event(s)
+      
+      # e.g.,
+      # sim <- scheduleEvent(sim, time(sim) + increment, "fireSense_SpreadFit", "save")
+      
+      # ! ----- STOP EDITING ----- ! #
+    },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
-  }
+  )
+  
   invisible(sim)
 }
 
@@ -141,7 +140,7 @@ fireSense_SpreadFitInit <- function(sim) {
   stopifnot(P(sim)$nCores >= 1)
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
-  sim
+  invisible(sim)
   
 } 
 
@@ -307,7 +306,7 @@ fireSense_SpreadFitRun <- function(sim) {
   if (!is.na(P(sim)$intervalRunModule))
     sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
   
-  sim
+  invisible(sim)
   
 }
 
