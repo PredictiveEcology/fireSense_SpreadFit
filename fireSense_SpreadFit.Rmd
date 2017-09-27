@@ -25,7 +25,7 @@ downloadModule(moduleName, path = spadesModulesDirectory)
 ## Module parameters
 Name|Default|Description
 ----|:-------|---------------------------------------------------------------------
-`formula`|`NULL`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
+`formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
 `data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers or RasterStacks (for time series). If variables are not found in `data` objects, they are searched in the `simList` environment.
 `fires`|`"fires"`|an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 `lower`|`NULL`|see `?DEoptim`.
@@ -51,7 +51,7 @@ paths <- list(
 # Define module parameters
 parameters <- list(
   fireSense_SpreadFit = list(
-    formula = ~ beta + theta - 1,
+    formula = ~ weather + vegetation - 1,
     lower = c(.2, .1, .01, .3, 0.001, 0.001),
     upper = c(.5, 10, .2, 4, .3, .3),
     trace = 5,
@@ -63,7 +63,7 @@ parameters <- list(
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = c("fires", "beta", "theta"),
-  file = c("Z:/fires.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
+  file = c("fires.shp", "weather.tif", "vegetation.tif"),
   fun = c("shapefile", "stack", "stack"),
   package = c("raster", "raster", "raster"),
   loadTime = 1
@@ -103,9 +103,6 @@ Events are scheduled as follows:
 
 - Module initiation
 - Model fitting
-
-## Saving
-TODO: Write what is saved. (there is currently nothing saved, but this may change in the future)
 
 # Data dependencies
 ## Input data

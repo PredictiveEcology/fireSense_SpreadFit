@@ -4,7 +4,7 @@ library(SpaDES)
 times <- list(start = 1, end = 1, timeunit = "year")
 modules <- list("fireSense_SpreadFit")
 paths <- list(
-  modulePath = file.path("~/Documents/GitHub/McIntire-lab/modulesPrivate/") ## TODO: change this to /path/to/modules/
+  modulePath = "~/Documents/GitHub/McIntire-lab/modulesPrivate/"
 )
 
 # Define module parameters
@@ -22,7 +22,7 @@ parameters <- list(
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = c("fires", "beta", "theta"),
-  file = c("Z:/fires.shp", "Z:/beta__STACK.tif", "Z:/theta__STACK.tif"),
+  file = c("C:/Z/fires.shp", "C:/Z/beta__STACK.tif", "C:/Z/theta__STACK.tif"),
   fun = c("shapefile", "stack", "stack"),
   package = c("raster", "raster", "raster"),
   loadTime = 1

@@ -11,7 +11,7 @@ defineModule(sim, list(
   keywords = c("fire", "spread", "POM", "percolation"),
   authors = c(person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("0.1.0"),
+  version = list(SpaDES.core = "0.1.0", fireSense_SpreadFit = "0.0.1"),,
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -20,7 +20,7 @@ defineModule(sim, list(
   reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
-    defineParameter(name = "formula", class = "formula", default = NULL,
+    defineParameter(name = "formula", class = "formula", default = NA,
                     desc = 'a formula describing the model to be fitted. Only 
                             the RHS needs to be provided.'),
     defineParameter(name = "data", class = "character", 
@@ -63,7 +63,8 @@ defineModule(sim, list(
                             time of the simulation."),
     defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
-                            expressed in units of simulation time.")
+                            expressed in units of simulation time."),
+    defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
   ),
   inputObjects = rbind(
     expectsInput(
@@ -135,11 +136,14 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 ### template initialization
 fireSense_SpreadFitInit <- function(sim) {
   
+  moduleName <- current(sim)$moduleName
+  
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 1)
+  if (!is(P(sim)$formula, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter is not of class formula."))
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, current(sim)$moduleName, "run")
+  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
   invisible(sim)
   
 } 
@@ -147,7 +151,9 @@ fireSense_SpreadFitInit <- function(sim) {
 fireSense_SpreadFitRun <- function(sim) {
   
   moduleName <- current(sim)$moduleName
-
+  currentTime <- time(sim, timeunit(sim))
+  endTime <- end(sim, timeunit(sim))
+  
   ## Toolbox: set of functions used internally by fireSense_SpreadFitRun
     ## Raster predict function
     fireSense_SpreadFitRaster <- function(model, data, par) {
@@ -227,7 +233,7 @@ fireSense_SpreadFitRun <- function(sim) {
         calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
       
       ## 10 replicates to better estimate the median
-      (lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+      (lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
           do.call("rbind", .) %>%
           apply(2L, median) %>%
           list(sizes) %>%
@@ -247,7 +253,6 @@ fireSense_SpreadFitRun <- function(sim) {
     
     if (any(badClass))
       stop(paste0(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack."))
-    
     
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
       lapply(unstack) %>%
@@ -270,7 +275,7 @@ fireSense_SpreadFitRun <- function(sim) {
              calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
            
            ## 10 replicates to better estimate the median
-           lapply(1:10, function(i) tabulate(SpaDES::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+           lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
              do.call("rbind", .) %>%
              apply(2L, median)
          }, loci = loci, SIMPLIFY = FALSE) %>%
@@ -297,14 +302,15 @@ fireSense_SpreadFitRun <- function(sim) {
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
   
-  sim$fireSense_SpreadFitted <- 
-    list(formula = P(sim)$formula,
-         coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
-         AD = AD)
+  sim$fireSense_SpreadFitted[as.character(currentTime)] <- list(
+    formula = P(sim)$formula,
+    coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
+    AD = AD
+  )
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
-  if (!is.na(P(sim)$intervalRunModule))
-    sim <- scheduleEvent(sim, time(sim) + P(sim)$intervalRunModule, moduleName, "run")
+  if (!is.na(P(sim)$intervalRunModule) && (currentTime + P(sim)$intervalRunModule) <= endTime) # Assumes time only moves forward
+    sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
   
   invisible(sim)
   
