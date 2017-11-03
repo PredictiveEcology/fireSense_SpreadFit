@@ -186,9 +186,9 @@ downloadModule(moduleName, path = spadesModulesDirectory)</code></pre>
 <td>integer defining the maximum number of iterations allowed (DEoptim optimizer).</td>
 </tr>
 <tr class="odd">
-<td><code>nCores</code></td>
-<td align="left"><code>1</code></td>
-<td>non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.</td>
+<td><code>cl</code></td>
+<td align="left"><code>NULL</code></td>
+<td>Existing parallel cluster object. If provided, parallel computation is turned on internally whenever possible.</td>
 </tr>
 <tr class="even">
 <td><code>trace</code></td>

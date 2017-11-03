@@ -42,17 +42,16 @@ defineModule(sim, list(
                             fires are assumed to have started at the same time
                             interval."),
     defineParameter(name = "lower", class = "numeric", default = NULL,
-                    desc = "see `?DEoptim`."),
+                    desc = "see `?DEoptim`. Lower bounds should be supplied for the lower bound, upper bound, slope, asymmetry, Then in the order they appear in the formula. Lower bounds for the parameters of the logistic function should be supplied first, while the model parameters need to be supplied after."),
     defineParameter(name = "upper", class = "numeric", default = NULL,
                     desc = "see `?DEoptim`."),
     defineParameter(name = "itermax", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
-    defineParameter(name = "nCores", class = "integer", default = 1, 
-                    desc = "non-negative integer. Defines the number of 
-                            logical cores to be used for parallel computation.
-                            The default value is 1, which disables parallel
-                            computing."),
+    defineParameter(name = "cl", class = "cluster", default = NULL,
+                    desc = "Existing parallel cluster object. If provided, 
+                            parallel computation is turned on internally 
+                            whenever possible."),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
@@ -140,7 +139,6 @@ fireSense_SpreadFitInit <- function(sim) {
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$nCores >= 1)
   if (!is(P(sim)$formula, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter is not of class formula."))
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
@@ -267,7 +265,7 @@ fireSense_SpreadFitRun <- function(sim) {
     sizes <- envData[["fires"]][["size"]]
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
-      
+
       (rasters %>%
          mapply(FUN = function(x, loci) {
            
@@ -287,10 +285,9 @@ fireSense_SpreadFitRun <- function(sim) {
     
   control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
   
-  if (P(sim)$nCores > 1) {
+  if ( !is.null(P(sim)$cl) ) {
     
-    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
-    on.exit(stopCluster(cl))
+    cl <- P(sim)$cl
     clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     control$cluster <- cl
     
