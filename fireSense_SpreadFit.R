@@ -100,8 +100,8 @@ defineModule(sim, list(
 ## event types
 #   - type `init` is required for initialiazation
 
-doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
-
+doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) 
+{
   switch(
     eventType,
     init = { sim <- sim$fireSense_SpreadFitInit(sim) },
@@ -133,8 +133,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 #   - keep event functions short and clean, modularize by calling subroutines from section below.
 
 ### template initialization
-fireSense_SpreadFitInit <- function(sim) {
-  
+fireSense_SpreadFitInit <- function(sim)
+{
   moduleName <- current(sim)$moduleName
   
   # Checking parameters
@@ -143,24 +143,22 @@ fireSense_SpreadFitInit <- function(sim) {
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
   invisible(sim)
-  
 } 
 
-fireSense_SpreadFitRun <- function(sim) {
-  
+fireSense_SpreadFitRun <- function(sim)
+{
   moduleName <- current(sim)$moduleName
   currentTime <- time(sim, timeunit(sim))
   endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by fireSense_SpreadFitRun
     ## Raster predict function
-    fireSense_SpreadFitRaster <- function(model, data, par) {
-      
+    fireSense_SpreadFitRaster <- function(model, data, par)
+    {
       model %>%
         model.matrix(data) %>%
         `%*%` (par) %>%
         drop
-      
     }
 
   # Create a container to hold the data
@@ -190,24 +188,23 @@ fireSense_SpreadFitRun <- function(sim) {
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
   
-  if (is.null(envData[["fires"]][["date"]])) { # All fires started during the same time interval
-
-    for(x in P(sim)$data) {
-      
-      if (!is.null(sim[[x]])) {
-        
-        if (is(sim[[x]], "RasterStack")) {
-          
+  if (is.null(envData[["fires"]][["date"]])) ## All fires started during the same time interval
+  { 
+    for(x in P(sim)$data)
+    {
+      if (!is.null(sim[[x]]))
+      {
+        if (is(sim[[x]], "RasterStack"))
+        {
           list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = envData)
           
-        } else if (is(sim[[x]], "RasterLayer")) {
-          
+        } 
+        else if (is(sim[[x]], "RasterLayer")) 
+        {
           # Do nothing
-          
-        } else stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
-        
+        } 
+        else stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
       }
-      
     }
     
     missing <- !allxy %in% ls(envData, all.names = TRUE)
@@ -225,8 +222,8 @@ fireSense_SpreadFitRun <- function(sim) {
     
     if (anyDuplicated(loci)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel."))
     
-    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
-      
+    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
+    {
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
         calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
       
@@ -240,8 +237,9 @@ fireSense_SpreadFitRun <- function(sim) {
       )[1L, 1L]
     }  
     
-  } else { # Fires started at different time intervals
-    
+  } 
+  else ## Fires started at different time intervals
+  { 
     missing <- !allxy %in% ls(envData, all.names = TRUE)
     
     if (any(missing))
@@ -264,11 +262,11 @@ fireSense_SpreadFitRun <- function(sim) {
     lapply(loci, function(x) if (anyDuplicated(x)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel during the same time interval.")))
     sizes <- envData[["fires"]][["size"]]
     
-    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster) {
-
+    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
+    {
       (rasters %>%
-         mapply(FUN = function(x, loci) {
-           
+         mapply(FUN = function(x, loci)
+         {
            r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
              calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
            
@@ -278,19 +276,16 @@ fireSense_SpreadFitRun <- function(sim) {
              apply(2L, median)
          }, loci = loci, SIMPLIFY = FALSE) %>%
          unlist %>% list(sizes) %>% ad.test %>% `[[` ("ad"))[1L, 1L]
-      
     }
-        
   }
     
   control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
   
-  if ( !is.null(P(sim)$cl) ) {
-    
+  if ( !is.null(P(sim)$cl) )
+  {
     cl <- P(sim)$cl
     clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     control$cluster <- cl
-    
   }
   
   DE <- DEoptim(objfun, lower = P(sim)$lower, upper = P(sim)$upper, control = do.call("DEoptim.control", control),
@@ -310,12 +305,12 @@ fireSense_SpreadFitRun <- function(sim) {
     sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
   
   invisible(sim)
-  
 }
 
 
 ### template for save events
-fireSense_SpreadFitSave <- function(sim) {
+fireSense_SpreadFitSave <- function(sim)
+{
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
