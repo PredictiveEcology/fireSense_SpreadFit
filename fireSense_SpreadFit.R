@@ -294,7 +294,7 @@ fireSense_SpreadFitRun <- function(sim)
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
   
-  sim$fireSense_SpreadFitted[as.character(currentTime)] <- list(
+  sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
     coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
     AD = AD
