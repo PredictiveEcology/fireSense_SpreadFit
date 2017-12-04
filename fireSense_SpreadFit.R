@@ -197,7 +197,6 @@ fireSense_SpreadFitRun <- function(sim)
         if (is(sim[[x]], "RasterStack"))
         {
           list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = envData)
-          
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
