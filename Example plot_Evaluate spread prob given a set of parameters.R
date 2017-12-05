@@ -1,4 +1,7 @@
 library(ggplot2)
+library(magrittr)
+library(raster)
+library(SpaDES.tools)
 
 graphFun <- function(x, a, b, d, g)
 {
@@ -56,10 +59,13 @@ graphFun <- function(x, a, b, d, g)
   p 
 }
 
-r <- raster()
 
-min <- minValue(r)
-max <- maxValue(r)
+nx <- ny <- 100L
+r <- raster(nrows = ny, ncols = nx, xmn = -nx/2, xmx = nx/2, ymn = -ny/2, ymx = ny/2)
+fireWeather <- gaussMap(r, scale = 300, var = 0.03, speedup = nx/5e2, inMemory = TRUE) * 10
+
+min <- minValue(fireWeather)
+max <- maxValue(fireWeather)
 x <-  seq(min, max, length.out = 100)
-graphFun(x = x, a = .5, b = seq(0.05, 10, length.out = 10), d = .05, g = 1)
+graphFun(x = x, a = .5, b = seq(0.1, 10, length.out = 10), d = .05, g = 1)
 graphFun(x = x, a = .5, b = 1, d = .05, g = seq(.01, 5, length.out = 10))
