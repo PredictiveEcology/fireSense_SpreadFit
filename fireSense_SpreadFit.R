@@ -48,10 +48,11 @@ defineModule(sim, list(
     defineParameter(name = "itermax", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
-    defineParameter(name = "cl", class = "cluster", default = NULL,
-                    desc = "Existing parallel cluster object. If provided, 
-                            parallel computation is turned on internally 
-                            whenever possible."),
+    defineParameter(name = "nCores", class = "integer", default = 1,
+                    desc = "non-negative integer. Defines the number of logical
+                            cores to be used for parallel computation. The
+                            default value is 1, which disables parallel 
+                            computing."),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
@@ -139,6 +140,7 @@ fireSense_SpreadFitInit <- function(sim)
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
+  stopifnot(P(sim)$nCores >= 0)
   if (!is(P(sim)$formula, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter is not of class formula."))
   
   sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
@@ -277,10 +279,11 @@ fireSense_SpreadFitRun <- function(sim)
     
   control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
   
-  if ( !is.null(P(sim)$cl) )
+  if (P(sim)$nCores > 1) 
   {
-    cl <- P(sim)$cl
-    clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
+    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
+    on.exit(stopCluster(cl))
+    parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     control$cluster <- cl
   }
   
