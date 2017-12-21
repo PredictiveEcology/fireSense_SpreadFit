@@ -215,9 +215,32 @@ fireSense_SpreadFitRun <- function(sim)
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters, envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE)[["cells"]]
-    
-    if (anyDuplicated(loci)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel."))
+    loci <- slot(
+      raster::extract(rasters[[1L]], envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+      "data"
+    ) %>%
+      with(., 
+           {
+             if (anyDuplicated(cells))
+             {
+               warning(paste0(moduleName, "> No more than one fire can start in a given pixel during",
+                              "the same time interval, keeping the largest fire."), immediate. = TRUE)
+               
+               cells[-unlist(
+                 lapply(
+                   unique(cells[duplicated(cells)]), 
+                   function(locus)
+                   {
+                     wh <- which(cells == locus)
+                     sizes <- size[wh]
+                     wh[-which.max(sizes)]
+                   }
+                 )
+               )]
+             }
+             else cells
+           }
+      )
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
@@ -235,7 +258,20 @@ fireSense_SpreadFitRun <- function(sim)
     }
   }
   else ## Fires started at different time intervals
-  { 
+  {
+    for(x in P(sim)$data)
+    {
+      if (!is.null(sim[[x]]))
+      {
+        if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterLayer"))
+        {
+          envData[[x]] <- sim[[x]]
+        } 
+        else 
+          stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
+      }
+    }
+    
     missing <- !allxy %in% ls(envData, all.names = TRUE)
     
     if (any(missing))
@@ -252,10 +288,42 @@ fireSense_SpreadFitRun <- function(sim)
       do.call("mapply", args = .)
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- raster::extract(rasters[[1L]], envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE)[["cells"]]
+    loci <- slot(
+      raster::extract(rasters[[1L]], envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+      "data"
+    )
     
-    loci %<>% split(envData[["fireLoc_FireSense_SpreadFit"]][["date"]]) %>% lapply(na.omit)
-    lapply(loci, function(x) if (anyDuplicated(x)) stop(paste0(moduleName, "> No more than one fire can start in a given pixel during the same time interval.")))
+    loci %<>% 
+      split(envData[["fireLoc_FireSense_SpreadFit"]][["date"]]) %>% 
+      lapply(na.omit) %>%
+      lapply(
+        function(x)
+        {
+          loci <- x[["cells"]]
+          if (anyDuplicated(loci))
+          {
+            warning(paste0(moduleName, "> No more than one fire can start in a given pixel during",
+                           "the same time interval, keeping the largest fire."), immediate. = TRUE)
+            
+            return(
+              loci[-unlist(
+                lapply(
+                  unique(loci[duplicated(loci)]), 
+                  function(locus)
+                  {
+                    wh <- which(loci == locus)
+                    sizes <- x[wh, "size"]
+                    wh[-which.max(sizes)]
+                  }
+                )
+              )]
+            )
+          }
+          else
+            return (loci)
+        }
+      )
+    
     sizes <- envData[["fireLoc_FireSense_SpreadFit"]][["size"]]
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
