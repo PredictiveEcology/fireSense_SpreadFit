@@ -165,18 +165,17 @@ fireSense_SpreadFitRun <- function(sim)
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
   
-  
   ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the simList environment
   envData[["fireLoc_FireSense_SpreadFit"]] <- sim[[P(sim)$fireLocations]]
   
-  if (!is.null(envData[["fireLoc_FireSense_SpreadFit"]]))
+  if (is.null(envData[["fireLoc_FireSense_SpreadFit"]]))
     stop(paste0(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL."))
   
   if (!is(envData[["fireLoc_FireSense_SpreadFit"]], "SpatialPointsDataFrame"))
     stop(paste0(moduleName, "> '", P(sim)$fireLocations, "' is not a SpatialPointsDataFrame."))
   
   if (is.null(envData[["fireLoc_FireSense_SpreadFit"]][["size"]]))
-    stop(paste0(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations,"' must have a 'size' column."))
+    stop(paste0(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations, "' must have a 'size' column."))
   
   sizes <- envData[["fireLoc_FireSense_SpreadFit"]][["size"]]
   
