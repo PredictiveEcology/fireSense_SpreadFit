@@ -164,9 +164,6 @@ fireSense_SpreadFitRun <- function(sim)
   # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
-
-  # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = envData)
   
   if (!exists(P(sim)$fires, envData, inherits = FALSE))
     stop(paste0(moduleName, "> '", P(sim)$fires, "' not found in the simList environment."))
