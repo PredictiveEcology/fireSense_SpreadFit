@@ -23,7 +23,7 @@ parameters <- list(
 
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
-  objectName = c("fires", "beta", "theta"),
+  objectName = c("fireLoc_FireSense_SpreadFit", "beta", "theta"),
   file = c("C:/Z/fires.shp", "C:/Z/beta__STACK.tif", "C:/Z/theta__STACK.tif"),
   fun = c("shapefile", "stack", "stack"),
   package = c("raster", "raster", "raster"),
