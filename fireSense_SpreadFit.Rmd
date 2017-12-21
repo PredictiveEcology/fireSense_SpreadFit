@@ -31,7 +31,7 @@ Name|Default|Description
 `lower`|`NULL`|see `?DEoptim`.
 `upper`|`NULL`|see `?DEoptim`.
 `itermax`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
-`cl`|`NULL`|Existing parallel cluster object. If provided, parallel computation is turned on internally whenever possible.
+`nCores`|`1`|non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.
 `trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
 `initialRunTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
 `intervalRunModule`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time.
