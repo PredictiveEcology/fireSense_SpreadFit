@@ -243,8 +243,7 @@ fireSense_SpreadFitRun <- function(sim)
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-        calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
-      
+        calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
       ## 10 replicates to better estimate the median
       (lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
           do.call("rbind", .) %>%
@@ -332,7 +331,7 @@ fireSense_SpreadFitRun <- function(sim)
          {
            r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
              calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
-           
+
            ## 10 replicates to better estimate the median
            lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
              do.call("rbind", .) %>%
