@@ -164,6 +164,9 @@ fireSense_SpreadFitRun <- function(sim)
   # Create a container to hold the data
   envData <- new.env(parent = envir(sim))
   on.exit(rm(envData))
+
+  # Load inputs in the data container
+  list2env(as.list(envir(sim)), envir = envData)
   
   ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the simList environment
   envData[["fireLoc_FireSense_SpreadFit"]] <- envData[[P(sim)$fireLocations]]
