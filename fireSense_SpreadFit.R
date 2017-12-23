@@ -166,7 +166,7 @@ fireSense_SpreadFitRun <- function(sim)
   on.exit(rm(envData))
   
   ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the simList environment
-  envData[["fireLoc_FireSense_SpreadFit"]] <- sim[[P(sim)$fireLocations]]
+  envData[["fireLoc_FireSense_SpreadFit"]] <- envData[[P(sim)$fireLocations]]
   
   if (is.null(envData[["fireLoc_FireSense_SpreadFit"]]))
     stop(paste0(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL."))
@@ -197,7 +197,7 @@ fireSense_SpreadFitRun <- function(sim)
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
-          envData[[x]] <- sim[[x]]
+          # Do nothing
         } 
         else stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
       }
@@ -272,8 +272,7 @@ fireSense_SpreadFitRun <- function(sim)
     missing <- !allxy %in% ls(envData, all.names = TRUE)
     
     if (any(missing))
-      stop(paste0(moduleName, "> '", paste(allxy[missing], collapse = "', '"),
-                  "' not found in data objects."))
+      stop(paste0(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment."))
     
     badClass <- !unlist(lapply(allxy, function(x) is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack")))
     
