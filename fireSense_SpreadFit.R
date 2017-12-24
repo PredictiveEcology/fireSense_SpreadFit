@@ -29,7 +29,9 @@ defineModule(sim, list(
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
                             objects can be RasterLayers or RasterStacks (for
-                            time series)."),
+                            time series). If variables are not found in `data` 
+                            objects, they are searched in the `simList`
+                            environment."),
     defineParameter(name = "fireLocations", class = "character", 
                     default = "fireLoc_FireSense_SpreadFit",
                     desc = "an object of class SpatialPointsDataFrame describing
