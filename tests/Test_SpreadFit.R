@@ -1,6 +1,6 @@
 library(SpaDES)
 
-modulePath <- "~/Documents/GitHub/McIntire-lab/modulesPrivate/"
+modulePath <- normalizePath("..")
 
 # Define simulation parameters
 times <- list(start = 1, end = 1, timeunit = "year")
@@ -12,7 +12,7 @@ paths <- list(
 # Define module parameters
 parameters <- list(
   fireSense_SpreadFit = list(
-    formula = ~ beta + theta - 1,
+    formula = ~ TP_Beta + TP_Theta,
     lower = c(.2, .1, .01, .3, 0.001, 0.001),
     upper = c(.5, 10, .2, 4, .3, .3),
     trace = 5,
@@ -23,10 +23,10 @@ parameters <- list(
 
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
-  objectName = c("fireLoc_FireSense_SpreadFit", "beta", "theta"),
-  file = c("C:/Z/fires.shp", "C:/Z/beta__STACK.tif", "C:/Z/theta__STACK.tif"),
-  fun = c("shapefile", "stack", "stack"),
-  package = c("raster", "raster", "raster"),
+  objectName = c("fireLoc_FireSense_SpreadFit", "TP_Beta", "TP_Theta"),
+  file = c("../inputs/fireLoc_FireSense_SpreadFit.shp", "../inputs/dataFireSense_SizePredict_RASTER.rds"),
+  fun = c("shapefile", "readRDS"),
+  package = c("raster", "base"),
   loadTime = 1
 )
 
