@@ -58,10 +58,10 @@ defineModule(sim, list(
                             the progress of the optimization are printed every
                             `trace` iteration. Default is 0, which turns off
                             tracing."),    
-    defineParameter(name = "initialRunTime", class = "numeric", default = start(sim),
+    defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start 
                             time of the simulation."),
-    defineParameter(name = "intervalRunModule", class = "numeric", default = NA, 
+    defineParameter(name = ".runInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
                             expressed in units of simulation time."),
     defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
@@ -143,7 +143,7 @@ fireSense_SpreadFitInit <- function(sim)
   stopifnot(P(sim)$nCores >= 0)
   if (!is(P(sim)$formula, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter is not of class formula."))
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$initialRunTime, moduleName, "run")
+  sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
   invisible(sim)
 } 
 
@@ -368,8 +368,8 @@ fireSense_SpreadFitRun <- function(sim)
   )
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
-  if (!is.na(P(sim)$intervalRunModule) && (currentTime + P(sim)$intervalRunModule) <= endTime) # Assumes time only moves forward
-    sim <- scheduleEvent(sim, currentTime + P(sim)$intervalRunModule, moduleName, "run")
+  if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
+    sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
   
   invisible(sim)
 }
