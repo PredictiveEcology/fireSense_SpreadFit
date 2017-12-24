@@ -26,7 +26,7 @@ downloadModule(moduleName, path = spadesModulesDirectory)
 Name|Default|Description
 ----|:-------|---------------------------------------------------------------------
 `formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
-`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers or RasterStacks (for time series). If variables are not found in `data` objects, they are searched in the `simList` environment.
+`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, or RasterStacks for time series (one layer per time unit). If variables are not found in `data` objects, they are searched in the `simList` environment.
 `fireLocations`|`"firesFireSense_SpreadFit"`|an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 `lower`|`NULL`|see `?DEoptim`.
 `upper`|`NULL`|see `?DEoptim`.

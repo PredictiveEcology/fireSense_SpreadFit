@@ -28,8 +28,8 @@ defineModule(sim, list(
                     desc = "a character vector indicating the names of objects 
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
-                            objects can be RasterLayers or RasterStacks (for
-                            time series). If variables are not found in `data` 
+                            objects can be RasterLayers, or RasterStacks for
+                            time series (one layer per time unit). If variables are not found in `data` 
                             objects, they are searched in the `simList`
                             environment."),
     defineParameter(name = "fireLocations", class = "character", 
@@ -66,7 +66,7 @@ defineModule(sim, list(
                             expressed in units of simulation time."),
     defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
                     desc = "optional. When to start saving output to a file."),
-    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
+    defineParameter(name = ".saveInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between save events."),
     defineParameter(".useCache", "numeric", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
   ),

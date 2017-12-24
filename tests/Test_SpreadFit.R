@@ -17,16 +17,19 @@ parameters <- list(
     upper = c(.5, 10, .2, 4, .3, .3),
     trace = 5,
     nCores = 1,
-    itermax = 5
+    itermax = 5,
+    data = c("TP_Beta", "TP_Theta")
   )
 )
 
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = c("fireLoc_FireSense_SpreadFit", "TP_Beta", "TP_Theta"),
-  file = c("../inputs/fireLoc_FireSense_SpreadFit.shp", "../inputs/dataFireSense_SizePredict_RASTER.rds"),
-  fun = c("shapefile", "readRDS"),
-  package = c("raster", "base"),
+  file = normalizePath(c("../inputs/fireLoc_FireSense_SpreadFit.shp",
+                         "../inputs/dataFireSense_SpreadFit_Beta.tif",
+                         "../inputs/dataFireSense_SpreadFit_Theta.tif")),
+  fun = c("shapefile", "stack", "stack"),
+  package = c("raster", "raster", "raster"),
   loadTime = 1
 )
 
@@ -41,10 +44,10 @@ sim <- simInit(
 
 # All fires at the same time
 loadFiles(sim)
-sim[["fires"]][["date"]] <- NULL
-sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
-sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
-inputs(sim) <- list()
+# sim[["fires"]][["date"]] <- NULL
+# sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
+# sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
+# inputs(sim) <- list()
 
 sim <- spades(sim)
 sim$fireSense_SpreadFitted
