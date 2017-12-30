@@ -13,8 +13,8 @@ paths <- list(
 parameters <- list(
   fireSense_SpreadFit = list(
     formula = ~ TP_Beta + TP_Theta,
-    lower = c(.2, .1, .01, .3, 0.001, 0.001),
-    upper = c(.5, 10, .2, 4, .3, .3),
+    lower = c(.2, .1, .01, .3, 0.001, 0.001, 0.001),
+    upper = c(.5, 10, .2, 4, .3, .3, .3),
     trace = 5,
     nCores = 1,
     itermax = 5,
@@ -44,10 +44,10 @@ sim <- simInit(
 
 # All fires at the same time
 loadFiles(sim)
-# sim[["fires"]][["date"]] <- NULL
-# sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
-# sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
-# inputs(sim) <- list()
+sim[["fires"]][["date"]] <- NULL
+sim[["TP_Beta"]] <- setNames(raster::unstack(sim[["TP_Beta"]])[[1]], "TP_Beta")
+sim[["TP_Theta"]] <- setNames(raster::unstack(sim[["TP_Theta"]])[[1]], "TP_Theta")
+inputs(sim) <- list()
 
 sim <- spades(sim)
 sim$fireSense_SpreadFitted
