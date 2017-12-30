@@ -265,7 +265,7 @@ fireSense_SpreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterLayer"))
         {
-          envData[[x]] <- sim[[x]]
+          next
         } 
         else 
           stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
