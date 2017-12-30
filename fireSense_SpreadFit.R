@@ -283,7 +283,7 @@ fireSense_SpreadFitRun <- function(sim)
       stop(paste0(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack."))
     
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
-      lapply(unstack) %>%
+      lapply(function(x) if( is(x, "RasterStack")) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
     
