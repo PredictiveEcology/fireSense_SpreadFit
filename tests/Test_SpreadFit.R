@@ -44,7 +44,7 @@ sim <- simInit(
 
 # All fires at the same time
 loadFiles(sim)
-sim[["fires"]][["date"]] <- NULL
+sim[["fireLoc_FireSense_SpreadFit"]][["date"]] <- NULL
 sim[["TP_Beta"]] <- setNames(raster::unstack(sim[["TP_Beta"]])[[1]], "TP_Beta")
 sim[["TP_Theta"]] <- setNames(raster::unstack(sim[["TP_Theta"]])[[1]], "TP_Theta")
 inputs(sim) <- list()
