@@ -29,9 +29,9 @@ defineModule(sim, list(
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
                             objects can be RasterLayers, or RasterStacks for
-                            time series (one layer per time unit). If variables are not found in `data` 
-                            objects, they are searched in the `simList`
-                            environment."),
+                            time series (one layer per time unit). If variables
+                            are not found in `data` objects, they are searched 
+                            in the `simList` environment."),
     defineParameter(name = "fireLocations", class = "character", 
                     default = "fireLoc_FireSense_SpreadFit",
                     desc = "an object of class SpatialPointsDataFrame describing
@@ -132,7 +132,7 @@ fireSense_SpreadFitInit <- function(sim)
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 0)
-  if (!is(P(sim)$formula, "formula")) stop(paste0(moduleName, "> The supplied object for the 'formula' parameter is not of class formula."))
+  if (!is(P(sim)$formula, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
   
   moduleName <- current(sim)$moduleName
   currentTime <- time(sim, timeunit(sim))
@@ -172,18 +172,18 @@ fireSense_SpreadFitRun <- function(sim)
   envData[["fireLoc_FireSense_SpreadFit"]] <- envData[[P(sim)$fireLocations]]
   
   if (is.null(envData[["fireLoc_FireSense_SpreadFit"]]))
-    stop(paste0(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL."))
+    stop(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL.")
   
   if (!is(envData[["fireLoc_FireSense_SpreadFit"]], "SpatialPointsDataFrame"))
-    stop(paste0(moduleName, "> '", P(sim)$fireLocations, "' is not a SpatialPointsDataFrame."))
+    stop(moduleName, "> '", P(sim)$fireLocations, "' is not a SpatialPointsDataFrame.")
   
   if (is.null(envData[["fireLoc_FireSense_SpreadFit"]][["size"]]))
-    stop(paste0(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations, "' must have a 'size' column."))
+    stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations, "' must have a 'size' column.")
   
   sizes <- envData[["fireLoc_FireSense_SpreadFit"]][["size"]]
   
   if (is.empty.model(P(sim)$formula))
-    stop(paste0(moduleName, "> The formula describes an empty model."))
+    stop(moduleName, "> The formula describes an empty model.")
 
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
@@ -202,16 +202,16 @@ fireSense_SpreadFitRun <- function(sim)
         {
           next
         } 
-        else stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
+        else stop(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack.")
       }
     }
-    
+
     missing <- !allxy %in% ls(envData, all.names = TRUE)
     
     if (s <- sum(missing))
-      stop(paste0(moduleName, "> '", allxy[missing][1L], "'",
-                  if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
-                  " not found in data objects."))
+      stop(moduleName, "> '", allxy[missing][1L], "'",
+           if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
+           " not found in data objects.")
     
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
     
@@ -224,8 +224,8 @@ fireSense_SpreadFitRun <- function(sim)
            {
              if (anyDuplicated(cells))
              {
-               warning(paste0(moduleName, "> No more than one fire can start in a given pixel during",
-                              "the same time interval, keeping the largest fire."), immediate. = TRUE)
+               warning(moduleName, "> No more than one fire can start in a given pixel during",
+                       "the same time interval, keeping the largest fire.", immediate. = TRUE)
                
                cells[-unlist(
                  lapply(
@@ -269,19 +269,19 @@ fireSense_SpreadFitRun <- function(sim)
           next
         } 
         else 
-          stop(paste0(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack."))
+          stop(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack.")
       }
     }
     
     missing <- !allxy %in% ls(envData, all.names = TRUE)
     
     if (any(missing))
-      stop(paste0(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment."))
+      stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
     
     badClass <- !unlist(lapply(allxy, function(x) is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack")))
     
     if (any(badClass))
-      stop(paste0(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack."))
+      stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack.")
     
     rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack")) unstack(x) else list(x)) %>%
@@ -303,8 +303,8 @@ fireSense_SpreadFitRun <- function(sim)
           loci <- x[["cells"]]
           if (anyDuplicated(loci))
           {
-            warning(paste0(moduleName, "> No more than one fire can start in a given pixel during",
-                           "the same time interval, keeping the largest fire."), immediate. = TRUE)
+            warning(moduleName, "> No more than one fire can start in a given pixel during",
+                    "the same time interval, keeping the largest fire.", immediate. = TRUE)
             
             return(
               loci[-unlist(
