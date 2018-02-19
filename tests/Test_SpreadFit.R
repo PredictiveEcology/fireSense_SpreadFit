@@ -13,8 +13,8 @@ paths <- list(
 parameters <- list(
   fireSense_SpreadFit = list(
     formula = ~ TP_Beta + TP_Theta,
-    lower = c(.2, .1, .01, .3, 0.001, 0.001, 0.001),
-    upper = c(.5, 10, .2, 4, .3, .3, .3),
+    lower = c(.01, .2, .1,  .3, .001, .001, .001),
+    upper = c(.20, .5, 10,  4., .300, .300, .300),
     trace = 5,
     nCores = 1,
     itermax = 5,
