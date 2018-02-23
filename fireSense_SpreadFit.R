@@ -333,7 +333,7 @@ fireSense_SpreadFitRun <- function(sim)
          mapply(FUN = function(x, loci)
          {
            r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-             calc(function(x) par[3L] + par[1L] / (1 + x^(-par[2L])) ^ par[4L]) ## 5-parameters logistic
+             calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
            
            ## 10 replicates to better estimate the median
            lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
@@ -362,7 +362,7 @@ fireSense_SpreadFitRun <- function(sim)
   
   sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
-    coef = val %>% setNames(nm = c("A", "B", "D", "G", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
+    coef = val %>% setNames(nm = c("d", "a", "b", "g", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
     AD = AD
   )
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
