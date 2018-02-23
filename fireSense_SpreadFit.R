@@ -225,7 +225,7 @@ fireSense_SpreadFitRun <- function(sim)
              if (anyDuplicated(cells))
              {
                warning(moduleName, "> No more than one fire can start in a given pixel during",
-                       "the same time interval, keeping the largest fire.", immediate. = TRUE)
+                       " the same time interval, keeping the largest fire.", immediate. = TRUE)
                
                cells[-unlist(
                  lapply(
