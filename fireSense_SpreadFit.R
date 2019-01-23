@@ -160,27 +160,23 @@ spreadFitRun <- function(sim)
         `%*%` (par) %>%
         drop
     }
-
-  # Create a container to hold the data
-  envData <- new.env(parent = envir(sim))
-  on.exit(rm(envData))
-
+  
   # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = envData)
+  list2env(as.list(envir(sim)), envir = mod)
   
   ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the simList environment
-  envData[["fireLoc_FireSense_SpreadFit"]] <- envData[[P(sim)$fireLocations]]
+  mod[["fireLoc_FireSense_SpreadFit"]] <- mod[[P(sim)$fireLocations]]
   
-  if (is.null(envData[["fireLoc_FireSense_SpreadFit"]]))
+  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]]))
     stop(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL.")
   
-  if (!is(envData[["fireLoc_FireSense_SpreadFit"]], "SpatialPointsDataFrame"))
+  if (!is(mod[["fireLoc_FireSense_SpreadFit"]], "SpatialPointsDataFrame"))
     stop(moduleName, "> '", P(sim)$fireLocations, "' is not a SpatialPointsDataFrame.")
   
-  if (is.null(envData[["fireLoc_FireSense_SpreadFit"]][["size"]]))
+  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]][["size"]]))
     stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations, "' must have a 'size' column.")
   
-  sizes <- envData[["fireLoc_FireSense_SpreadFit"]][["size"]]
+  sizes <- mod[["fireLoc_FireSense_SpreadFit"]][["size"]]
   
   if (is.empty.model(P(sim)$formula))
     stop(moduleName, "> The formula describes an empty model.")
@@ -188,7 +184,7 @@ spreadFitRun <- function(sim)
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
   
-  if (is.null(envData[["fireLoc_FireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
+  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
     {
@@ -196,7 +192,7 @@ spreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterStack"))
         {
-          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = envData)
+          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod)
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
@@ -206,18 +202,18 @@ spreadFitRun <- function(sim)
       }
     }
 
-    missing <- !allxy %in% ls(envData, all.names = TRUE)
+    missing <- !allxy %in% ls(mod, all.names = TRUE)
     
     if (s <- sum(missing))
       stop(moduleName, "> '", allxy[missing][1L], "'",
            if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
            " not found in data objects.")
     
-    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>% stack
+    rasters <- mget(allxy, envir = mod, inherits = FALSE) %>% stack
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
     loci <- slot(
-      raster::extract(rasters[[1L]], envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+      raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
       "data"
     ) %>%
       with(., 
@@ -273,7 +269,7 @@ spreadFitRun <- function(sim)
       }
     }
     
-    missing <- !allxy %in% ls(envData, all.names = TRUE)
+    missing <- !allxy %in% ls(mod, all.names = TRUE)
     
     if (any(missing))
       stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
@@ -283,19 +279,19 @@ spreadFitRun <- function(sim)
     if (any(badClass))
       stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack.")
     
-    rasters <- mget(allxy, envir = envData, inherits = FALSE) %>%
+    rasters <- mget(allxy, envir = mod, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack")) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
     
     ## Get the corresponding loci from the raster sim$landscape for the fire locations
     loci <- slot(
-      raster::extract(rasters[[1L]], envData[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+      raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
       "data"
     )
     
     loci %<>% 
-      split(envData[["fireLoc_FireSense_SpreadFit"]][["date"]]) %>% 
+      split(mod[["fireLoc_FireSense_SpreadFit"]][["date"]]) %>% 
       lapply(na.omit) %>%
       lapply(
         function(x)
@@ -325,7 +321,7 @@ spreadFitRun <- function(sim)
         }
       )
     
-    sizes <- envData[["fireLoc_FireSense_SpreadFit"]][["size"]]
+    sizes <- mod[["fireLoc_FireSense_SpreadFit"]][["size"]]
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
@@ -372,7 +368,6 @@ spreadFitRun <- function(sim)
   
   invisible(sim)
 }
-
 
 spreadFitSave <- function(sim)
 {
