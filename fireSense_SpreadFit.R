@@ -300,7 +300,7 @@ spreadFitRun <- function(sim)
           if (anyDuplicated(loci))
           {
             warning(moduleName, "> No more than one fire can start in a given pixel during",
-                    "the same time interval, keeping the largest fire.", immediate. = TRUE)
+                    " the same time interval, keeping the largest fire.", immediate. = TRUE)
             
             return(
               loci[-unlist(
