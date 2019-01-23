@@ -96,7 +96,7 @@ defineModule(sim, list(
     )
   ),
   outputObjects = createsOutput(
-    objectName = "spreadFitted",
+    objectName = "fireSense_SpreadFitted",
     objectClass = "fireSense_SpreadFit",
     desc = "A fitted model object of class fireSense_SpreadFit."
   )
@@ -356,12 +356,12 @@ spreadFitRun <- function(sim)
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
   
-  sim$spreadFitted <- list(
+  sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
     coef = val %>% setNames(nm = c("d", "a", "b", "g", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
     AD = AD
   )
-  class(sim$spreadFitted) <- "fireSense_SpreadFit"
+  class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
   if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
     sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
@@ -376,7 +376,7 @@ spreadFitSave <- function(sim)
   currentTime <- time(sim, timeUnit)
   
   saveRDS(
-    sim$spreadFitted, 
+    sim$fireSense_SpreadFitted, 
     file = file.path(paths(sim)$out, paste0("fireSense_SpreadFitted_", timeUnit, currentTime, ".rds"))
   )
   
