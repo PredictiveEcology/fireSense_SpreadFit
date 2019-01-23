@@ -152,7 +152,6 @@ spreadFitRun <- function(sim)
   endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by spreadFitRun
-    ## Raster predict function
     fireSense_SpreadFitRaster <- function(model, data, par)
     {
       model %>%
@@ -164,7 +163,7 @@ spreadFitRun <- function(sim)
   # Load inputs in the data container
   list2env(as.list(envir(sim)), envir = mod)
   
-  ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the simList environment
+  ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the module environment
   mod[["fireLoc_FireSense_SpreadFit"]] <- mod[[P(sim)$fireLocations]]
   
   if (is.null(mod[["fireLoc_FireSense_SpreadFit"]]))
@@ -358,7 +357,14 @@ spreadFitRun <- function(sim)
   
   sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
-    coef = val %>% setNames(nm = c("d", "a", "b", "g", if (attr(terms, "intercept")) "Intercept" else NULL, attr(terms, "term.labels"))),
+    coef = setNames(
+      val,
+      nm = c(
+        "d", "a", "b", "g", 
+        if (attr(terms, "intercept")) "Intercept" else NULL,
+        attr(terms, "term.labels")
+      )
+    ),
     AD = AD
   )
   class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
