@@ -230,7 +230,7 @@ spreadFitRun <- function(sim)
                    {
                      wh <- which(cells == locus)
                      sizes <- size[wh]
-                     wh[-which.max(sizes)]
+                     wh[-base::which.max(sizes)]
                    }
                  )
                )]
@@ -310,7 +310,7 @@ spreadFitRun <- function(sim)
                   {
                     wh <- which(loci == locus)
                     sizes <- x[wh, "size"]
-                    wh[-which.max(sizes)]
+                    wh[-base::which.max(sizes)]
                   }
                 )
               )]
