@@ -25,11 +25,12 @@ parameters <- list(
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
   objectName = c("fireLoc_FireSense_SpreadFit", "TP_Beta", "TP_Theta"),
-  file = normalizePath(c("../inputs/fireLoc_FireSense_SpreadFit.shp",
-                         "../inputs/dataFireSense_SpreadFit_Beta.tif",
-                         "../inputs/dataFireSense_SpreadFit_Theta.tif")),
-  fun = c("shapefile", "stack", "stack"),
-  package = c("raster", "raster", "raster"),
+  file = normalizePath(
+    c("../inputs/fireLoc_FireSense_SpreadFit.shp",
+      "../inputs/dataFireSense_SpreadFit_Beta.tif",
+      "../inputs/dataFireSense_SpreadFit_Theta.tif")
+  ),
+  functions = c("raster::shapefile", "raster::raster", "raster::raster"),
   loadTime = 1
 )
 
@@ -45,9 +46,6 @@ sim <- simInit(
 # All fires at the same time
 loadFiles(sim)
 sim[["fireLoc_FireSense_SpreadFit"]][["date"]] <- NULL
-sim[["TP_Beta"]] <- setNames(raster::unstack(sim[["TP_Beta"]])[[1]], "TP_Beta")
-sim[["TP_Theta"]] <- setNames(raster::unstack(sim[["TP_Theta"]])[[1]], "TP_Theta")
-inputs(sim) <- list()
 
 sim <- spades(sim)
 sim$fireSense_SpreadFitted
