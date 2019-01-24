@@ -243,14 +243,28 @@ spreadFitRun <- function(sim)
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
         calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
       
-      ## 10 replicates to better estimate the median
-      (lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
-          do.call("rbind", .) %>%
-          apply(2L, median) %>%
-          list(sizes) %>%
-          ad.test %>%
-          `[[` ("ad")
-      )[1L, 1L]
+      ad.test(
+        list(
+          tabulate(
+            SpaDES.tools::spread(
+              r,
+              loci = loci, 
+              spreadProb = r,
+              returnIndices = TRUE
+            )[["id"]]
+          ),
+          sizes
+        )
+      )[1,1]
+       
+      # 10 replicates to better estimate the median
+      # (lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+      # do.call("rbind", .) %>%
+      # apply(2L, median) %>%
+      # list(sizes) %>%
+      # ad.test %>%
+      # `[[` ("ad")
+      # )[1L, 1L]
     }
   }
   else ## Fires started at different time intervals
