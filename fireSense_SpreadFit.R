@@ -28,17 +28,17 @@ defineModule(sim, list(
                     desc = "a character vector indicating the names of objects 
                             in the `simList` environment in which to look for
                             variables present in the model formula. `data`
-                            objects can be RasterLayers, or RasterStacks for
-                            time series (one layer per time unit). If variables
-                            are not found in `data` objects, they are searched 
-                            in the `simList` environment."),
+                            objects can be RasterLayers, or RasterStacks/RasterBricks.
+                            If the fires are to spread to different days/months/years
+                            we recommend to use RasterStacks/RasterBricks with one layer
+                            per time unit."),
     defineParameter(name = "fireLocations", class = "character", 
                     default = "fireLoc_FireSense_SpreadFit",
                     desc = "an object of class SpatialPointsDataFrame describing
                             fires starting locations, final sizes ('size'
                             column), and possibly the starting dates ('date'
                             column) if fires are to be spread at different time
-                            intervals. If the 'date' column is not present, all
+                            steps. If the 'date' column is not present, all
                             fires are assumed to have started at the same time
                             interval."),
     defineParameter(name = "lower", class = "numeric", default = NULL,
@@ -137,7 +137,7 @@ spreadFitInit <- function(sim)
   moduleName <- current(sim)$moduleName
   currentTime <- time(sim, timeunit(sim))
   
-  sim <- scheduleEvent(sim, eventTime = P(sim)$.runInitialTime, moduleName, "run")
+  sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
   
   if (!is.na(P(sim)$.saveInitialTime))
     sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
@@ -152,6 +152,30 @@ spreadFitRun <- function(sim)
   endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by spreadFitRun
+    chk_duplicatedStartPixels <- function(cells, size)
+    {
+      if (anyDuplicated(cells))
+      {
+        warning(moduleName, "> No more than one fire can start in a given pixel during",
+                " the same time interval, keeping the largest fire.", immediate. = TRUE)
+        
+        to_rm <- unlist(
+          lapply(
+            unique(cells[duplicated(cells)]), 
+            function(locus)
+            {
+              wh <- which(cells == locus)
+              sizes <- size[wh]
+              wh[-base::which.max(sizes)]
+            }
+          )
+        )
+        
+        list(loci = cells[-to_rm], sizes = size[-to_rm])
+      }
+      else list(loci = cells, sizes = size) 
+    }
+  
     fireSense_SpreadFitRaster <- function(model, data, par)
     {
       model %>%
@@ -159,12 +183,12 @@ spreadFitRun <- function(sim)
         `%*%` (par) %>%
         drop
     }
-  
+    
   # Load inputs in the data container
-  list2env(as.list(envir(sim)), envir = mod)
+  # list2env(as.list(envir(sim)), envir = mod)
   
   ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the module environment
-  mod[["fireLoc_FireSense_SpreadFit"]] <- mod[[P(sim)$fireLocations]]
+  mod[["fireLoc_FireSense_SpreadFit"]] <- sim[[P(sim)$fireLocations]]
   
   if (is.null(mod[["fireLoc_FireSense_SpreadFit"]]))
     stop(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL.")
@@ -189,15 +213,15 @@ spreadFitRun <- function(sim)
     {
       if (!is.null(sim[[x]]))
       {
-        if (is(sim[[x]], "RasterStack"))
+        if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
           list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod)
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
-          next
+          mod[[x]] <- sim[[x]]
         } 
-        else stop(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack.")
+        else stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
 
@@ -210,33 +234,17 @@ spreadFitRun <- function(sim)
     
     rasters <- mget(allxy, envir = mod, inherits = FALSE) %>% stack
     
-    ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- slot(
-      raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
-      "data"
-    ) %>%
-      with(., 
-           {
-             if (anyDuplicated(cells))
-             {
-               warning(moduleName, "> No more than one fire can start in a given pixel during",
-                       " the same time interval, keeping the largest fire.", immediate. = TRUE)
-               
-               cells[-unlist(
-                 lapply(
-                   unique(cells[duplicated(cells)]), 
-                   function(locus)
-                   {
-                     wh <- which(cells == locus)
-                     sizes <- size[wh]
-                     wh[-base::which.max(sizes)]
-                   }
-                 )
-               )]
-             }
-             else cells
-           }
-      )
+    list2env(
+      with(
+        slot(
+          ## Get loci from the raster sim$landscape for the fire locations
+          raster::extract(rasters[[1L]], fireLoc_FireSense_SpreadFit, cellnumbers = TRUE, df = TRUE, sp = TRUE),
+          "data"
+        ),
+        chk_duplicatedStartPixels(cells, sizes)
+      ),
+      envir = environment()
+    )
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
@@ -255,7 +263,7 @@ spreadFitRun <- function(sim)
           ),
           sizes
         )
-      )[1,1]
+      )[["ad"]][1,1]
        
       # 10 replicates to better estimate the median
       # (lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
@@ -273,12 +281,12 @@ spreadFitRun <- function(sim)
     {
       if (!is.null(sim[[x]]))
       {
-        if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterLayer"))
+        if (is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
-          next
+          mod[[x]] <- sim[[x]]
         } 
         else 
-          stop(moduleName, "> '", x, "' is not a RasterLayer or a RasterStack.")
+          stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
     
@@ -287,68 +295,71 @@ spreadFitRun <- function(sim)
     if (any(missing))
       stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
     
-    badClass <- !unlist(lapply(allxy, function(x) is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack")))
+    badClass <- !unlist(
+      lapply(
+        allxy, 
+        function(x) is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick")
+      )
+    )
     
     if (any(badClass))
-      stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer or a RasterStack.")
+      stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
     
     rasters <- mget(allxy, envir = mod, inherits = FALSE) %>%
-      lapply(function(x) if( is(x, "RasterStack")) unstack(x) else list(x)) %>%
+      lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
     
-    ## Get the corresponding loci from the raster sim$landscape for the fire locations
-    loci <- slot(
-      raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
-      "data"
+    list2env(
+      with(
+        lapply(
+          lapply(
+            split(
+              slot(
+                ## Get loci from the raster sim$landscape for the fire locations
+                raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+                "data"
+              ),
+              mod[["fireLoc_FireSense_SpreadFit"]][["date"]]
+            ),
+            na.omit
+          ),
+          function(x) with(x, chk_duplicatedStartPixels(cells, size))
+        ),
+        list(
+          loci = eapply(environment(), FUN = function(x) x[["loci"]]),
+          sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]]))
+        )
+      ),
+      envir = environment()
     )
-    
-    loci %<>% 
-      split(mod[["fireLoc_FireSense_SpreadFit"]][["date"]]) %>% 
-      lapply(na.omit) %>%
-      lapply(
-        function(x)
-        {
-          loci <- x[["cells"]]
-          if (anyDuplicated(loci))
-          {
-            warning(moduleName, "> No more than one fire can start in a given pixel during",
-                    " the same time interval, keeping the largest fire.", immediate. = TRUE)
-            
-            return(
-              loci[-unlist(
-                lapply(
-                  unique(loci[duplicated(loci)]), 
-                  function(locus)
-                  {
-                    wh <- which(loci == locus)
-                    sizes <- x[wh, "size"]
-                    wh[-base::which.max(sizes)]
-                  }
-                )
-              )]
-            )
-          }
-          else
-            return (loci)
-        }
-      )
-    
-    sizes <- mod[["fireLoc_FireSense_SpreadFit"]][["size"]]
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
       (rasters %>%
-         mapply(FUN = function(x, loci)
-         {
-           r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-             calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
-           
-           ## 10 replicates to better estimate the median
-           lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
-             do.call("rbind", .) %>%
-             apply(2L, median)
-         }, loci = loci, SIMPLIFY = FALSE) %>%
+         mapply(
+           FUN = function(x, loci)
+           {
+             r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
+               calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
+             
+             tabulate(
+               SpaDES.tools::spread(
+                 r,
+                 loci = loci, 
+                 spreadProb = r,
+                 returnIndices = TRUE
+               )[["id"]]
+             )
+             
+             #   ## 10 replicates to better estimate the median
+             #   lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+             #     do.call("rbind", .) %>%
+             #     apply(2L, median)
+           },
+           loci = loci, 
+           SIMPLIFY = FALSE
+         ) %>%
          unlist %>% list(sizes) %>% ad.test %>% `[[` ("ad"))[1L, 1L]
     }
   }

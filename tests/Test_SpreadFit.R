@@ -1,6 +1,9 @@
 library(SpaDES)
 
-modulePath <- normalizePath("..")
+setPaths(
+  inputPath = "../inputs",
+  modulePath = ".." 
+)
 
 # Define simulation parameters
 times <- list(start = 1, end = 1, timeunit = "year")
@@ -26,9 +29,14 @@ parameters <- list(
 inputs <- data.frame(
   objectName = c("fireLoc_FireSense_SpreadFit", "TP_Beta", "TP_Theta"),
   file = normalizePath(
-    c("../inputs/fireLoc_FireSense_SpreadFit.shp",
-      "../inputs/dataFireSense_SpreadFit_Beta.tif",
-      "../inputs/dataFireSense_SpreadFit_Theta.tif")
+    file.path(
+      getPaths()$inputPath,
+      c(
+        "fireLoc_FireSense_SpreadFit.shp",
+        "dataFireSense_SpreadFit_Beta.tif",
+        "dataFireSense_SpreadFit_Theta.tif"
+      )
+    )
   ),
   functions = c("raster::shapefile", "raster::raster", "raster::raster"),
   loadTime = 1
@@ -43,9 +51,13 @@ sim <- simInit(
   inputs = inputs
 )
 
-# All fires at the same time
-loadFiles(sim)
-sim[["fireLoc_FireSense_SpreadFit"]][["date"]] <- NULL
 
+# Time series: start fires at different years
 sim <- spades(sim)
 sim$fireSense_SpreadFitted
+
+# All fires at the same time
+sim[["fireLoc_FireSense_SpreadFit"]][["date"]] <- NULL
+sim <- spades(sim)
+sim$fireSense_SpreadFitted
+
