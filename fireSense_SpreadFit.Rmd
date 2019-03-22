@@ -26,8 +26,8 @@ downloadModule(moduleName, path = spadesModulesDirectory)
 Name|Default|Description
 ----|:-------|---------------------------------------------------------------------
 `formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
-`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, or RasterStacks/RasterBricks. If the fires are to spread to different days/months/years we recommend to use RasterStacks/RasterBricks with one layer per time unit.
-`fireLocations`|`"firesFireSense_SpreadFit"`|an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
+`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, RasterStacks or RasterBricks. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
+`fireLocations`|`"firesFireSense_SpreadFit"`|a character vector indicating the name of an object of class `SpatialPointsDataFrame` describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 `lower`|`NULL`|see `?DEoptim`.
 `upper`|`NULL`|see `?DEoptim`.
 `itermax`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
@@ -103,12 +103,12 @@ sim3$fireSense_SpreadFitted
 # Events
 Events are scheduled as follows:
 
-- Module initiation
+- Module initialisation
 - Model fitting
 
 # Data dependencies
 ## Input data
-- **dataFireSense_SpreadFit**: One or more objects of class 'RasterLayer' or 'RasterStack', in which to look for variables present in the model formula. RasterStacks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
+- **dataFireSense_SpreadFit**: One or more objects of class 'RasterLayer', 'RasterStack' or 'RasterBrick', in which to look for variables present in the model formula. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
 - **fireLoc_FireSense_SpreadFit**: an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 
 ## Output data

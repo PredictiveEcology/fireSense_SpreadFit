@@ -25,16 +25,20 @@ defineModule(sim, list(
                             the RHS needs to be provided.'),
     defineParameter(name = "data", class = "character", 
                     default = "dataFireSense_SpreadFit",
-                    desc = "a character vector indicating the names of objects 
-                            in the `simList` environment in which to look for
-                            variables present in the model formula. `data`
-                            objects can be RasterLayers, or RasterStacks/RasterBricks.
-                            If the fires are to spread to different days/months/years
-                            we recommend to use RasterStacks/RasterBricks with one layer
-                            per time unit."),
+                    desc = "a character vector indicating the names of objects in 
+                            the `simList` environment in which to look for variables
+                            present in the model formula. `data` objects can be
+                            RasterLayers, RasterStacks or RasterBricks. RasterStacks
+                            and RasterBricks can be used in cases where fires have 
+                            started at different times and should not be spread at
+                            the same time interval, but are still used to describe
+                            the same fire size distribution. In this case, the
+                            number of layers in the RasterStack should equal the 
+                            number of distinct dates in column 'date'."),
     defineParameter(name = "fireLocations", class = "character", 
                     default = "fireLoc_FireSense_SpreadFit",
-                    desc = "an object of class SpatialPointsDataFrame describing
+                    desc = "a character vector indicating the name of an object of
+                            class `SpatialPointsDataFrame` describing
                             fires starting locations, final sizes ('size'
                             column), and possibly the starting dates ('date'
                             column) if fires are to be spread at different time
@@ -85,14 +89,14 @@ defineModule(sim, list(
       objectName = "dataFireSense_SpreadFit",
       objectClass = "RasterLayer, RasterStack",
       sourceURL = NA_character_,
-      desc = "One or more objects of class 'RasterLayer' or 'RasterStack', in
-              which to look for variables present in the model formula.
-              RasterStacks can be used in cases where fires have started at
-              different times and should not be spread at the same time 
-              interval, but are still used to describe the same fire size
-              distribution. In this case, the number of layers in the
-              RasterStack should equal the number of distinct dates in column
-              'date'."
+      desc = "One or more objects of class 'RasterLayer', 'RasterStack'
+              or 'RasterBrick', in which to look for variables present 
+              in the model formula. RasterStacks and RasterBricks can 
+              be used in cases where fires have started at different 
+              times and should not be spread at the same time interval,
+              but are still used to describe the same fire size 
+              distribution. In this case, the number of layers in the 
+              RasterStack should equal the number of distinct dates in column 'date'."
     )
   ),
   outputObjects = createsOutput(
@@ -107,11 +111,31 @@ defineModule(sim, list(
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) 
 {
+  moduleName <- current(sim)$moduleName
+  
   switch(
     eventType,
-    init = { sim <- spreadFitInit(sim) },
-    run = { sim <- spreadFitRun(sim) },
-    save = { sim <- spreadFitSave(sim) },
+    init = { 
+      sim <- spreadFitInit(sim) 
+      
+      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+      
+      if (!is.na(P(sim)$.saveInitialTime))
+        sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
+    },
+    run = { 
+      sim <- spreadFitRun(sim)
+      
+      if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
+        sim <- scheduleEvent(sim, time(sim) + P(sim)$.runInterval, moduleName, "run")
+    },
+    save = { 
+      sim <- spreadFitSave(sim)
+      
+      if (!is.na(P(sim)$.saveInterval))
+        sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
+      
+    },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
@@ -132,24 +156,15 @@ spreadFitInit <- function(sim)
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$nCores >= 0)
-  if (!is(P(sim)$formula, "formula")) stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
-  
-  moduleName <- current(sim)$moduleName
-  currentTime <- time(sim, timeunit(sim))
-  
-  sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
-  
-  if (!is.na(P(sim)$.saveInitialTime))
-    sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
-  
+  if (!is(P(sim)$formula, "formula"))
+    stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
+
   invisible(sim)
 } 
 
 spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-  currentTime <- time(sim, timeunit(sim))
-  endTime <- end(sim, timeunit(sim))
   
   ## Toolbox: set of functions used internally by spreadFitRun
     chk_duplicatedStartPixels <- function(cells, size)
@@ -392,10 +407,8 @@ spreadFitRun <- function(sim)
     ),
     AD = AD
   )
-  class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
-  if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
-    sim <- scheduleEvent(sim, currentTime + P(sim)$.runInterval, moduleName, "run")
+  class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   
   invisible(sim)
 }
@@ -410,9 +423,6 @@ spreadFitSave <- function(sim)
     sim$fireSense_SpreadFitted, 
     file = file.path(paths(sim)$out, paste0("fireSense_SpreadFitted_", timeUnit, currentTime, ".rds"))
   )
-  
-  if (!is.na(P(sim)$.saveInterval))
-    sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
-  
+
   invisible(sim)
 }
