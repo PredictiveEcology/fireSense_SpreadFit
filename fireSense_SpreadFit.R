@@ -35,8 +35,8 @@ defineModule(sim, list(
                             the same fire size distribution. In this case, the
                             number of layers in the RasterStack should equal the 
                             number of distinct dates in column 'date'."),
-    defineParameter(name = "fireLocations", class = "character", 
-                    default = "fireLoc_FireSense_SpreadFit",
+    defineParameter(name = "fireAttributes", class = "character", 
+                    default = "fireAttributesFireSense_SpreadFit",
                     desc = "a character vector indicating the name of an object of
                             class `SpatialPointsDataFrame` describing
                             fires starting locations, final sizes ('size'
@@ -78,7 +78,7 @@ defineModule(sim, list(
   ),
   inputObjects = rbind(
     expectsInput(
-      objectName = "fireLoc_FireSense_SpreadFit",
+      objectName = "fireAttributesFireSense_SpreadFit",
       objectClass = "SpatialPointsDataFrame",
       sourceURL = NA_character_,
       desc = "An object of class SpatialPointsDataFrame describing fires
@@ -204,19 +204,19 @@ spreadFitRun <- function(sim)
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
-  ## Map the "fireLoc_FireSense_SpreadFit" parameter of this module to the "fireLoc_FireSense_SpreadFit" object in the module environment
-  mod[["fireLoc_FireSense_SpreadFit"]] <- sim[[P(sim)$fireLocations]]
+  ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
+  mod[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
   
-  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]]))
-    stop(moduleName, "> '", P(sim)$fireLocations, "' not found in data objects or NULL.")
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]]))
+    stop(moduleName, "> '", P(sim)$fireAttributes, "' not found in data objects or NULL.")
   
-  if (!is(mod[["fireLoc_FireSense_SpreadFit"]], "SpatialPointsDataFrame"))
-    stop(moduleName, "> '", P(sim)$fireLocations, "' is not a SpatialPointsDataFrame.")
+  if (!is(mod[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
+    stop(moduleName, "> '", P(sim)$fireAttributes, "' is not a SpatialPointsDataFrame.")
   
-  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]][["size"]]))
-    stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireLocations, "' must have a 'size' column.")
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["size"]]))
+    stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireAttributes, "' must have a 'size' column.")
   
-  sizes <- mod[["fireLoc_FireSense_SpreadFit"]][["size"]]
+  sizes <- mod[["fireAttributesFireSense_SpreadFit"]][["size"]]
   
   if (is.empty.model(P(sim)$formula))
     stop(moduleName, "> The formula describes an empty model.")
@@ -224,7 +224,7 @@ spreadFitRun <- function(sim)
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
   
-  if (is.null(mod[["fireLoc_FireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
     {
@@ -255,7 +255,7 @@ spreadFitRun <- function(sim)
       with(
         slot(
           ## Get loci from the raster sim$landscape for the fire locations
-          raster::extract(rasters[[1L]], fireLoc_FireSense_SpreadFit, cellnumbers = TRUE, df = TRUE, sp = TRUE),
+          raster::extract(rasters[[1L]], fireAttributesFireSense_SpreadFit, cellnumbers = TRUE, df = TRUE, sp = TRUE),
           "data"
         ),
         chk_duplicatedStartPixels(cells, sizes)
@@ -334,10 +334,10 @@ spreadFitRun <- function(sim)
             split(
               slot(
                 ## Get loci from the raster sim$landscape for the fire locations
-                raster::extract(rasters[[1L]], mod[["fireLoc_FireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+                raster::extract(rasters[[1L]], mod[["fireAttributesFireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
                 "data"
               ),
-              mod[["fireLoc_FireSense_SpreadFit"]][["date"]]
+              mod[["fireAttributesFireSense_SpreadFit"]][["date"]]
             ),
             na.omit
           ),
@@ -392,8 +392,17 @@ spreadFitRun <- function(sim)
     control$cluster <- cl
   }
   
-  DE <- DEoptim(objfun, lower = P(sim)$lower, upper = P(sim)$upper, control = do.call("DEoptim.control", control),
-                 rasters = rasters, formula = P(sim)$formula, loci = loci, sizes = sizes, fireSense_SpreadFitRaster = fireSense_SpreadFitRaster)
+  DE <- DEoptim(
+    objfun, 
+    lower = P(sim)$lower,
+    upper = P(sim)$upper,
+    control = do.call("DEoptim.control", control),
+    rasters = rasters, 
+    formula = P(sim)$formula, 
+    loci = loci,
+    sizes = sizes,
+    fireSense_SpreadFitRaster = fireSense_SpreadFitRaster
+  )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")

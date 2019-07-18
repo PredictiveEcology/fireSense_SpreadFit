@@ -27,7 +27,7 @@ Name|Default|Description
 ----|:-------|---------------------------------------------------------------------
 `formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
 `data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, RasterStacks or RasterBricks. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
-`fireLocations`|`"firesFireSense_SpreadFit"`|a character vector indicating the name of an object of class `SpatialPointsDataFrame` describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
+`fireAttributes`|`"fireAttributesFireSense_SpreadFit"`|a character vector indicating the name of an object of class `SpatialPointsDataFrame` describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 `lower`|`NULL`|see `?DEoptim`.
 `upper`|`NULL`|see `?DEoptim`.
 `itermax`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
@@ -65,7 +65,7 @@ parameters <- list(
 
 # Define from where and how data will be loaded in the simList environment
 inputs <- data.frame(
-  objectName = c("fireLoc_FireSense_SpreadFit", "beta", "theta"),
+  objectName = c("fireAttributesFireSense_SpreadFit", "beta", "theta"),
   file = c("fires.shp", "weather.tif", "vegetation.tif"),
   fun = c("shapefile", "stack", "stack"),
   package = c("raster", "raster", "raster"),
@@ -83,7 +83,7 @@ sim <- simInit(
 
 tweakSimList <- function(sim) {
   loadFiles(sim)
-  sim[["fireLoc_FireSense_SpreadFit"]][["date"]] <- NULL
+  sim[["fireAttributesFireSense_SpreadFit"]][["date"]] <- NULL
   sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
   sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
   inputs(sim) <- list()
@@ -110,7 +110,7 @@ Events are scheduled as follows:
 # Data dependencies
 ## Input data
 - **dataFireSense_SpreadFit**: One or more objects of class 'RasterLayer', 'RasterStack' or 'RasterBrick', in which to look for variables present in the model formula. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
-- **fireLoc_FireSense_SpreadFit**: an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
+- **fireAttributesFireSense_SpreadFit**: an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
 
 ## Output data
 - **fireSense_SpreadFitted**: an object of class `fireSense_SpreadFit`, i.e. a list containing the following components:
