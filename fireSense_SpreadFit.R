@@ -57,6 +57,8 @@ defineModule(sim, list(
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
                             computing."),
+    defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
+                    desc = "optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled."),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
@@ -386,6 +388,7 @@ spreadFitRun <- function(sim)
     cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
+    parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
   
