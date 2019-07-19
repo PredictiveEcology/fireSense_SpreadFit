@@ -195,10 +195,7 @@ spreadFitRun <- function(sim)
   
     fireSense_SpreadFitRaster <- function(model, data, par)
     {
-      model %>%
-        model.matrix(data) %>%
-        `%*%` (par) %>%
-        drop
+      drop( model.matrix(model, data) %*% par )
     }
     
   # Load inputs in the data container
@@ -322,6 +319,8 @@ spreadFitRun <- function(sim)
     if (any(badClass))
       stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
     
+    browser()
+    
     rasters <- mget(allxy, envir = mod, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
@@ -334,7 +333,13 @@ spreadFitRun <- function(sim)
             split(
               slot(
                 ## Get loci from the raster sim$landscape for the fire locations
-                raster::extract(rasters[[1L]], mod[["fireAttributesFireSense_SpreadFit"]], cellnumbers = TRUE, df = TRUE, sp = TRUE),
+                raster::extract(
+                  rasters[[1L]],
+                  mod[["fireAttributesFireSense_SpreadFit"]], 
+                  cellnumbers = TRUE,
+                  df = TRUE,
+                  sp = TRUE
+                ),
                 "data"
               ),
               mod[["fireAttributesFireSense_SpreadFit"]][["date"]]
@@ -353,31 +358,39 @@ spreadFitRun <- function(sim)
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
-      (rasters %>%
-         mapply(
-           FUN = function(x, loci)
-           {
-             r <- predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-               calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
-             
-             tabulate(
-               SpaDES.tools::spread(
-                 r,
-                 loci = loci, 
-                 spreadProb = r,
-                 returnIndices = TRUE
-               )[["id"]]
-             )
-             
-             #   ## 10 replicates to better estimate the median
-             #   lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
-             #     do.call("rbind", .) %>%
-             #     apply(2L, median)
-           },
-           loci = loci, 
-           SIMPLIFY = FALSE
-         ) %>%
-         unlist %>% list(sizes) %>% ad.test %>% `[[` ("ad"))[1L, 1L]
+      ad.test(
+        list(
+          unlist(
+            mapply(
+              FUN = function(x, loci)
+              {
+                r <- calc(
+                  predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]),
+                  fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L] ## 5-parameters logistic
+                )
+                
+                tabulate(
+                  SpaDES.tools::spread(
+                    r,
+                    loci = loci, 
+                    spreadProb = r,
+                    returnIndices = TRUE
+                  )[["id"]]
+                )
+                
+                #   ## 10 replicates to better estimate the median
+                #   lapply(1:10, function(i) tabulate(SpaDES.tools::spread(r, loci = loci, spreadProb = r, returnIndices = TRUE)[["id"]])) %>%
+                #     do.call("rbind", .) %>%
+                #     apply(2L, median)
+              },
+              rasters,
+              loci = loci, 
+              SIMPLIFY = FALSE
+            )
+          ),
+          sizes
+        )
+      )[["ad"]][1L, 1L]
     }
   }
   
