@@ -67,5 +67,9 @@ fireWeather <- gaussMap(r, scale = 300, var = 0.03, speedup = nx/5e2, inMemory =
 min <- minValue(fireWeather)
 max <- maxValue(fireWeather)
 x <-  seq(min, max, length.out = 100)
-graphFun(x = x, a = .3, b = seq(0.1, 10, length.out = 10), d = .05, g = 1)
+graphFun(x = x, a = .3, b = seq(1, 10, length.out = 10), d = .05, g = 1)
 graphFun(x = x, a = .3, b = 1, d = .05, g = seq(.01, 5, length.out = 10))
+graphFun(x = x/2, a = .3, b = 1, d = .05, g = seq(.01, 5, length.out = 10))
+
+
+
