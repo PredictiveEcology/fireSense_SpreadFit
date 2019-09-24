@@ -35,7 +35,7 @@ Name|Default|Description
 `clusterEvalExpr`|`expression()`|optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled.
 `trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
 `.runInitialTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
-`.runInterval`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time.
+`.runInterval`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation.
 `.saveInitialTime`|`NA`|optional. When to start saving output to a file.
 `.saveInterval`|`NA`|optional. Interval between save events.
 |||
