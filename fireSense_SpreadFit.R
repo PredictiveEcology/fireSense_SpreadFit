@@ -201,19 +201,21 @@ spreadFitRun <- function(sim)
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
+  mod_env <- new.env()
+    
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
-  mod[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
+  mod_env[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
   
-  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]]))
+  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]]))
     stop(moduleName, "> '", P(sim)$fireAttributes, "' not found in data objects or NULL.")
   
-  if (!is(mod[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
+  if (!is(mod_env[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
     stop(moduleName, "> '", P(sim)$fireAttributes, "' is not a SpatialPointsDataFrame.")
   
-  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["size"]]))
+  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]))
     stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireAttributes, "' must have a 'size' column.")
   
-  sizes <- mod[["fireAttributesFireSense_SpreadFit"]][["size"]]
+  sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
   
   if (is.empty.model(P(sim)$formula))
     stop(moduleName, "> The formula describes an empty model.")
@@ -221,7 +223,7 @@ spreadFitRun <- function(sim)
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
   
-  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
+  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
     {
@@ -229,24 +231,24 @@ spreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
-          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod)
+          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod_env)
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
-          mod[[x]] <- sim[[x]]
+          mod_env[[x]] <- sim[[x]]
         } 
         else stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
 
-    missing <- !allxy %in% ls(mod, all.names = TRUE)
+    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
     if (s <- sum(missing))
       stop(moduleName, "> '", allxy[missing][1L], "'",
            if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
            " not found in data objects.")
     
-    rasters <- mget(allxy, envir = mod, inherits = FALSE) %>% stack
+    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>% stack
     
     list2env(
       with(
@@ -322,14 +324,14 @@ spreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
-          mod[[x]] <- sim[[x]]
+          mod_env[[x]] <- sim[[x]]
         } 
         else 
           stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
     
-    missing <- !allxy %in% ls(mod, all.names = TRUE)
+    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
     if (any(missing))
       stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
@@ -344,7 +346,7 @@ spreadFitRun <- function(sim)
     if (any(badClass))
       stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
 
-    rasters <- mget(allxy, envir = mod, inherits = FALSE) %>%
+    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
@@ -358,14 +360,14 @@ spreadFitRun <- function(sim)
                 ## Get loci from the raster sim$landscape for the fire locations
                 raster::extract(
                   rasters[[1L]],
-                  mod[["fireAttributesFireSense_SpreadFit"]], 
+                  mod_env[["fireAttributesFireSense_SpreadFit"]], 
                   cellnumbers = TRUE,
                   df = TRUE,
                   sp = TRUE
                 ),
                 "data"
               ),
-              mod[["fireAttributesFireSense_SpreadFit"]][["date"]]
+              mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]]
             ),
             na.omit
           ),
