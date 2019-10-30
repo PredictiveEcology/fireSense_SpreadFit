@@ -445,7 +445,12 @@ spreadFitRun <- function(sim)
   
   if (P(sim)$nCores > 1) 
   {
-    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
+    if (.Platform$OS.type == "unix")
+      mkCluster <- parallel::makeForkCluster
+    else
+      mkCluster <- parallel::makePSOCKcluster
+    
+    cl <- mkCluster(P(sim)$nCores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
