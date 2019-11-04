@@ -55,7 +55,7 @@ defineModule(sim, list(
                             parameters (lower bound, upper bound, slope, asymmetry)
                             and the statistical model parameters (in the order they
                             appear in the formula)."),
-    defineParameter(name = "itermax", class = "integer", default = 500,
+    defineParameter(name = "nIterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
     defineParameter(name = "nCores", class = "integer", default = 1,
@@ -457,7 +457,7 @@ spreadFitRun <- function(sim)
     }
   }
   
-  control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
+  control <- list(itermax = P(sim)$nIterDEoptim, trace = P(sim)$trace)
   
   if (P(sim)$nCores > 1) 
   {
