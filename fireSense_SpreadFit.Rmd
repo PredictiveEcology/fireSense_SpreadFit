@@ -28,8 +28,8 @@ Name|Default|Description
 `formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
 `data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, RasterStacks or RasterBricks. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
 `fireAttributes`|`"fireAttributesFireSense_SpreadFit"`|a character vector indicating the name of an object of class `SpatialPointsDataFrame` describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
-`lower`|`NULL`|see `?DEoptim`.
-`upper`|`NULL`|see `?DEoptim`.
+`lower`|`NA`|see `?DEoptim`. Lower limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (in the order they appear in the formula).
+`upper`|`NA`|see `?DEoptim`. Upper limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (in the order they appear in the formula).
 `itermax`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
 `nCores`|`1`|non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.
 `clusterEvalExpr`|`expression()`|optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled.
