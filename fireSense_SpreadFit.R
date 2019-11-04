@@ -45,10 +45,11 @@ defineModule(sim, list(
                             steps. If the 'date' column is not present, all
                             fires are assumed to have started at the same time
                             interval."),
-    defineParameter(name = "lower", class = "numeric", default = NULL,
+    defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = "see `?DEoptim`. Lower bounds should be supplied for the lower bound, upper bound, slope, asymmetry, Then in the order they appear in the formula. Lower bounds for the parameters of the logistic function should be supplied first, while the model parameters need to be supplied after."),
     defineParameter(name = "upper", class = "numeric", default = NULL,
                     desc = "see `?DEoptim`."),
+    defineParameter(name = "upper", class = "numeric", default = NA,
     defineParameter(name = "itermax", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
@@ -161,6 +162,16 @@ spreadFitInit <- function(sim)
   if (!is(P(sim)$formula, "formula"))
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
 
+  if (is.na(P(sim)$lower))
+  {
+    stop(moduleName, "> The 'lower' parameter should be supplied.")
+  }
+  
+  if (is.na(P(sim)$upper))
+  {
+    stop(moduleName, "> The 'upper' parameter should be supplied.")
+  }
+  
   invisible(sim)
 } 
 
