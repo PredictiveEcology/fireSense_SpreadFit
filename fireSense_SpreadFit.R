@@ -55,10 +55,10 @@ defineModule(sim, list(
                             parameters (lower bound, upper bound, slope, asymmetry)
                             and the statistical model parameters (in the order they
                             appear in the formula)."),
-    defineParameter(name = "nIterDEoptim", class = "integer", default = 500,
+    defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
-    defineParameter(name = "nCores", class = "integer", default = 1,
+    defineParameter(name = "cores", class = "integer", default = 1,
                     desc = "non-negative integer. Defines the number of logical
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
@@ -163,7 +163,7 @@ spreadFitInit <- function(sim)
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$nCores >= 0)
+  stopifnot(P(sim)$cores >= 0)
   if (!is(P(sim)$formula, "formula"))
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
 
@@ -457,16 +457,16 @@ spreadFitRun <- function(sim)
     }
   }
   
-  control <- list(itermax = P(sim)$nIterDEoptim, trace = P(sim)$trace)
+  control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
   
-  if (P(sim)$nCores > 1) 
+  if (P(sim)$cores > 1) 
   {
     if (.Platform$OS.type == "unix")
       mkCluster <- parallel::makeForkCluster
     else
       mkCluster <- parallel::makePSOCKcluster
     
-    cl <- mkCluster(P(sim)$nCores)
+    cl <- mkCluster(P(sim)$cores)
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
