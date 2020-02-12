@@ -17,7 +17,7 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster"),
+  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "PtProcess", "raster"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(name = "formula", class = "formula", default = NA,
@@ -45,20 +45,14 @@ defineModule(sim, list(
                             steps. If the 'date' column is not present, all
                             fires are assumed to have started at the same time
                             interval."),
-    defineParameter(name = "lower", class = "numeric", default = NA,
-                    desc = "see `?DEoptim`. Lower limits for the logistic function
-                            parameters (lower bound, upper bound, slope, asymmetry)
-                            and the statistical model parameters (in the order they
-                            appear in the formula)."),
-    defineParameter(name = "upper", class = "numeric", default = NA,
-                    desc = "see `?DEoptim`. Upper limits for the logistic function 
-                            parameters (lower bound, upper bound, slope, asymmetry)
-                            and the statistical model parameters (in the order they
-                            appear in the formula)."),
-    defineParameter(name = "iterDEoptim", class = "integer", default = 500,
+    defineParameter(name = "lower", class = "numeric", default = NULL,
+                    desc = "see `?DEoptim`. Lower bounds should be supplied for the lower bound, upper bound, slope, asymmetry, Then in the order they appear in the formula. Lower bounds for the parameters of the logistic function should be supplied first, while the model parameters need to be supplied after."),
+    defineParameter(name = "upper", class = "numeric", default = NULL,
+                    desc = "see `?DEoptim`."),
+    defineParameter(name = "itermax", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations 
                             allowed (DEoptim optimizer). Default is 500."),
-    defineParameter(name = "cores", class = "integer", default = 1,
+    defineParameter(name = "nCores", class = "integer", default = 1,
                     desc = "non-negative integer. Defines the number of logical
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
@@ -75,7 +69,7 @@ defineModule(sim, list(
                             time of the simulation."),
     defineParameter(name = ".runInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between two runs of this module,
-                            expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation."),
+                            expressed in units of simulation time."),
     defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA, 
@@ -163,19 +157,9 @@ spreadFitInit <- function(sim)
   
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$cores >= 0)
+  stopifnot(P(sim)$nCores >= 0)
   if (!is(P(sim)$formula, "formula"))
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
-
-  if (is.na(P(sim)$lower))
-  {
-    stop(moduleName, "> The 'lower' parameter should be supplied.")
-  }
-  
-  if (is.na(P(sim)$upper))
-  {
-    stop(moduleName, "> The 'upper' parameter should be supplied.")
-  }
   
   invisible(sim)
 } 
@@ -185,61 +169,59 @@ spreadFitRun <- function(sim)
   moduleName <- current(sim)$moduleName
   
   ## Toolbox: set of functions used internally by spreadFitRun
-    chk_duplicatedStartPixels <- function(cells, size)
+  chk_duplicatedStartPixels <- function(cells, size, beta, theta)
+  {
+    if (anyDuplicated(cells))
     {
-      if (anyDuplicated(cells))
-      {
-        warning(moduleName, "> No more than one fire can start in a given pixel during",
-                " the same time interval, keeping the largest fire.", immediate. = TRUE)
-        
-        to_rm <- unlist(
-          lapply(
-            unique(cells[duplicated(cells)]), 
-            function(locus)
-            {
-              wh <- which(cells == locus)
-              sizes <- size[wh]
-              wh[-base::which.max(sizes)]
-            }
-          )
+      warning(moduleName, "> No more than one fire can start in a given pixel during",
+              " the same time interval, keeping the largest fire.", immediate. = TRUE)
+      
+      to_rm <- unlist(
+        lapply(
+          unique(cells[duplicated(cells)]), 
+          function(locus)
+          {
+            wh <- which(cells == locus)
+            sizes <- size[wh]
+            wh[-base::which.max(sizes)]
+          }
         )
-        
-        list(loci = cells[-to_rm], sizes = size[-to_rm])
-      }
-      else list(loci = cells, sizes = size) 
+      )
+      
+      list(loci = cells[-to_rm], sizes = size[-to_rm], betas = betas[-to_rm], thetas = thetas[-to_rm])
     }
+    else list(loci = cells, sizes = size, betas = beta, thetas = theta) 
+  }
   
-    fireSense_SpreadFitRaster <- function(model, data, par)
-    {
-      drop( model.matrix(model, data) %*% par )
-    }
-    
+  fireSense_SpreadFitRaster <- function(model, data, par)
+  {
+    drop( model.matrix(model, data) %*% par )
+  }
+  
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
-  mod_env <- new.env()
-    
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
-  mod_env[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
+  mod[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]]))
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]]))
     stop(moduleName, "> '", P(sim)$fireAttributes, "' not found in data objects or NULL.")
   
-  if (!is(mod_env[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
+  if (!is(mod[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
     stop(moduleName, "> '", P(sim)$fireAttributes, "' is not a SpatialPointsDataFrame.")
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]))
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["size"]]))
     stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireAttributes, "' must have a 'size' column.")
   
-  sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
+  sizes <- mod[["fireAttributesFireSense_SpreadFit"]][["size"]]
   
   if (is.empty.model(P(sim)$formula))
     stop(moduleName, "> The formula describes an empty model.")
-
+  
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
+  if (is.null(mod[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
     {
@@ -247,24 +229,24 @@ spreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
-          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod_env)
+          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod)
         } 
         else if (is(sim[[x]], "RasterLayer")) 
         {
-          mod_env[[x]] <- sim[[x]]
+          mod[[x]] <- sim[[x]]
         } 
         else stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
-
-    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
+    
+    missing <- !allxy %in% ls(mod, all.names = TRUE)
     
     if (s <- sum(missing))
       stop(moduleName, "> '", allxy[missing][1L], "'",
            if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
            " not found in data objects.")
     
-    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>% stack
+    rasters <- mget(allxy, envir = mod, inherits = FALSE) %>% stack
     
     list2env(
       with(
@@ -280,17 +262,20 @@ spreadFitRun <- function(sim)
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
-      r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-        calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
+      r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[3:length(par)]) %>%
+        calc(function(x) .1 + .4 / (1 + x^(-par[1L])) ^ par[2L]) ## 5-parameters logistic
       
       spreadState <- SpaDES.tools::spread2(
         landscape = r,
         start = loci, 
         spreadProb = r,
-        asRaster = FALSE
+        asRaster = FALSE,
+        maxSize = 1e5
       )
       
       spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
+      
+      
       
       ad.test(
         list(
@@ -300,7 +285,7 @@ spreadFitRun <- function(sim)
           sizes
         )
       )[["ad"]][1,1]
-       
+      
       # # 10 replicates to better estimate the median
       # ad.test(
       #   list(
@@ -340,14 +325,14 @@ spreadFitRun <- function(sim)
       {
         if (is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
         {
-          mod_env[[x]] <- sim[[x]]
+          mod[[x]] <- sim[[x]]
         } 
         else 
           stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
     
-    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
+    missing <- !allxy %in% ls(mod, all.names = TRUE)
     
     if (any(missing))
       stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
@@ -361,128 +346,142 @@ spreadFitRun <- function(sim)
     
     if (any(badClass))
       stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
-
-    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>%
+    
+    # Each stack or brick describes all years for one variable. We need one stack per year so we pull out
+    # each year from the stack(s) of variable(s) and create yearly stacks (stored as data.tables)
+    yearly_vars <- mget(allxy, envir = mod, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
     
+    # Calculate model matrices in advance
+    mms <- lapply(
+      yearly_vars,
+      function(x)
+      {
+        unname(
+          model.matrix(
+            P(sim)$formula,
+            model.frame(
+              P(sim)$formula,
+              data = as.data.frame(x[]), 
+              na.action = NULL
+            )
+          )
+        )
+      }
+    )
+    
+    unique_dates <- sort(unique(mod[["fireAttributesFireSense_SpreadFit"]][["date"]]))
+    
+    # For each loci calculate FSD parameters
     list2env(
       with(
-        lapply(
+        setNames(
           lapply(
-            split(
-              slot(
-                ## Get loci from the raster sim$landscape for the fire locations
-                raster::extract(
-                  rasters[[1L]],
-                  mod_env[["fireAttributesFireSense_SpreadFit"]], 
-                  cellnumbers = TRUE,
-                  df = TRUE,
-                  sp = TRUE
-                ),
-                "data"
-              ),
-              mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]]
+            mapply(
+              unique_dates,
+              yearly_vars,
+              FUN = function(unique_date_i, r)
+              {
+                slot(
+                  raster::extract(
+                    r,
+                    mod[["fireAttributesFireSense_SpreadFit"]][mod[["fireAttributesFireSense_SpreadFit"]][["date"]] == unique_date_i, ],
+                    cellnumbers = TRUE,
+                    df = TRUE,
+                    sp = TRUE
+                  ),
+                  "data"
+                )
+              },
+              SIMPLIFY = FALSE
             ),
-            na.omit
+            function(x) with(x, chk_duplicatedStartPixels(cells, size, beta, theta))
           ),
-          function(x) with(x, chk_duplicatedStartPixels(cells, size))
+          nm = unique_dates
         ),
         list(
-          loci = eapply(environment(), FUN = function(x) x[["loci"]]),
-          sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]]))
+          loci = eapply(environment(), FUN = function(x) sort(x[["loci"]])),
+          betas = eapply(environment(), FUN = function(x) x[["betas"]][order(x[["loci"]])]),
+          thetas = eapply(environment(), FUN = function(x) x[["thetas"]][order(x[["loci"]])])
         )
       ),
       envir = environment()
     )
     
-    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
+    objfun <- function(par, mms, landscape, loci, betas, thetas)
     {
-      ad.test(
-        list(
-          unlist(
-            mapply(
-              FUN = function(x, loci)
-              {
-                r <- calc(
-                  predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]),
-                  fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L] ## 5-parameters logistic
-                )
-                
-                spreadState <- SpaDES.tools::spread2(
-                  landscape = r,
-                  start = loci, 
-                  spreadProb = r,
-                  asRaster = FALSE
-                )
-                
-                spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
-
-                tabulate(spreadState[["fire_id"]]) # Here tabulate() is equivalent to table() but faster
-                
-                # # 10 replicates to better estimate the median
-                # apply(
-                #   do.call(
-                #     "rbind",
-                #     lapply(
-                #       1:10,
-                #       function(i)
-                #       {
-                #         spreadState <- SpaDES.tools::spread2(
-                #           landscape = r,
-                #           start = loci,
-                #           spreadProb = r,
-                #           asRaster = FALSE
-                #         )
-                # 
-                #         spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
-                # 
-                #         tabulate(spreadState[["fire_id"]])
-                #       }
-                #     )
-                #   ),
-                #   2L,
-                #   median
-                # )
-              },
-              rasters,
-              loci = loci, 
-              SIMPLIFY = FALSE
-            )
-          ),
-          sizes
+      # browser()
+      
+      # library(profvis)
+      
+      # p <- profvis({
+      -sum(
+        unlist(
+          mapply(
+            FUN = function(x, loci, betas, thetas)
+            {
+              spreadProb <- .1 + .2 / ( 1 + drop(x %*% par[3:length(par)]) ^ (-par[1L]) ) ^ par[2L]
+              
+              spreadState <- SpaDES.tools::spread(
+                landscape = landscape,
+                loci = loci, 
+                spreadProb = spreadProb,
+                returnIndices = TRUE,
+                maxSize = 1e5
+              )
+              
+              dtappareto(
+                x = tabulate(spreadState[["id"]]), # Here tabulate() is equivalent to table() but faster
+                lambda = 1/betas, 
+                theta = exp(thetas), 
+                a = 1,
+                log = TRUE
+              )
+            },
+            mms,
+            loci = loci,
+            betas = betas,
+            thetas = thetas,
+            SIMPLIFY = FALSE,
+            USE.NAMES = FALSE
+          )
         )
-      )[["ad"]][1L, 1L]
+      )
+      
+      # })
+      
+      # browser()
+      
+      # htmlwidgets::saveWidget(p, "D:/Jean/profile_spread_newcode.html")
     }
   }
   
-  control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
+  control <- list(itermax = P(sim)$itermax, trace = P(sim)$trace)
   
-  if (P(sim)$cores > 1) 
+  if (P(sim)$nCores > 1) 
   {
-    if (.Platform$OS.type == "unix")
-      mkCluster <- parallel::makeForkCluster
-    else
-      mkCluster <- parallel::makePSOCKcluster
-    
-    cl <- mkCluster(P(sim)$cores)
+    cl <- parallel::makePSOCKcluster(names = P(sim)$nCores)
     on.exit(stopCluster(cl))
-    parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
+    parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "PtProcess", "raster")) library(i, character.only = TRUE))
+    parallel::clusterEvalQ(cl, options(raster.maxmemoy = 4e10))
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
+  
+  # browser()
   
   DE <- DEoptim(
     objfun, 
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
-    rasters = rasters, 
-    formula = P(sim)$formula, 
+    landscape = raster(get(allxy[1L], envir = mod, inherits = FALSE)), # Template raster
+    mm = mms,
     loci = loci,
-    sizes = sizes,
-    fireSense_SpreadFitRaster = fireSense_SpreadFitRaster
+    betas = betas,
+    thetas = thetas
   )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
@@ -493,7 +492,7 @@ spreadFitRun <- function(sim)
     coef = setNames(
       val,
       nm = c(
-        "d", "a", "b", "g", 
+        "b", "g", 
         if (attr(terms, "intercept")) "Intercept" else NULL,
         attr(terms, "term.labels")
       )
@@ -516,6 +515,6 @@ spreadFitSave <- function(sim)
     sim$fireSense_SpreadFitted, 
     file = file.path(paths(sim)$out, paste0("fireSense_SpreadFitted_", timeUnit, currentTime, ".rds"))
   )
-
+  
   invisible(sim)
 }
