@@ -419,6 +419,7 @@ spreadFitRun <- function(sim)
                 )
                 r[] <- r[]
                 if (median(spreadProb, na.rm = TRUE) > .245) return(1e100)
+                browser()
                 spreadState <- SpaDES.tools::spread(
                   landscape = r,
                   loci = loci, 
@@ -492,7 +493,7 @@ spreadFitRun <- function(sim)
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
-  
+  browser() # Check fireSense_SpreadFitRaster, loci, sizes... all params
   DE <- DEoptim(
     objfun, 
     lower = P(sim)$lower,
