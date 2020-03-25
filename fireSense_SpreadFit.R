@@ -489,7 +489,6 @@ spreadFitRun <- function(sim)
     control$cluster <- cl
   }
   
-  browser()
   DE <- DEoptim(
     objfun, 
     lower = P(sim)$lower,
