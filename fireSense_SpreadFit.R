@@ -313,9 +313,6 @@ spreadFitRun <- function(sim)
       }
     }
     
-    print("browser line 318")
-    browser()
-    
     missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
     if (any(missing))
@@ -335,6 +332,9 @@ spreadFitRun <- function(sim)
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
+    
+    print("browser line 336")
+    browser()
     
     list2env(
       with(
