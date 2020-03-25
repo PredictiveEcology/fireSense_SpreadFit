@@ -160,19 +160,18 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 spreadFitInit <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-  
   # Checking parameters
   stopifnot(P(sim)$trace >= 0)
   stopifnot(P(sim)$cores >= 0)
   if (!is(P(sim)$formula, "formula"))
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
 
-  if (is.na(P(sim)$lower))
+  if (anyNA(P(sim)$lower))
   {
     stop(moduleName, "> The 'lower' parameter should be supplied.")
   }
   
-  if (is.na(P(sim)$upper))
+  if (anyNA(P(sim)$upper))
   {
     stop(moduleName, "> The 'upper' parameter should be supplied.")
   }
@@ -283,16 +282,23 @@ spreadFitRun <- function(sim)
       r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
         calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
       
-      spreadState <- SpaDES.tools::spread2(
+      spreadState <- SpaDES.tools::spread(
         landscape = r,
-        start = loci, 
+        loci = loci, 
         spreadProb = r,
-        asRaster = FALSE
+        returnIndices = TRUE
       )
+      # spreadState <- SpaDES.tools::spread2(
+      #   landscape = r,
+      #   start = loci, 
+      #   spreadProb = r,
+      #   asRaster = FALSE
+      # )
       
-      spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
+      #spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
+      spreadState[ , fire_id := .GRP, by = "initialLocus"] # Add an fire_id column
       
-      ad.test(
+      first <- ad.test(
         list(
           tabulate( # Here tabulate() is equivalent to table() but faster
             spreadState[["fire_id"]]
@@ -300,6 +306,8 @@ spreadFitRun <- function(sim)
           sizes
         )
       )[["ad"]][1,1]
+      #second <- liklihood here
+      scale(first) # + scale(second)
        
       # # 10 replicates to better estimate the median
       # ad.test(
@@ -409,17 +417,25 @@ spreadFitRun <- function(sim)
                   predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]),
                   fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L] ## 5-parameters logistic
                 )
-                
-                spreadState <- SpaDES.tools::spread2(
+                spreadState <- SpaDES.tools::spread(
                   landscape = r,
-                  start = loci, 
+                  loci = loci, 
                   spreadProb = r,
-                  asRaster = FALSE
+                  returnIndices = TRUE
                 )
                 
-                spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
-
+                # spreadState <- SpaDES.tools::spread2(
+                #   landscape = r,
+                #   start = loci, 
+                #   spreadProb = r,
+                #   asRaster = FALSE
+                # )
+                
+                # spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
+                spreadState[ , fire_id := .GRP, by = "initialLocus"] # Add an fire_id column
+                
                 tabulate(spreadState[["fire_id"]]) # Here tabulate() is equivalent to table() but faster
+                # tabulate(spreadState[["initialLocus"]]) # Here tabulate() is equivalent to table() but faster
                 
                 # # 10 replicates to better estimate the median
                 # apply(
@@ -486,7 +502,8 @@ spreadFitRun <- function(sim)
   )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
-  AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
+  # AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
+  AD <- DE$optim$bestval
   
   sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
