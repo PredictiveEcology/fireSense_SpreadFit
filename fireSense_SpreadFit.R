@@ -188,18 +188,14 @@ spreadFitRun <- function(sim)
   
   mod_env <- new.env(parent = emptyenv()) # 'emptyenv()' Avoid memory leak and C recursive problem
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
-  print("Browser Line 191")
-  browser() # Check if it is doing the correct assignment
   assign("fireAttributesFireSense_SpreadFit", value = sim[[P(sim)$fireAttributes]], envir = mod_env)
   
   .doDataChecks(env = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
   
-  sizes <- get(fireAttributesFireSense_SpreadFit[["size"]], envir = mod_env)
+  sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
   
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
-  print("Browser Line 200")
-  browser()
   if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
@@ -316,6 +312,9 @@ spreadFitRun <- function(sim)
           stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
+    
+    print("browser line 318")
+    browser()
     
     missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
