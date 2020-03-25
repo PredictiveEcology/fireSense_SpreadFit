@@ -417,6 +417,8 @@ spreadFitRun <- function(sim)
                   predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]),
                   fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L] ## 5-parameters logistic
                 )
+                r[] <- r[]
+                if (median(spreadProb, na.rm = TRUE) > .245) return(1e100)
                 spreadState <- SpaDES.tools::spread(
                   landscape = r,
                   loci = loci, 
