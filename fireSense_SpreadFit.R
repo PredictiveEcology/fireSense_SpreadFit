@@ -183,61 +183,23 @@ spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
   
-  ## Toolbox: set of functions used internally by spreadFitRun
-    chk_duplicatedStartPixels <- function(cells, size)
-    {
-      if (anyDuplicated(cells))
-      {
-        warning(moduleName, "> No more than one fire can start in a given pixel during",
-                " the same time interval, keeping the largest fire.", immediate. = TRUE)
-        
-        to_rm <- unlist(
-          lapply(
-            unique(cells[duplicated(cells)]), 
-            function(locus)
-            {
-              wh <- which(cells == locus)
-              sizes <- size[wh]
-              wh[-base::which.max(sizes)]
-            }
-          )
-        )
-        
-        list(loci = cells[-to_rm], sizes = size[-to_rm])
-      }
-      else list(loci = cells, sizes = size) 
-    }
-  
-    fireSense_SpreadFitRaster <- function(model, data, par)
-    {
-      drop( model.matrix(model, data) %*% par )
-    }
-    
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
-  mod_env <- new.env()
-    
+  mod_env <- new.env(parent = emptyenv()) # 'emptyenv()' Avoid memory leak and C recursive problem
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
-  mod_env[["fireAttributesFireSense_SpreadFit"]] <- sim[[P(sim)$fireAttributes]]
+  print("Browser Line 191")
+  browser() # Check if it is doing the correct assignment
+  assign("fireAttributesFireSense_SpreadFit", value = sim[[P(sim)$fireAttributes]], envir = mod_env)
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]]))
-    stop(moduleName, "> '", P(sim)$fireAttributes, "' not found in data objects or NULL.")
+  .doDataChecks(env = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
   
-  if (!is(mod_env[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
-    stop(moduleName, "> '", P(sim)$fireAttributes, "' is not a SpatialPointsDataFrame.")
+  sizes <- get(fireAttributesFireSense_SpreadFit[["size"]], envir = mod_env)
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]))
-    stop(moduleName, "> The SpatialPointsDataFrame '", P(sim)$fireAttributes, "' must have a 'size' column.")
-  
-  sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
-  
-  if (is.empty.model(P(sim)$formula))
-    stop(moduleName, "> The formula describes an empty model.")
-
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
   allxy <- all.vars(terms)
-  
+  print("Browser Line 200")
+  browser()
   if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
   {
     for(x in P(sim)$data)
@@ -479,7 +441,7 @@ spreadFitRun <- function(sim)
   
   control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
   
-  if (P(sim)$cores > 1) 
+  if (P(sim)$cores > 1) # Creates cluster
   {
     if (.Platform$OS.type == "unix")
       mkCluster <- parallel::makeForkCluster
@@ -494,7 +456,7 @@ spreadFitRun <- function(sim)
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
-  print("browser line 497")
+  print("browser line 497: Check fireSense_SpreadFitRaster, loci, sizes... all params")
   browser() # Check fireSense_SpreadFitRaster, loci, sizes... all params
   DE <- DEoptim(
     objfun, 
