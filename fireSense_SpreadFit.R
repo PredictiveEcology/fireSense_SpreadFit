@@ -482,7 +482,9 @@ spreadFitRun <- function(sim)
     else
       mkCluster <- parallel::makePSOCKcluster
     
-    cl <- mkCluster(P(sim)$cores)
+    message(crayon::blurred(paste0("Starting parallel model fitting for fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, "fireSense_SpreadFit_log"))))
+    
+    cl <- mkCluster(P(sim)$cores, outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log"))
     on.exit(stopCluster(cl))
     parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
