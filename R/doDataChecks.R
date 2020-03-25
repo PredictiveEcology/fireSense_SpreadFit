@@ -1,12 +1,12 @@
 .doDataChecks <- function(env, attribs, fml){
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]]))
+  if (is.null(env[["fireAttributesFireSense_SpreadFit"]]))
     stop(moduleName, "> '", attribs, "' not found in data objects or NULL.")
   
-  if (!is(mod_env[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
+  if (!is(env[["fireAttributesFireSense_SpreadFit"]], "SpatialPointsDataFrame"))
     stop(moduleName, "> '", attribs, "' is not a SpatialPointsDataFrame.")
   
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]))
+  if (is.null(env[["fireAttributesFireSense_SpreadFit"]][["size"]]))
     stop(moduleName, "> The SpatialPointsDataFrame '", attribs, "' must have a 'size' column.")
 
   if (is.empty.model(fml))
