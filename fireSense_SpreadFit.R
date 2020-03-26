@@ -80,7 +80,11 @@ defineModule(sim, list(
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant")
+    defineParameter(".useCache", "logical", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant"),
+    defineParameter(name = "termsNAtoZ", class = "character", default = NULL, 
+                    desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
+                                  "not zeroed) you can pass the names of these terms and the ",
+                                  "module will convert those to 0's internally"))
   ),
   inputObjects = rbind(
     expectsInput(
