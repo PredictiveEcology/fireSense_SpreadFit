@@ -378,7 +378,9 @@ spreadFitRun <- function(sim)
     else
       mkCluster <- parallel::makePSOCKcluster
     
-    message(crayon::blurred(paste0("Starting parallel model fitting for fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, "fireSense_SpreadFit_log"))))
+    message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                   "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
+                                                                           "fireSense_SpreadFit_log"))))
     
     cl <- mkCluster(P(sim)$cores, outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log"))
     on.exit(stopCluster(cl))
@@ -386,10 +388,11 @@ spreadFitRun <- function(sim)
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
+  
   print("browser line 497: Check fireSense_SpreadFitRaster, loci, sizes... all params")
   browser() # Check fireSense_SpreadFitRaster, loci, sizes... all params
   DE <- DEoptim(
-    objfun, 
+    .objfun, 
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
