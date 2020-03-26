@@ -1,6 +1,7 @@
 .objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster){
   # Optimization's objective function
   ad.test(list(unlist(mapply(FUN = function(x, loci){
+    browser()
             predX <- raster::predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par) #par[5:length(par)]
             r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
