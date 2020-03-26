@@ -1,12 +1,8 @@
-.objfun <- function(par, rasters, formula, loci, sizes, verbose){ #fireSense_SpreadFitRaster
+.objfun <- function(par, rasters, formula, loci, sizes, bufferedRealHistoricalFiresList, verbose){ #fireSense_SpreadFitRaster
   # Optimization's objective function
-  ad.test(list(unlist(mapply(FUN = function(x, loci){
-    #removed this fun. Was not working: fireSense_SpreadFitRaster
-    # fireSense_SpreadFitRaster <- function(model, data, par){
-    #   browser()
-    #   drop(model.matrix(model, data) %*% par)
-    # }
-    # 
+ results <- mapply(FUN = function(x, bufferedRealHistoricalFires, loci, nonNA, wADtest = 1){
+    
+            
     print("browser for Eliot")
     browser()
             # How many of the parameters belong to the model?
@@ -18,10 +14,6 @@
             # filling up classes with 0.
             dtReplaceNAwith0(modelDT)
             pixelID <- modelDT$pixelID
-            # Not sure what is the correct way of doing this...
-            
-            # Way 1: fit a model with the formula and data
-            # mod <- lm(formula = formula, data = modelDT[, -1]) # doesn't work
             
             # Way 2: Evaluate the formula, but this only works if its a simple additive model
             modelDT <- modelDT[, Map("*", .SD, tail(x = par, n = parsModel)), .SDcols = names(modelDT)[-1]]
@@ -47,55 +39,31 @@
           
             spreadState <- SpaDES.tools::spread(
               landscape = r,
-              loci = loci, 
+              loci = rep(loci, times = 10), 
               spreadProb = r,
-              returnIndices = TRUE
+              returnIndices = TRUE,
+              allowOverlap = TRUE
             )
             
-            # spreadState <- SpaDES.tools::spread2(
-            #   landscape = r,
-            #   start = loci, 
-            #   spreadProb = r,
-            #   asRaster = FALSE
-            # )
-            
-            # spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
             spreadState[ , fire_id := .GRP, by = "initialLocus"] # Add an fire_id column
             
-            tabulate(spreadState[["fire_id"]]) # Here tabulate() is equivalent to table() but faster
-            # tabulate(spreadState[["initialLocus"]]) # Here tabulate() is equivalent to table() but faster
+            fireSizes <- tabulate(spreadState[["fire_id"]]) # Here tabulate() is equivalent to table() but faster
+            SNLL <- -sum(dbinom(prob = ras[nonNA], size = N, x = bufferedRealHistoricalFires[nonNA], log = TRUE), na.rm = TRUE) # Sum of the negative log likelihood
+            internalResults <- list(fireSizes = fireSizes, SNLL = SNLL)
             
-            # # 10 replicates to better estimate the median
-            # apply(
-            #   do.call(
-            #     "rbind",
-            #     lapply(
-            #       1:10,
-            #       function(i)
-            #       {
-            #         spreadState <- SpaDES.tools::spread2(
-            #           landscape = r,
-            #           start = loci,
-            #           spreadProb = r,
-            #           asRaster = FALSE
-            #         )
-            # 
-            #         spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
-            # 
-            #         tabulate(spreadState[["fire_id"]])
-            #       }
-            #     )
-            #   ),
-            #   2L,
-            #   median
-            # )
+            return(internalResults)
           },
           rasters,
           loci = loci, 
           SIMPLIFY = FALSE
         )
-      ),
-      sizes
-    )
-  )[["ad"]][1L, 1L]
+  results <- purrr::transpose(results)
+ 
+  adTest <- ad.test(unlist(results$fireSizes), sizes)[["ad"]][1L, 1L]
+  SNLLTest <- sum(unlist(results$SNLL))
+  adTest <- rescale(adTest)
+  SNLLTest <- rescale(SNLLTest)
+  objFunRes <- wADtest * adTest + SNLLTest # wADtest is the weight for the AD test
+  # Figure out what we want from these. This is potentially correct (i.e. we want the smallest ad.test and the smallest SNLL)
+  return(objFunRes)
 }
