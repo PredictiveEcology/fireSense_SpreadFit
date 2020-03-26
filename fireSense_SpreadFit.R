@@ -194,7 +194,7 @@ spreadFitRun <- function(sim)
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
   assign("fireAttributesFireSense_SpreadFit", value = sim[[P(sim)$fireAttributes]], envir = mod_env)
   
-  .doDataChecks(env = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
+  .doDataChecks(moduleName = moduleName, env = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
   
   sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
   

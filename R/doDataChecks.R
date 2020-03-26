@@ -1,4 +1,4 @@
-.doDataChecks <- function(env, attribs, fml){
+.doDataChecks <- function(moduleName, env, attribs, fml){
   
   if (is.null(env[["fireAttributesFireSense_SpreadFit"]]))
     stop(moduleName, "> '", attribs, "' not found in data objects or NULL.")
