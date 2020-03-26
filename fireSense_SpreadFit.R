@@ -368,7 +368,7 @@ spreadFitRun <- function(sim)
       })
     browser()
     list2env(with(lociPerDate, list(loci = eapply(environment(), FUN = function(x) x[["loci"]]),
-                                    sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]])))),
+                                    sizes = eapply(environment(), FUN = function(x) x[["sizes"]]))),
              envir = environment())
     
   control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
@@ -395,12 +395,34 @@ spreadFitRun <- function(sim)
   # Make sure the rasters are in memory
   rasters <- lapply(X = rasters, FUN = raster::brick)
   
+# HAVE A SHAPEFILE of the ecoregions/ecodistricts and this optiimzation needs to be done for each one
+  
+  # Step 1: create a list of rasters of buffered fires
+  # Needs to be a lapply, one for each year
+  # For each year, I rasterize the all fire Polygons and
+  # buffer (how much? -- goal is to have the same number of unburned as burned pixels) 
+  # each raster's fires
+  
+  # Create realHistoricalFireList (lapply)
+  
+  # buffered <- buffer(realHistoricalFireList, 4)
+  # bufferedRealHistoricalFiresList <- raster(realHistoricalFire)
+  # bufferedRealHistoricalFiresList[buffered[] == 1] <- 0
+  # bufferedRealHistoricalFiresList[RealFire$indices] <- 1
+  # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
+  # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
+  # nonNAList
+  
+  # This up, is this: bufferedRealHistoricalFiresList
+
   DE <- DEoptim(
     .objfun, 
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
     rasters = rasters, 
+    # bufferedRealHistoricalFiresList = bufferedRealHistoricalFiresList,
+    # nonNAList = nonNAList,
     formula = P(sim)$formula, 
     verbose = P(sim)$verbose,
     loci = loci,
