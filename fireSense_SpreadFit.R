@@ -402,7 +402,7 @@ spreadFitRun <- function(sim)
     control = do.call("DEoptim.control", control),
     rasters = rasters, 
     formula = P(sim)$formula, 
-    verbose = P(sim)$verbose
+    verbose = P(sim)$verbose,
     loci = loci,
     sizes = sizes,
     fireSense_SpreadFitRaster = fireSense_SpreadFitRaster
