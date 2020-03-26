@@ -17,7 +17,7 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster"),
+  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster", "data.table"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(name = "formula", class = "formula", default = NA,
