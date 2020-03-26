@@ -22,16 +22,16 @@
             if (isTRUE(median(predicted, na.rm = TRUE) > .245)) 
               return(1e100)
             
-            browser()
             # Put the prediction back in the raster
             predDT <- data.table(pixelID = pixelID, pred = predicted)
             mergedDT <- merge(data.table(pixelID = 1:ncell(x)), predDT, all.x = TRUE, by = "pixelID")
-            predRas <- raster::setValues(x = x[[1]][[1]], values = mergedDT$predicted)
-            
+            predRas <- raster::setValues(x = x[[1]][[1]], values = mergedDT$pred)
+            names(predRas) <- spreadProb
+            print(paste0("spreadProb raster: median = ", median(predicted, na.rm = TRUE),
+                         "    spreadProb raster: mean = ", mean(predicted, na.rm = TRUE)))
             
             r <- calc(predRas, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
-            r[] <- r[]
-                    
+
             spreadState <- SpaDES.tools::spread(
               landscape = r,
               loci = loci, 
