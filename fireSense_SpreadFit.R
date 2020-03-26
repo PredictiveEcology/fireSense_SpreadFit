@@ -404,8 +404,8 @@ spreadFitRun <- function(sim)
     formula = P(sim)$formula, 
     verbose = P(sim)$verbose,
     loci = loci,
-    sizes = sizes,
-    fireSense_SpreadFitRaster = fireSense_SpreadFitRaster
+    # fireSense_SpreadFitRaster = fireSense_SpreadFitRaster,
+    sizes = sizes
   )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
