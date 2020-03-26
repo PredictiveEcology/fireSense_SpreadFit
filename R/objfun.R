@@ -18,11 +18,16 @@
             # filling up classes with 0.
             dtReplaceNAwith0(modelDT)
             pixelID <- modelDT$pixelID
-            modelDT <- modelDT[, Map("*", .SD, tail(x = par, n = parsModel)), .SDcols = names(modelDT)[-1]]
             # Not sure what is the correct way of doing this...
+            
+            # Way 1: fit a model with the formula and data
+            # mod <- lm(formula = formula, data = modelDT[, -1]) # doesn't work
+            
+            # Way 2: Evaluate the formula, but this only works if its a simple additive model
+            modelDT <- modelDT[, Map("*", .SD, tail(x = par, n = parsModel)), .SDcols = names(modelDT)[-1]]
             dataEnv <- new.env()
             list2env(x = modelDT, envir = dataEnv)
-            assign("predicted", value = eval(parse(text = paste0(formula)[2]), 
+            assign("predicted", value = eval(parse(text = paste0(formula)[2]),
                                              envir = dataEnv), envir = dataEnv)
             predicted <- get("predicted", dataEnv)
             

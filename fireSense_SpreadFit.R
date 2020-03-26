@@ -366,7 +366,7 @@ spreadFitRun <- function(sim)
     lociPerDate <- lapply(lociPerDate, function(x){
       with(x, chk_duplicatedStartPixels(cells, size))
       })
-    
+    browser()
     list2env(with(lociPerDate, list(loci = eapply(environment(), FUN = function(x) x[["loci"]]),
                                     sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]])))),
              envir = environment())
