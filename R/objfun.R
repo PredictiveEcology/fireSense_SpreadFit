@@ -1,9 +1,23 @@
 .objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster){
   # Optimization's objective function
   ad.test(list(unlist(mapply(FUN = function(x, loci){
-    browser()
             parsModel <- length(attributes(terms(formula))[["term.labels"]]) # How many of the parameters belong to the model?
-            predX <- raster::predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = tail(x = par, n = parsModel))
+
+            browser()
+            # a <- drop(model.matrix(formula, x) %*% par)
+            
+            # Making a data table of all raster values
+            modelDT <- data.table(pixelID = 1:ncell(x), getValues(x))
+            # removing NA's from outside studyArea
+            modelDT <- modelDT[!is.na(weather), ]
+            # filling up classes with 0.
+            dtReplaceNAwith0(modelDT)
+            
+
+            # predX <- raster::predict(x, model = formula, fun = function(data, model, par){
+            #   browser()
+            # }, na.rm = TRUE, par = tail(x = par, n = parsModel)) #fireSense_SpreadFitRaster
+            
             r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
             if (all(!all(is.na(getValues(r))), 
