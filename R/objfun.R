@@ -26,7 +26,7 @@
             predDT <- data.table(pixelID = pixelID, pred = predicted)
             mergedDT <- merge(data.table(pixelID = 1:ncell(x)), predDT, all.x = TRUE, by = "pixelID")
             predRas <- raster::setValues(x = x[[1]][[1]], values = mergedDT$pred)
-            names(predRas) <- spreadProb
+            names(predRas) <- "spreadProb"
             print(paste0("spreadProb raster: median = ", median(predicted, na.rm = TRUE),
                          "    spreadProb raster: mean = ", mean(predicted, na.rm = TRUE)))
             
