@@ -361,8 +361,6 @@ spreadFitRun <- function(sim)
                      "the fitting, but should be revised", immediate. = TRUE))
     
     # Removing duplicated fires on the same pixel on the same year
-    print("browser lociPerDate")
-    browser()
     lociPerDate <- lapply(lociPerDate, function(x){
       with(x, chk_duplicatedStartPixels(cells, size))
       })
