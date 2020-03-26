@@ -404,7 +404,7 @@ spreadFitRun <- function(sim)
     formula = P(sim)$formula, 
     verbose = P(sim)$verbose,
     loci = loci,
-    # fireSense_SpreadFitRaster = fireSense_SpreadFitRaster,
+    # fireSense_SpreadFitRaster = fireSense_SpreadFitRaster, # Removed because was failing. I think its the wrong thing to do
     sizes = sizes
   )
   

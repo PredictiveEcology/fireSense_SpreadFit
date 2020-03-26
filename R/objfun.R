@@ -1,6 +1,14 @@
 .objfun <- function(par, rasters, formula, loci, sizes, verbose){ #fireSense_SpreadFitRaster
   # Optimization's objective function
   ad.test(list(unlist(mapply(FUN = function(x, loci){
+    #removed this fun. Was not working: fireSense_SpreadFitRaster
+    # fireSense_SpreadFitRaster <- function(model, data, par){
+    #   browser()
+    #   drop(model.matrix(model, data) %*% par)
+    # }
+    # 
+    print("browser for Eliot")
+    browser()
             # How many of the parameters belong to the model?
             parsModel <- length(attributes(terms(formula))[["term.labels"]]) 
             # Making a data table of all raster values
