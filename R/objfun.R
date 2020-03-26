@@ -13,6 +13,8 @@
             print("browser: make sure r is in memory, and that spreadProb")
             browser()
             r[] <- r[]
+            rasVals <- data.table(valsR = getValues(r))
+            
             if (median(spreadProb, na.rm = TRUE) > .245) return(1e100)
             spreadState <- SpaDES.tools::spread(
               landscape = r,
