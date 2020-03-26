@@ -405,7 +405,6 @@ spreadFitRun <- function(sim)
   )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
-  # AD <- DE %>% `[[` ("optim") %>% `[[` ("bestval")
   AD <- DE$optim$bestval
   
   sim$fireSense_SpreadFitted <- list(
