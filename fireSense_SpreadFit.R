@@ -336,10 +336,7 @@ spreadFitRun <- function(sim)
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
-    
-    print("browser line 336")
-    browser()
-    
+
     ## Get loci from the raster sim$landscape for the fire locations
     lociDF <- raster::extract(x = rasters[[1L]], y = mod_env[["fireAttributesFireSense_SpreadFit"]],
                          cellnumbers = TRUE,
