@@ -1,4 +1,4 @@
-dtReplaceNAwith0 <- function(DT, colsToUse){
+dtReplaceNAwith0 <- function(DT, colsToUse = NULL){
   if (is.null(colsToUse))
     colsToUse <- names(DT)
   for (i in colsToUse)
