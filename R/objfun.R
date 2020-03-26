@@ -6,7 +6,8 @@
             predX <- raster::predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = tail(x = par, n = parsModel))
             r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
-            if (isTRUE(median(r, na.rm = TRUE) > .245)) return(1e100)
+            if (all(!all(is.na(getValues(r))), 
+                    isTRUE(median(r, na.rm = TRUE) > .245))) return(1e100)
             spreadState <- SpaDES.tools::spread(
               landscape = r,
               loci = loci, 
