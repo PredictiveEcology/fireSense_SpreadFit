@@ -9,6 +9,7 @@
             modelDT <- modelDT[!is.na(weather), ]
             # filling up classes with 0.
             dtReplaceNAwith0(modelDT)
+            pixelID <- modelDT$pixelID
             modelDT <- modelDT[, Map("*", .SD, tail(x = par, n = parsModel)), .SDcols = names(modelDT)[-1]]
             # Not sure what is the correct way of doing this...
             dataEnv <- new.env()
@@ -16,13 +17,19 @@
             assign("predicted", value = eval(parse(text = paste0(formula)[2]), 
                                              envir = dataEnv), envir = dataEnv)
             predicted <- get("predicted", dataEnv)
-            # Put the prediction back in the raster
-            browser()
             
+            # Test if this is worth testing
             if (isTRUE(median(predicted, na.rm = TRUE) > .245)) 
               return(1e100)
             
-            r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
+            browser()
+            # Put the prediction back in the raster
+            predDT <- data.table(pixelID = pixelID, pred = predicted)
+            mergedDT <- merge(data.table(pixelID = 1:ncell(x)), predDT, all.x = TRUE, by = "pixelID")
+            predRas <- raster::setValues(x = x[[1]][[1]], values = mergedDT$predicted)
+            
+            
+            r <- calc(predRas, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
                     
             spreadState <- SpaDES.tools::spread(
