@@ -390,8 +390,9 @@ spreadFitRun <- function(sim)
   }
   }
   
-  print("browser line 497: Check fireSense_SpreadFitRaster, loci, sizes... all params")
-  browser() # Check fireSense_SpreadFitRaster, loci, sizes... all params
+  # Make sure the rasters are in memory
+  rasters <- lapply(X = rasters, FUN = raster::brick)
+  
   DE <- DEoptim(
     .objfun, 
     lower = P(sim)$lower,
