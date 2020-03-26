@@ -1,20 +1,10 @@
 .objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster){
   # Optimization's objective function
-  ad.test(
-    list(
-      unlist(
-        mapply(
-          FUN = function(x, loci)
-          {
-            r <- calc(
-              predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]),
-              fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L] ## 5-parameters logistic
-            )
-            print("browser: make sure r is in memory, and that spreadProb")
-            browser()
+  ad.test(list(unlist(mapply(FUN = function(x, loci){
+            predX <- raster::predict(x, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par) #par[5:length(par)]
+            r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
-            rasVals <- data.table(valsR = getValues(r))
-            
+
             if (median(spreadProb, na.rm = TRUE) > .245) return(1e100)
             spreadState <- SpaDES.tools::spread(
               landscape = r,
