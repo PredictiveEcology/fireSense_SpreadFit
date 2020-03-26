@@ -340,35 +340,39 @@ spreadFitRun <- function(sim)
     print("browser line 336")
     browser()
     
-    list2env(
-      with(
-        lapply(
-          lapply(
-            split(
-              slot(
-                ## Get loci from the raster sim$landscape for the fire locations
-                raster::extract(
-                  rasters[[1L]],
-                  mod_env[["fireAttributesFireSense_SpreadFit"]], 
-                  cellnumbers = TRUE,
-                  df = TRUE,
-                  sp = TRUE
-                ),
-                "data"
-              ),
-              mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]]
-            ),
-            na.omit
-          ),
-          function(x) with(x, chk_duplicatedStartPixels(cells, size))
-        ),
-        list(
-          loci = eapply(environment(), FUN = function(x) x[["loci"]]),
-          sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]]))
-        )
-      ),
-      envir = environment()
-    )
+    ## Get loci from the raster sim$landscape for the fire locations
+    lociDF <- raster::extract(x = rasters[[1L]], y = mod_env[["fireAttributesFireSense_SpreadFit"]],
+                         cellnumbers = TRUE,
+                         df = TRUE,
+                         sp = TRUE)
+    
+    # This has lots of NAs (probably the 0's in the original data), these should be converted to/ensured that are zeros 
+    lociData <- data.table(slot(object = lociDF, name = "data"))
+    
+    dtReplaceNAwith0(DT = lociData, colsToUse = P(sim)$termsNAtoZ)
+    #TODO Functions temporarily in R folder of the module. Will be moved to a package
+    lociPerDate <- split(x = lociData, mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])
+    
+    #NOTE: somehow we might still have some NA's coming from the weather data. We should exclude these points, BUT warn the user
+    originalNROW <- sum(unlist(lapply(X = lociPerDate, FUN = NROW)))
+    lociPerDate <- lapply(X = split(x = lociData, mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]]), FUN = na.omit)
+    # Assertion:
+    currentNROW <- sum(unlist(lapply(X = lociPerDate, FUN = NROW)))
+    if (currentNROW != originalNROW)
+      warning(paste0("There are ", originalNROW - currentNROW,
+                     " rows that contain NA's in the dataset. These will be excluded for ",
+                     "the fitting, but should be revised", immediate. = TRUE))
+    
+    # Removing duplicated fires on the same pixel on the same year
+    print("browser lociPerDate")
+    browser()
+    lociPerDate <- lapply(lociPerDate, function(x){
+      with(x, chk_duplicatedStartPixels(cells, size))
+      })
+    
+    list2env(with(lociPerDate, list(loci = eapply(environment(), FUN = function(x) x[["loci"]]),
+                                    sizes = unlist(eapply(environment(), FUN = function(x) x[["sizes"]])))),
+             envir = environment())
     
     objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
     {
