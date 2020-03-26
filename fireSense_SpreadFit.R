@@ -84,7 +84,9 @@ defineModule(sim, list(
     defineParameter(name = "termsNAtoZ", class = "character", default = NULL, 
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
-                                  "module will convert those to 0's internally"))
+                                  "module will convert those to 0's internally")),
+    defineParameter(name = "verbose", class = "logical", default = FALSE, 
+                    desc = "optional. Should it calculate and print median of spread Probability during calculations?")
   ),
   inputObjects = rbind(
     expectsInput(
@@ -400,6 +402,7 @@ spreadFitRun <- function(sim)
     control = do.call("DEoptim.control", control),
     rasters = rasters, 
     formula = P(sim)$formula, 
+    verbose = P(sim)$verbose
     loci = loci,
     sizes = sizes,
     fireSense_SpreadFitRaster = fireSense_SpreadFitRaster

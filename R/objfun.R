@@ -1,4 +1,4 @@
-.objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster){
+.objfun <- function(par, rasters, formula, loci, sizes, verbose){ #fireSense_SpreadFitRaster
   # Optimization's objective function
   ad.test(list(unlist(mapply(FUN = function(x, loci){
             # How many of the parameters belong to the model?
@@ -27,11 +27,11 @@
             mergedDT <- merge(data.table(pixelID = 1:ncell(x)), predDT, all.x = TRUE, by = "pixelID")
             predRas <- raster::setValues(x = x[[1]][[1]], values = mergedDT$pred)
             names(predRas) <- "spreadProb"
-            print(paste0("spreadProb raster: median = ", median(predicted, na.rm = TRUE),
-                         "    spreadProb raster: mean = ", mean(predicted, na.rm = TRUE)))
             
             r <- calc(predRas, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
-
+            if (verbose)
+              print(paste0("spreadProb raster: median = ", median(getValues(r), na.rm = TRUE)))
+          
             spreadState <- SpaDES.tools::spread(
               landscape = r,
               loci = loci, 
