@@ -1,27 +1,30 @@
 .objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster){
   # Optimization's objective function
   ad.test(list(unlist(mapply(FUN = function(x, loci){
-            parsModel <- length(attributes(terms(formula))[["term.labels"]]) # How many of the parameters belong to the model?
-
-            browser()
-            # a <- drop(model.matrix(formula, x) %*% par)
-            
+            # How many of the parameters belong to the model?
+            parsModel <- length(attributes(terms(formula))[["term.labels"]]) 
             # Making a data table of all raster values
             modelDT <- data.table(pixelID = 1:ncell(x), getValues(x))
             # removing NA's from outside studyArea
             modelDT <- modelDT[!is.na(weather), ]
             # filling up classes with 0.
             dtReplaceNAwith0(modelDT)
+            modelDT <- modelDT[, Map("*", .SD, tail(x = par, n = parsModel)), .SDcols = names(modelDT)[-1]]
+            # Not sure what is the correct way of doing this...
+            dataEnv <- new.env()
+            list2env(x = modelDT, envir = dataEnv)
+            assign("predicted", value = eval(parse(text = paste0(formula)[2]), 
+                                             envir = dataEnv), envir = dataEnv)
+            predicted <- get("predicted", dataEnv)
+            # Put the prediction back in the raster
+            browser()
             
-
-            # predX <- raster::predict(x, model = formula, fun = function(data, model, par){
-            #   browser()
-            # }, na.rm = TRUE, par = tail(x = par, n = parsModel)) #fireSense_SpreadFitRaster
+            if (isTRUE(median(predicted, na.rm = TRUE) > .245)) 
+              return(1e100)
             
             r <- calc(predX, fun = function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
             r[] <- r[]
-            if (all(!all(is.na(getValues(r))), 
-                    isTRUE(median(r, na.rm = TRUE) > .245))) return(1e100)
+                    
             spreadState <- SpaDES.tools::spread(
               landscape = r,
               loci = loci, 
