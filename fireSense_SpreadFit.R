@@ -193,9 +193,9 @@ spreadFitRun <- function(sim)
   mod_env <- new.env(parent = emptyenv()) # 'emptyenv()' Avoid memory leak and C recursive problem
   ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
   assign("fireAttributesFireSense_SpreadFit", value = sim[[P(sim)$fireAttributes]], envir = mod_env)
-  
+  browser()
   .doDataChecks(moduleName = moduleName, env = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
-  
+  browser()
   sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
   
   terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
