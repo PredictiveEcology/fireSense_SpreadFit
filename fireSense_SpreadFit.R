@@ -388,6 +388,7 @@ spreadFitRun <- function(sim)
     parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
     control$cluster <- cl
   }
+  }
   
   print("browser line 497: Check fireSense_SpreadFitRaster, loci, sizes... all params")
   browser() # Check fireSense_SpreadFitRaster, loci, sizes... all params
