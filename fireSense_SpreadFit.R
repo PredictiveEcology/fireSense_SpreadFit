@@ -405,6 +405,7 @@ spreadFitRun <- function(sim)
   # buffer (how much? -- goal is to have the same number of unburned as burned pixels) 
   # each raster's fires
   
+  
   # Create realHistoricalFireList (lapply)
   
   # buffered <- buffer(realHistoricalFireList, 4)
