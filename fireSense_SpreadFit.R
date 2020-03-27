@@ -366,7 +366,7 @@ spreadFitRun <- function(sim)
     lociPerDate <- lapply(lociPerDate, function(x){
       with(x, chk_duplicatedStartPixels(cells, size))
       })
-    browser()
+
     list2env(with(lociPerDate, list(loci = eapply(environment(), FUN = function(x) x[["loci"]]),
                                     sizes = eapply(environment(), FUN = function(x) x[["sizes"]]))),
              envir = environment())
@@ -393,9 +393,11 @@ spreadFitRun <- function(sim)
   }
   
   # Make sure the rasters are in memory
-  rasters <- lapply(X = rasters, FUN = raster::brick)
+  # rasters <- lapply(X = rasters, FUN = raster::brick)
+  browser()
   
 # HAVE A SHAPEFILE of the ecoregions/ecodistricts and this optiimzation needs to be done for each one
+  # Later on...
   
   # Step 1: create a list of rasters of buffered fires
   # Needs to be a lapply, one for each year
