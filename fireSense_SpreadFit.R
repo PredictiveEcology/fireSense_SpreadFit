@@ -88,7 +88,7 @@ defineModule(sim, list(
     defineParameter(name = "verbose", class = "logical", default = FALSE, 
                     desc = "optional. Should it calculate and print median of spread Probability during calculations?")
   ),
-  inputObjects = rbind(
+  inputObjects = rbind( 
     expectsInput(
       objectName = "fireAttributesFireSense_SpreadFit",
       objectClass = "SpatialPointsDataFrame",
@@ -98,6 +98,14 @@ defineModule(sim, list(
               starting dates ('date' column) if fires are to be spread at
               different time intervals. If the 'date' column is not present, all
               fires are assumed to have started at the same time interval."
+    ),
+    expectsInput(
+      objectName = "firePolys",
+      objectClass = "list",
+      sourceURL = NA_character_,
+      desc = paste0("List of years of SpatialPolygonsDataFrame representing fire polygons.", 
+                    "This defaults to https://cwfis.cfs.nrcan.gc.ca/downloads/nbac/ and uses ",
+                    "the most current versions of the database (Nov or Sept 2019)")
     ),
     expectsInput(
       objectName = "dataFireSense_SpreadFit",
@@ -219,7 +227,9 @@ spreadFitRun <- function(sim)
         else stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
       }
     }
-
+    
+# TODOAdd test for firePolygon to be a list of shapefiles
+    
     missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
     if (s <- sum(missing))
@@ -252,14 +262,7 @@ spreadFitRun <- function(sim)
         spreadProb = r,
         returnIndices = TRUE
       )
-      # spreadState <- SpaDES.tools::spread2(
-      #   landscape = r,
-      #   start = loci, 
-      #   spreadProb = r,
-      #   asRaster = FALSE
-      # )
       
-      #spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
       spreadState[ , fire_id := .GRP, by = "initialLocus"] # Add an fire_id column
       
       first <- ad.test(
@@ -272,36 +275,6 @@ spreadFitRun <- function(sim)
       )[["ad"]][1,1]
       #second <- liklihood here
       scale(first) # + scale(second)
-       
-      # # 10 replicates to better estimate the median
-      # ad.test(
-      #   list(
-      #     apply(
-      #       do.call(
-      #         "rbind",
-      #         lapply(
-      #           1:10, 
-      #           function(i) 
-      #           {
-      #             spreadState <- SpaDES.tools::spread2(
-      #               landscape = r,
-      #               start = loci, 
-      #               spreadProb = r,
-      #               asRaster = FALSE
-      #             )
-      #             
-      #             spreadState[ , fire_id := .GRP, by = "initialPixels"] # Add an fire_id column
-      #             
-      #             tabulate(spreadState[["fire_id"]])
-      #           }
-      #         )
-      #       ),
-      #       2L,
-      #       median
-      #     ),
-      #     sizes
-      #   )
-      # )[["ad"]][1,1]
     }
   }
   else ## Fires started at different time intervals
@@ -392,27 +365,21 @@ spreadFitRun <- function(sim)
   }
   }
   
-  # Make sure the rasters are in memory
-  # rasters <- lapply(X = rasters, FUN = raster::brick)
   browser()
   
-# HAVE A SHAPEFILE of the ecoregions/ecodistricts and this optiimzation needs to be done for each one
-  # Later on...
+# TODO HAVE A SHAPEFILE of the ecoregions/ecodistricts and make this optimization perform in 
+  #each ecoregion
   
-  # Step 1: create a list of rasters of buffered fires
-  # Needs to be a lapply, one for each year
-  # For each year, I rasterize the all fire Polygons and
-  # buffer (how much? -- goal is to have the same number of unburned as burned pixels) 
-  # each raster's fires
+  fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
+                        rasterToMatch = rasterToMatch, useParallel = TRUE, 
+                        omitArgs = "useParallel")
   
-  
-
   # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
   # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
   # nonNAList
   
   # This up, is this: bufferedRealHistoricalFiresList
-
+# All being passed should be lists of tables
   DE <- DEoptim(
     .objfun, 
     lower = P(sim)$lower,
@@ -462,3 +429,18 @@ spreadFitSave <- function(sim)
 
   invisible(sim)
 }
+
+.inputObjects <- function(sim) {
+  
+  cloudFolderID <- "https://drive.google.com/open?id=1PoEkOkg_ixnAdDqqTQcun77nUvkEHDc0"
+  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  message(currentModule(sim), ": using dataPath '", dPath, "'.")
+
+  if (!suppliedElsewhere("firePolys", sim)){
+    sim$firePolys <- Cache(getFirePolygons, years = 1991:2017, studyArea = sim$studyArea, 
+                           pathInputs = Paths$inputPath, userTags = c("years:1991_2017"))
+  }
+  
+  return(invisible(sim))
+}
+
