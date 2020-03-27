@@ -406,12 +406,7 @@ spreadFitRun <- function(sim)
   # each raster's fires
   
   
-  # Create realHistoricalFireList (lapply)
-  
-  # buffered <- buffer(realHistoricalFireList, 4)
-  # bufferedRealHistoricalFiresList <- raster(realHistoricalFire)
-  # bufferedRealHistoricalFiresList[buffered[] == 1] <- 0
-  # bufferedRealHistoricalFiresList[RealFire$indices] <- 1
+
   # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
   # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
   # nonNAList
