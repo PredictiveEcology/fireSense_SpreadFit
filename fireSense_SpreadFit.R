@@ -197,6 +197,7 @@ spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
   
+  if (FALSE) {
   # Load inputs in the data container
   # list2env(as.list(envir(sim)), envir = mod)
   
@@ -237,7 +238,7 @@ spreadFitRun <- function(sim)
            if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
            " not found in data objects.")
     
-    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>% stack
+    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>% raster::brick
     
     list2env(
       with(
@@ -307,13 +308,30 @@ spreadFitRun <- function(sim)
     if (any(badClass))
       stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
 
+    # move to RAM
+    
+    out <- lapply(mget(allxy, envir = envir(sim)), function(x) {
+      raster::unstack(x)
+    })
+    out2 <- purrr::transpose(out)
+    names(out2) <- as.character(1991:2017)
+    
     rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>%
       lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
       c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
       do.call("mapply", args = .)
-
+    names(rasters) <- as.character(1991:2017)
+    rastersDT <- rbindlist(lapply(rasters[1:2], function(x) {
+      a <- as.data.table(x[])
+      }), use.names = TRUE, idcol = "year")
+    set(rastersDT, NULL, "pixelID", rep(1:ncell(rasters[[1]]), length.out = NROW(rastersDT)))
+    
+    
+    rastersDT1 <- na.omit(rastersDT, cols = c(names(rasters[[1]])))
+    
     ## Get loci from the raster sim$landscape for the fire locations
-    lociDF <- raster::extract(x = rasters[[1L]], y = mod_env[["fireAttributesFireSense_SpreadFit"]],
+    lociDF <- raster::extract(x = rasters[[1L]], 
+                              y = sim[["fireAttributesFireSense_SpreadFit"]],
                          cellnumbers = TRUE,
                          df = TRUE,
                          sp = TRUE)
@@ -364,15 +382,29 @@ spreadFitRun <- function(sim)
     control$cluster <- cl
   }
   }
+}
   
-  browser()
+  hash <- fastdigest(sim$annualStacks)
+  system.time(rastersDT <- Cache(annualStacksToDT, sim$annualStacks, sim$rasterToMatch,
+                                 .fastHash = hash,
+                                 omitArgs = c("annualStacks", "rasterToMatch")))
+  
   
 # TODO HAVE A SHAPEFILE of the ecoregions/ecodistricts and make this optimization perform in 
   #each ecoregion
+  lociDF <- raster::extract(x = sim$rasterToMatch, 
+                            y = sim[["fireAttributesFireSense_SpreadFit"]],
+                            cellnumbers = TRUE,
+                            df = TRUE,
+                            sp = TRUE) %>% 
+    as.data.table() %>%
+    set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
+  lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
   
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = TRUE, 
                         omitArgs = "useParallel")
+  names(fireBuffered) <- names(lociList)
   
   # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
   # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
@@ -380,19 +412,52 @@ spreadFitRun <- function(sim)
   
   # This up, is this: bufferedRealHistoricalFiresList
 # All being passed should be lists of tables
-  DE <- DEoptim(
+  fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
+  browser()
+  
+  if (FALSE) {
+    for (i in 1:100) {
+      seed <- sample(1e6, 1)
+      set.seed(seed)
+      pars <- apply(cbind(P(sim)$lower, P(sim)$upper), 1, mean) * runif(length(P(sim)$lower), 2, 3)
+      pars[5] <- pars[5]*8
+      system.time(a <- .objfun(par = pars,
+                               landscape = sim$rasterToMatch,
+                               formula = formula, #loci = loci,
+                               rastersDT = lapply(rastersDT, setDF),
+                               fireBufferedListDT = lapply(fireBufferedListDT, setDF),
+                               historicalFires = lapply(lociList, setDF),
+                               verbose = TRUE
+      ))
+    }
+  }
+  
+  control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
+  message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                 "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
+                                                                         "fireSense_SpreadFit_log"))))
+  browser()
+  cl <- makeCluster(P(sim)$cores, 
+                    outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log"),
+                    )
+  on.exit(stopCluster(cl))
+  parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster", "data.table")) 
+    library(i, character.only = TRUE))
+  parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
+  control$cluster <- cl
+  
+  DE <- Cache(DEoptim,
     .objfun, 
     lower = P(sim)$lower,
-    upper = P(sim)$upper,
+    upper = P(sim)$upper*2,
     control = do.call("DEoptim.control", control),
-    rasters = rasters, 
-    # bufferedRealHistoricalFiresList = bufferedRealHistoricalFiresList,
-    # nonNAList = nonNAList,
+    landscape = sim$rasterToMatch,
+    rastersDT = lapply(rastersDT, setDF),
+    fireBufferedListDT = lapply(fireBufferedListDT, setDF),
+    historicalFires = lapply(lociList, setDF),
     formula = P(sim)$formula, 
     verbose = P(sim)$verbose,
-    loci = loci,
-    # fireSense_SpreadFitRaster = fireSense_SpreadFitRaster, # Removed because was failing. I think its the wrong thing to do
-    sizes = sizes
+    omitArgs = c("verbose")
   )
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
@@ -444,3 +509,25 @@ spreadFitSave <- function(sim)
   return(invisible(sim))
 }
 
+annualStacksToDT <- function(annualStacks, rasterToMatch, ...) {
+  whNotNA <- which(!is.na(rasterToMatch[]))
+  rastersDT <- #rbindlist(
+                     lapply(annualStacks, whNotNA = whNotNA, function(x, whNotNA) {
+                       a <- as.data.table(x[])[whNotNA]
+                       set(a, NULL, "pixelID", whNotNA)
+                       a <- dtReplaceNAwith0(a)
+                       a
+                     })
+  #, use.names = TRUE, idcol = "year")
+  
+}
+
+simplifyFireBuffered <- function(fireBuffered) {
+  lapply(fireBuffered, function(r) {
+    ras <- raster(r)
+    nonNA <- which(!is.na(r[]))
+    ras[r[] == 1] <- 0
+    ras[r[] == 0] <- 1
+    data.table(buffer = ras[][nonNA], pixelID = nonNA)
+  })
+}
