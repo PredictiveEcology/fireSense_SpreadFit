@@ -385,10 +385,16 @@ spreadFitRun <- function(sim)
 }
   
   hash <- fastdigest(sim$annualStacks)
-  system.time(rastersDT <- Cache(annualStacksToDT, sim$annualStacks, sim$rasterToMatch,
+  whNotNA <- which(!is.na(rasterToMatch[]))
+  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
+                                 whNotNA = whNotNA,
                                  .fastHash = hash,
                                  omitArgs = c("annualStacks", "rasterToMatch")))
-  
+  hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
+  system.time(nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, sim$nonAnnualStacks, 
+                                 whNotNA = whNotNA,
+                                 .fastHash = hashNonAnnual,
+                                 omitArgs = c("annualStacks", "rasterToMatch")))
   
 # TODO HAVE A SHAPEFILE of the ecoregions/ecodistricts and make this optimization perform in 
   #each ecoregion
@@ -413,8 +419,37 @@ spreadFitRun <- function(sim)
   # This up, is this: bufferedRealHistoricalFiresList
 # All being passed should be lists of tables
   fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
-  browser()
   
+  # re-add pixelID to objects for join with fireBufferedListDT
+  annualDTx1000 <- lapply(annualDTx1000, function(x) {
+    setDT(x)
+    set(x, NULL, "pixelID", whNotNA)
+    x
+  })
+  annualDTx1000 <- Map(merge, fireBufferedListDT, annualDTx1000, MoreArgs = list(by = "pixelID"))
+  nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, function(x) {
+    setDT(x)
+    set(x, NULL, "pixelID", whNotNA)
+    x
+  })
+  
+  yearSplit <- strsplit(names(nonAnnualDTx1000), "_")
+  names(yearSplit) <- as.character(seq_along(nonAnnualDTx1000))
+  indexNonAnnual <- rbindlist(
+    Map(ind = seq_along(nonAnnualDTx1000), date = yearSplit, 
+        function(ind, date) data.table(ind = ind, date = date))
+  )
+  
+  # Take only pixels that burned during the years contained within each group of 
+  #   nonAnnualDTx1000
+  nonAnnualDTx1000 <- Map(nonAnnDTx1000 = nonAnnualDTx1000, 
+                          index = seq_along(nonAnnualDTx1000), 
+      MoreArgs = list(indexNonAnnual, fireBufferedListDT),
+      function(index, nonAnnDTx1000, indexNonAnnual, fireBufferedListDT) {
+        subDTs <- fireBufferedListDT[indexNonAnnual[index == ind]$date]
+        pixelIDs <- rbindlist(subDTs)$pixelID
+        nonAnnDTx1000[pixelID %in% pixelIDs]
+      })
   if (FALSE) {
     for (i in 1:100) {
       seed <- sample(1e6, 1)
@@ -424,7 +459,8 @@ spreadFitRun <- function(sim)
       system.time(a <- .objfun(par = pars,
                                landscape = sim$rasterToMatch,
                                formula = formula, #loci = loci,
-                               rastersDT = lapply(rastersDT, setDF),
+                               annualDTx1000 = lapply(annualDTx1000, setDF),
+                               nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
                                verbose = TRUE
@@ -432,13 +468,13 @@ spreadFitRun <- function(sim)
     }
   }
   
-  control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
+  control <- list(itermax = 10,#P(sim)$iterDEoptim, 
+                  trace = P(sim)$trace)
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
                                                                          "fireSense_SpreadFit_log"))))
-  browser()
   cl <- makeCluster(P(sim)$cores, 
-                    outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log"),
+                    outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log")
                     )
   on.exit(stopCluster(cl))
   parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster", "data.table")) 
@@ -446,19 +482,22 @@ spreadFitRun <- function(sim)
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
   control$cluster <- cl
   
-  DE <- Cache(DEoptim,
+  
+  DE <- DEoptim(
     .objfun, 
     lower = P(sim)$lower,
     upper = P(sim)$upper*2,
     control = do.call("DEoptim.control", control),
     landscape = sim$rasterToMatch,
-    rastersDT = lapply(rastersDT, setDF),
+    annualDTx1000 = lapply(annualDTx1000, setDF),
+    nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
     fireBufferedListDT = lapply(fireBufferedListDT, setDF),
     historicalFires = lapply(lociList, setDF),
     formula = P(sim)$formula, 
-    verbose = P(sim)$verbose,
-    omitArgs = c("verbose")
+    verbose = P(sim)$verbose#,
+    #omitArgs = c("verbose")
   )
+  browser()
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
@@ -509,25 +548,33 @@ spreadFitSave <- function(sim)
   return(invisible(sim))
 }
 
-annualStacksToDT <- function(annualStacks, rasterToMatch, ...) {
+annualStacksToDTx1000 <- function(annualStacks, whNotNA, ...) {
   whNotNA <- which(!is.na(rasterToMatch[]))
   rastersDT <- #rbindlist(
                      lapply(annualStacks, whNotNA = whNotNA, function(x, whNotNA) {
                        a <- as.data.table(x[])[whNotNA]
-                       set(a, NULL, "pixelID", whNotNA)
+        #               set(a, NULL, "pixelID", whNotNA)
                        a <- dtReplaceNAwith0(a)
                        a
                      })
+  lapply(rastersDT, function(x) {
+    for (col in colnames(x)) {
+      set(x, NULL, col, asInteger(x[[col]]*1000))  
+    }
+  })
+
+  rastersDT  
   #, use.names = TRUE, idcol = "year")
   
 }
+
 
 simplifyFireBuffered <- function(fireBuffered) {
   lapply(fireBuffered, function(r) {
     ras <- raster(r)
     nonNA <- which(!is.na(r[]))
-    ras[r[] == 1] <- 0
-    ras[r[] == 0] <- 1
+    ras[r[] == 1] <- 0L
+    ras[r[] == 0] <- 1L
     data.table(buffer = ras[][nonNA], pixelID = nonNA)
   })
 }

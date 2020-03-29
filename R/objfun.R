@@ -1,12 +1,16 @@
-.objfun <- function(par, landscape, rastersDT, formula, #loci, sizes, 
+.objfun <- function(par, landscape, annualDTx1000, 
+                    nonAnnualDTx1000,
+                    #pixelIndices,
+                    formula, #loci, sizes, 
                     historicalFires,
                     fireBufferedListDT,
                     wADtest = 1,
                     #bufferedRealHistoricalFiresList, 
-                    verbose){ #fireSense_SpreadFitRaster
+                    verbose = TRUE){ #fireSense_SpreadFitRaster
   # Optimization's objective function
-  lapply(historicalFires, setDT)
-  lapply(rastersDT, setDT)
+  # lapply(historicalFires, setDT)
+  lapply(annualDTx1000, setDT)
+  lapply(nonAnnualDTx1000, setDT)
   lapply(fireBufferedListDT, setDT)
   dtThreadsOrig <- data.table::setDTthreads(1)
   colsToUse <- attributes(terms(formula))[["term.labels"]]
@@ -14,57 +18,77 @@
   parsModel <- length(colsToUse) 
   ncells <- ncell(landscape)
   r <- raster(landscape)
-  years <- as.character(names(rastersDT))
+  years <- as.character(names(annualDTx1000))
   names(years) <- years
   cells <- integer(ncells)
   Nreps <- 10
+  yearSplit <- strsplit(names(nonAnnualDTx1000), "_")
+  names(yearSplit) <- as.character(seq_along(nonAnnualDTx1000))
+  indexNonAnnual <- rbindlist(
+    Map(ind = seq_along(nonAnnualDTx1000), date = yearSplit, 
+      function(ind, date) data.table(ind = ind, date = date))
+  )
   
-  results <- Map(
-    yr = years, annualDT = rastersDT, 
+  results <- Map(annDTx1000 = annualDTx1000, 
+    yr = years, 
     annualFires = historicalFires, 
     annualFireBufferedDT = fireBufferedListDT,
-    MoreArgs = list(par = par, parsModel = parsModel),
-    function(yr, annualDT, par, parsModel, annualFires, annualFireBufferedDT) {
+    MoreArgs = list(par = par, parsModel = parsModel, 
+                    #pixelIndices = pixelIndices,
+                    verbose = verbose, 
+                    nonAnnDTx1000 = nonAnnualDTx1000,
+                    indexNonAnnual = indexNonAnnual,
+                    colsToUse = colsToUse),
+    function(yr, annDTx1000, par, parsModel, 
+             annualFires, nonAnnDTx1000, annualFireBufferedDT, #pixelIndices,
+             indexNonAnnual, colsToUse,
+             verbose = TRUE) {
       # needed because data.table objects were recovered from disk
-      try(setDT(annualDT))
-      # matrix multiplication
-      set(annualDT, NULL, "pred", as.matrix(annualDT[,..colsToUse]) %*% tail(x = par, n = parsModel))
-      # logistic multiplication
-      set(annualDT, NULL, "spreadProb", logistic4p(annualDT$pred, par[1:4])) ## 5-parameters logistic
-      actualBurnSP <- annualDT[annualFireBufferedDT, on = "pixelID"]
-      medSP <- median(actualBurnSP[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
-      if (medSP <= 0.27) {
-      if (verbose) {
-        message(paste0("-- year: ",yr, ", spreadProb raster: median in buffered pixels = ", 
-                             round(medSP, 3)))
-      }
-      cells[as.integer(annualDT$pixelID)] <- annualDT$spreadProb
-      maxSizes <- rep(annualFires$size, times = Nreps) * 2
-      spreadState <- SpaDES.tools::spread(
-        landscape = r,
-        maxSize = maxSizes,
-        loci = rep(annualFires$cells, times = Nreps), 
-        spreadProb = cells,
-        returnIndices = TRUE,
-        allowOverlap = TRUE
-      )
-      fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
-      burnedProb <- spreadState[, .N, by = "indices"]
-      setnames(burnedProb, "indices", "pixelID")
-      out <- burnedProb[annualFireBufferedDT, on = "pixelID"]
-      out[is.na(N), N := 0]
       
-      # THis is a work around for cases where "initial pixels" are not actually burned in 
-      #   the polygon database
-      out[pixelID %in% annualFires$cells, buffer := 1]
-      # Add a very small number so that no pixel has exactly zero probability -- creating Inf
-      SNLL <- -sum(dbinom(prob = pmin(out$N/Nreps + 0.001, 0.99), size = 1, 
-                          x = out$buffer, 
-                          log = TRUE
-      ), na.rm = TRUE) # Sum of the negative log likelihood
+      # Rescale to numerics and /1000
+      shortAnnDTx1000 <- nonAnnDTx1000[[indexNonAnnual[date == yr]$ind]][annDTx1000, on = "pixelID"]
+      mat <- as.matrix(shortAnnDTx1000[, ..colsToUse])/1000
+      # matrix multiplication
+      covPars <- tail(x = par, n = parsModel)
+      logisticPars <- par[1:4]
+      set(shortAnnDTx1000, NULL, "spreadProb", logistic4p(mat %*% covPars, logisticPars))
+      # logistic multiplication
+      #set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
+      #actualBurnSP <- annDTx1000[annualFireBufferedDT, on = "pixelID"]
+      medSP <- median(shortAnnDTx1000[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
+      if (medSP <= 0.27) {
+        if (verbose) {
+          print(paste0(Sys.getpid(), "-- year: ",yr, ", spreadProb raster: median in buffered pixels = ", 
+                       round(medSP, 3)))
+        }
+        cells[as.integer(shortAnnDTx1000$pixelID)] <- shortAnnDTx1000$spreadProb
+        maxSizes <- rep(annualFires$size, times = Nreps) * 2
+        spreadState <- SpaDES.tools::spread(
+          landscape = r,
+          maxSize = maxSizes,
+          loci = rep(annualFires$cells, times = Nreps), 
+          spreadProb = cells,
+          returnIndices = TRUE,
+          allowOverlap = TRUE
+        )
+        fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
+        if (length(fireSizes) == 0) browser()
+        burnedProb <- spreadState[, .N, by = "indices"]
+        setnames(burnedProb, "indices", "pixelID")
+        out <- burnedProb[annualFireBufferedDT, on = "pixelID"]
+        out[is.na(N), N := 0]
+        
+        # THis is a work around for cases where "initial pixels" are not actually burned in 
+        #   the polygon database
+        out[pixelID %in% annualFires$cells, buffer := 1]
+        # Add a very small number so that no pixel has exactly zero probability -- creating Inf
+        SNLL <- -sum(dbinom(prob = pmin(out$N/Nreps + 0.001, 0.99), size = 1, 
+                            x = out$buffer, 
+                            log = TRUE
+        ), na.rm = TRUE) # Sum of the negative log likelihood
       } else {
         SNLL <- 1e7
-        fireSizes <- numeric()
+        fireSizes <- sample(1:3, 1)
       }
       
       list(fireSizes = fireSizes, SNLL = SNLL)
@@ -72,9 +96,10 @@
   results <- purrr::transpose(results)
   historicalFiresTr <- purrr::transpose(historicalFires)
   
-  adTest <- ad.test(unlist(results$fireSizes), unlist(historicalFiresTr$size))[["ad"]][1L, 1L]
+  adTest <- try(ad.test(unlist(results$fireSizes), unlist(historicalFiresTr$size))[["ad"]][1L, 1L])
   SNLLTest <- sum(unlist(results$SNLL))
   objFunRes <- adTest + SNLLTest/1e3 # wADtest is the weight for the AD test
+  gc()
   # Figure out what we want from these. This is potentially correct (i.e. we want the smallest ad.test and the smallest SNLL)
   return(objFunRes)
   
@@ -146,7 +171,6 @@
   # # Figure out what we want from these. This is potentially correct (i.e. we want the smallest ad.test and the smallest SNLL)
   # return(objFunRes)
 }
-
 logistic4p <- function(x, par) {
   par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
 }
