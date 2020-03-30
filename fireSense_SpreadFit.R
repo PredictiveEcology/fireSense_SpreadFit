@@ -468,7 +468,7 @@ spreadFitRun <- function(sim)
     }
   }
   
-  control <- list(itermax = 10,#P(sim)$iterDEoptim, 
+  control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
@@ -477,30 +477,36 @@ spreadFitRun <- function(sim)
                     outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log")
                     )
   on.exit(stopCluster(cl))
+  landscape = sim$rasterToMatch
+  annualDTx1000 = lapply(annualDTx1000, setDF)
+  nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+  fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+  historicalFires = lapply(lociList, setDF)
+  
+  clusterExport(cl, list("landscape", 
+                         "annualDTx1000",
+                         "nonAnnualDTx1000",
+                         "fireBufferedListDT",
+                         "historicalFires"), envir = environment())
   parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster", "data.table")) 
     library(i, character.only = TRUE))
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
   control$cluster <- cl
   
   
-  DE <- DEoptim(
+  DE <- Cache(DEoptim,
     .objfun, 
     lower = P(sim)$lower,
     upper = P(sim)$upper*2,
     control = do.call("DEoptim.control", control),
-    landscape = sim$rasterToMatch,
-    annualDTx1000 = lapply(annualDTx1000, setDF),
-    nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
-    fireBufferedListDT = lapply(fireBufferedListDT, setDF),
-    historicalFires = lapply(lociList, setDF),
     formula = P(sim)$formula, 
-    verbose = P(sim)$verbose#,
-    #omitArgs = c("verbose")
+    verbose = P(sim)$verbose,
+    omitArgs = c("verbose")
   )
-  browser()
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
+  browser()
   
   sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
@@ -508,7 +514,7 @@ spreadFitRun <- function(sim)
       val,
       nm = c(
         "d", "a", "b", "g", 
-        if (attr(terms, "intercept")) "Intercept" else NULL,
+        if (!is.null(attr(terms, "intercept"))) "Intercept" else NULL,
         attr(terms, "term.labels")
       )
     ),

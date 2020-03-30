@@ -1,9 +1,11 @@
-.objfun <- function(par, landscape, annualDTx1000, 
-                    nonAnnualDTx1000,
+.objfun <- function(par, 
+                    #landscape, 
+                    #annualDTx1000, 
+                    #nonAnnualDTx1000,
                     #pixelIndices,
                     formula, #loci, sizes, 
-                    historicalFires,
-                    fireBufferedListDT,
+                    #historicalFires,
+                    #fireBufferedListDT,
                     wADtest = 1,
                     #bufferedRealHistoricalFiresList, 
                     verbose = TRUE){ #fireSense_SpreadFitRaster
@@ -56,7 +58,7 @@
       #set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
       #actualBurnSP <- annDTx1000[annualFireBufferedDT, on = "pixelID"]
       medSP <- median(shortAnnDTx1000[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
-      if (medSP <= 0.27) {
+      if (medSP <= 0.27 & medSP >= 0.15) {
         if (verbose) {
           print(paste0(Sys.getpid(), "-- year: ",yr, ", spreadProb raster: median in buffered pixels = ", 
                        round(medSP, 3)))
