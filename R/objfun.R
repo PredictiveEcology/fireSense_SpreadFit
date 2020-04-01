@@ -1,20 +1,31 @@
 .objfun <- function(par, 
-                    #landscape, 
-                    #annualDTx1000, 
-                    #nonAnnualDTx1000,
-                    #pixelIndices,
+                    landscape, 
+                    annualDTx1000, 
+                    nonAnnualDTx1000,
+                    pixelIndices,
                     formula, #loci, sizes, 
-                    #historicalFires,
-                    #fireBufferedListDT,
+                    historicalFires,
+                    fireBufferedListDT,
                     wADtest = 1,
                     #bufferedRealHistoricalFiresList, 
                     verbose = TRUE){ #fireSense_SpreadFitRaster
   # Optimization's objective function
   # lapply(historicalFires, setDT)
-  lapply(annualDTx1000, setDT)
+  data.table::setDTthreads(1)
+  if (missing(landscape))
+    landscape <- get("landscape", envir = .GlobalEnv)
+  if (missing(annualDTx1000))
+    annualDTx1000 <- get("annualDTx1000", envir = .GlobalEnv)
+  if (missing(nonAnnualDTx1000))
+    nonAnnualDTx1000 <- get("nonAnnualDTx1000", envir = .GlobalEnv)
+  if (missing(historicalFires))
+    historicalFires <- get("historicalFires", envir = .GlobalEnv)
+  if (missing(fireBufferedListDT))
+    fireBufferedListDT <- get("fireBufferedListDT", envir = .GlobalEnv)
+  #lapply(annualDTx1000, setDT)
   lapply(nonAnnualDTx1000, setDT)
-  lapply(fireBufferedListDT, setDT)
-  dtThreadsOrig <- data.table::setDTthreads(1)
+  #lapply(fireBufferedListDT, setDT)
+  # dtThreadsOrig <- data.table::setDTthreads(1)
   colsToUse <- attributes(terms(formula))[["term.labels"]]
   # How many of the parameters belong to the model?
   parsModel <- length(colsToUse) 
@@ -30,7 +41,6 @@
     Map(ind = seq_along(nonAnnualDTx1000), date = yearSplit, 
       function(ind, date) data.table(ind = ind, date = date))
   )
-  
   results <- Map(annDTx1000 = annualDTx1000, 
     yr = years, 
     annualFires = historicalFires, 
@@ -38,45 +48,60 @@
     MoreArgs = list(par = par, parsModel = parsModel, 
                     #pixelIndices = pixelIndices,
                     verbose = verbose, 
-                    nonAnnDTx1000 = nonAnnualDTx1000,
+                    nonAnnualDTx1000 = nonAnnualDTx1000,
                     indexNonAnnual = indexNonAnnual,
                     colsToUse = colsToUse),
     function(yr, annDTx1000, par, parsModel, 
-             annualFires, nonAnnDTx1000, annualFireBufferedDT, #pixelIndices,
+             annualFires, nonAnnualDTx1000, annualFireBufferedDT, #pixelIndices,
              indexNonAnnual, colsToUse,
              verbose = TRUE) {
       # needed because data.table objects were recovered from disk
       
       # Rescale to numerics and /1000
-      shortAnnDTx1000 <- nonAnnDTx1000[[indexNonAnnual[date == yr]$ind]][annDTx1000, on = "pixelID"]
+      #setDT(nonAnnDTx1000)
+      setDT(annDTx1000)
+      shortAnnDTx1000 <- nonAnnualDTx1000[[indexNonAnnual[date == yr]$ind]][annDTx1000, on = "pixelID"]
       mat <- as.matrix(shortAnnDTx1000[, ..colsToUse])/1000
       # matrix multiplication
       covPars <- tail(x = par, n = parsModel)
       logisticPars <- par[1:4]
       set(shortAnnDTx1000, NULL, "spreadProb", logistic4p(mat %*% covPars, logisticPars))
       # logistic multiplication
-      #set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
+      set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
+      #set(annDTx1000, NULL, "spreadProb", logistic5p(annDTx1000$pred, par[1:5])) ## 5-parameters logistic
       #actualBurnSP <- annDTx1000[annualFireBufferedDT, on = "pixelID"]
       medSP <- median(shortAnnDTx1000[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
-      if (medSP <= 0.27 & medSP >= 0.15) {
+      if (medSP <= 0.25 & medSP >= 0.16) {
         if (verbose) {
           print(paste0(Sys.getpid(), "-- year: ",yr, ", spreadProb raster: median in buffered pixels = ", 
                        round(medSP, 3)))
         }
         cells[as.integer(shortAnnDTx1000$pixelID)] <- shortAnnDTx1000$spreadProb
         maxSizes <- rep(annualFires$size, times = Nreps) * 2
-        spreadState <- SpaDES.tools::spread(
-          landscape = r,
-          maxSize = maxSizes,
-          loci = rep(annualFires$cells, times = Nreps), 
-          spreadProb = cells,
-          returnIndices = TRUE,
-          allowOverlap = TRUE
-        )
+        lociAll <- rep(annualFires$cells, times = Nreps)
+        # spreadState <- rbindlist(Map(loci = lociAll, ms = maxSizes, function(loci, ms) 
+        #   spread(r, 
+        #           start = loci, 
+        #           spreadProb = cells, 
+        #           directions = 8, 
+        #           # returnIndices = 2, 
+        #           asRaster = FALSE, 
+        #           
+        #           maxSize = ms,
+        #           skipChecks = TRUE)), 
+        #   idcol = "rep")
+          spreadState <- SpaDES.tools::spread(
+            landscape = r,
+            maxSize = maxSizes,
+            loci = rep(annualFires$cells, times = Nreps),
+            spreadProb = cells,
+            returnIndices = TRUE,
+            allowOverlap = TRUE)
         fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
         if (length(fireSizes) == 0) browser()
         burnedProb <- spreadState[, .N, by = "indices"]
         setnames(burnedProb, "indices", "pixelID")
+        setDT(annualFireBufferedDT)
         out <- burnedProb[annualFireBufferedDT, on = "pixelID"]
         out[is.na(N), N := 0]
         
@@ -101,7 +126,7 @@
   adTest <- try(ad.test(unlist(results$fireSizes), unlist(historicalFiresTr$size))[["ad"]][1L, 1L])
   SNLLTest <- sum(unlist(results$SNLL))
   objFunRes <- adTest + SNLLTest/1e3 # wADtest is the weight for the AD test
-  gc()
+  # gc()
   # Figure out what we want from these. This is potentially correct (i.e. we want the smallest ad.test and the smallest SNLL)
   return(objFunRes)
   
@@ -172,7 +197,4 @@
   # objFunRes <- wADtest * adTest + SNLLTest # wADtest is the weight for the AD test
   # # Figure out what we want from these. This is potentially correct (i.e. we want the smallest ad.test and the smallest SNLL)
   # return(objFunRes)
-}
-logistic4p <- function(x, par) {
-  par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
 }

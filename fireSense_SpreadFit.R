@@ -17,7 +17,8 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster", "data.table"),
+  reqdPkgs = list("DEoptim", "kSamples", "magrittr", "parallel", "raster", "data.table",
+                  "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(name = "formula", class = "formula", default = NA,
@@ -452,13 +453,19 @@ spreadFitRun <- function(sim)
       })
   if (FALSE) {
     for (i in 1:100) {
+      landscape = sim$rasterToMatch
+      annualDTx1000 = lapply(annualDTx1000, setDF)
+      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+      historicalFires = lapply(lociList, setDF)
+      
+      
       seed <- sample(1e6, 1)
       set.seed(seed)
-      pars <- apply(cbind(P(sim)$lower, P(sim)$upper), 1, mean) * runif(length(P(sim)$lower), 2, 3)
-      pars[5] <- pars[5]*8
+      pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
       system.time(a <- .objfun(par = pars,
-                               landscape = sim$rasterToMatch,
                                formula = formula, #loci = loci,
+                               landscape = sim$rasterToMatch,
                                annualDTx1000 = lapply(annualDTx1000, setDF),
                                nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
@@ -467,15 +474,15 @@ spreadFitRun <- function(sim)
       ))
     }
   }
-  
+  # 13 iterations hit at 1:21pm
   control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
+  logPath <- file.path(Paths$outputPath, 
+                       paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
-                                 "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
-                                                                         "fireSense_SpreadFit_log"))))
-  cl <- makeCluster(P(sim)$cores, 
-                    outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log")
-                    )
+                                 "fireSense_SpreadFit. Log: ", logPath)))
+  browser()
+  cl <- makeCluster(P(sim)$cores, outfile = logPath)
   on.exit(stopCluster(cl))
   landscape = sim$rasterToMatch
   annualDTx1000 = lapply(annualDTx1000, setDF)
@@ -488,16 +495,19 @@ spreadFitRun <- function(sim)
                          "nonAnnualDTx1000",
                          "fireBufferedListDT",
                          "historicalFires"), envir = environment())
-  parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster", "data.table")) 
-    library(i, character.only = TRUE))
+  parallel::clusterEvalQ(
+    cl, 
+    for (i in c("kSamples", "magrittr", "raster", "data.table",
+                "SpaDES.tools")) 
+      library(i, character.only = TRUE)
+    )
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
   control$cluster <- cl
-  
   
   DE <- Cache(DEoptim,
     .objfun, 
     lower = P(sim)$lower,
-    upper = P(sim)$upper*2,
+    upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
     formula = P(sim)$formula, 
     verbose = P(sim)$verbose,
@@ -583,4 +593,12 @@ simplifyFireBuffered <- function(fireBuffered) {
     ras[r[] == 0] <- 1L
     data.table(buffer = ras[][nonNA], pixelID = nonNA)
   })
+}
+
+logistic4p <- function(x, par) {
+  par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
+}
+
+logistic5p <- function(x, par) {
+  par[1L] + (par[2L] - par[1L]) / (1 + (x/par[3L])^(-par[4L])) ^ par[5L]
 }
