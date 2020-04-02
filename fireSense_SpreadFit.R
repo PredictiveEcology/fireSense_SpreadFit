@@ -474,27 +474,39 @@ spreadFitRun <- function(sim)
       ))
     }
   }
-  # 13 iterations hit at 1:21pm
+  
+  ####################################################################  
+  # Final preparations of objects for .objfun
+  ####################################################################  
+  landscape = sim$rasterToMatch
+  annualDTx1000 = lapply(annualDTx1000, setDF)
+  nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+  fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+  historicalFires = lapply(lociList, setDF)
+
+  # source any functions that are needed into .GlobalEnv so it doesn't have sim env
+  source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
+  logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
+  
+  ####################################################################  
+  #  Cluster
+  ####################################################################  
   control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
   logPath <- file.path(Paths$outputPath, 
                        paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
-  browser()
   cl <- makeCluster(P(sim)$cores, outfile = logPath)
+  # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
-  landscape = sim$rasterToMatch
-  annualDTx1000 = lapply(annualDTx1000, setDF)
-  nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-  fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-  historicalFires = lapply(lociList, setDF)
   
   clusterExport(cl, list("landscape", 
                          "annualDTx1000",
                          "nonAnnualDTx1000",
                          "fireBufferedListDT",
-                         "historicalFires"), envir = environment())
+                         "historicalFires", 
+                         "logistic4p"), envir = environment())
   parallel::clusterEvalQ(
     cl, 
     for (i in c("kSamples", "magrittr", "raster", "data.table",
@@ -504,8 +516,12 @@ spreadFitRun <- function(sim)
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
   control$cluster <- cl
   
+  #####################################################################
+  # DEOptim call
+  #####################################################################
+  data.table::setDTthreads(1)
   DE <- Cache(DEoptim,
-    .objfun, 
+    get(".objfun", envir = .GlobalEnv), 
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
@@ -595,9 +611,6 @@ simplifyFireBuffered <- function(fireBuffered) {
   })
 }
 
-logistic4p <- function(x, par) {
-  par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
-}
 
 logistic5p <- function(x, par) {
   par[1L] + (par[2L] - par[1L]) / (1 + (x/par[3L])^(-par[4L])) ^ par[5L]

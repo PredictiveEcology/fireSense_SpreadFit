@@ -1,3 +1,7 @@
+logistic4p <- function(x, par) {
+  par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
+}
+
 .objfun <- function(par, 
                     landscape, 
                     annualDTx1000, 
@@ -96,7 +100,8 @@
             loci = rep(annualFires$cells, times = Nreps),
             spreadProb = cells,
             returnIndices = TRUE,
-            allowOverlap = TRUE)
+            allowOverlap = TRUE,
+            quick = TRUE)
         fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
         if (length(fireSizes) == 0) browser()
         burnedProb <- spreadState[, .N, by = "indices"]
