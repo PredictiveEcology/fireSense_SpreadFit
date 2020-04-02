@@ -1,3 +1,4 @@
+
 logistic4p <- function(x, par) {
   par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]
 }
@@ -7,14 +8,13 @@ logistic4p <- function(x, par) {
                     annualDTx1000, 
                     nonAnnualDTx1000,
                     pixelIndices,
-                    formula, #loci, sizes, 
+                    formula, 
                     historicalFires,
                     fireBufferedListDT,
-                    wADtest = 1,
-                    #bufferedRealHistoricalFiresList, 
-                    verbose = TRUE){ #fireSense_SpreadFitRaster
+                    wADtest = 1, # not used yet
+                    verbose = TRUE){ 
+  
   # Optimization's objective function
-  # lapply(historicalFires, setDT)
   data.table::setDTthreads(1)
   if (missing(landscape))
     landscape <- get("landscape", envir = .GlobalEnv)
@@ -26,11 +26,9 @@ logistic4p <- function(x, par) {
     historicalFires <- get("historicalFires", envir = .GlobalEnv)
   if (missing(fireBufferedListDT))
     fireBufferedListDT <- get("fireBufferedListDT", envir = .GlobalEnv)
-  #lapply(annualDTx1000, setDT)
   lapply(nonAnnualDTx1000, setDT)
-  #lapply(fireBufferedListDT, setDT)
-  # dtThreadsOrig <- data.table::setDTthreads(1)
   colsToUse <- attributes(terms(formula))[["term.labels"]]
+  
   # How many of the parameters belong to the model?
   parsModel <- length(colsToUse) 
   ncells <- ncell(landscape)
@@ -59,21 +57,19 @@ logistic4p <- function(x, par) {
              annualFires, nonAnnualDTx1000, annualFireBufferedDT, #pixelIndices,
              indexNonAnnual, colsToUse,
              verbose = TRUE) {
-      # needed because data.table objects were recovered from disk
-      
       # Rescale to numerics and /1000
-      #setDT(nonAnnDTx1000)
       setDT(annDTx1000)
+      # needed because data.table objects were recovered from disk
       shortAnnDTx1000 <- nonAnnualDTx1000[[indexNonAnnual[date == yr]$ind]][annDTx1000, on = "pixelID"]
       mat <- as.matrix(shortAnnDTx1000[, ..colsToUse])/1000
       # matrix multiplication
       covPars <- tail(x = par, n = parsModel)
       logisticPars <- par[1:4]
       set(shortAnnDTx1000, NULL, "spreadProb", logistic4p(mat %*% covPars, logisticPars))
+
       # logistic multiplication
       set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
-      #set(annDTx1000, NULL, "spreadProb", logistic5p(annDTx1000$pred, par[1:5])) ## 5-parameters logistic
-      #actualBurnSP <- annDTx1000[annualFireBufferedDT, on = "pixelID"]
+      
       medSP <- median(shortAnnDTx1000[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
       if (medSP <= 0.25 & medSP >= 0.16) {
         if (verbose) {
@@ -83,25 +79,15 @@ logistic4p <- function(x, par) {
         cells[as.integer(shortAnnDTx1000$pixelID)] <- shortAnnDTx1000$spreadProb
         maxSizes <- rep(annualFires$size, times = Nreps) * 2
         lociAll <- rep(annualFires$cells, times = Nreps)
-        # spreadState <- rbindlist(Map(loci = lociAll, ms = maxSizes, function(loci, ms) 
-        #   spread(r, 
-        #           start = loci, 
-        #           spreadProb = cells, 
-        #           directions = 8, 
-        #           # returnIndices = 2, 
-        #           asRaster = FALSE, 
-        #           
-        #           maxSize = ms,
-        #           skipChecks = TRUE)), 
-        #   idcol = "rep")
-          spreadState <- SpaDES.tools::spread(
-            landscape = r,
-            maxSize = maxSizes,
-            loci = rep(annualFires$cells, times = Nreps),
-            spreadProb = cells,
-            returnIndices = TRUE,
-            allowOverlap = TRUE,
-            quick = TRUE)
+        
+        spreadState <- SpaDES.tools::spread(
+          landscape = r,
+          maxSize = maxSizes,
+          loci = rep(annualFires$cells, times = Nreps),
+          spreadProb = cells,
+          returnIndices = TRUE,
+          allowOverlap = TRUE,
+          quick = TRUE)
         fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
         if (length(fireSizes) == 0) browser()
         burnedProb <- spreadState[, .N, by = "indices"]

@@ -581,14 +581,12 @@ spreadFitSave <- function(sim)
 }
 
 annualStacksToDTx1000 <- function(annualStacks, whNotNA, ...) {
-  whNotNA <- which(!is.na(rasterToMatch[]))
-  rastersDT <- #rbindlist(
-                     lapply(annualStacks, whNotNA = whNotNA, function(x, whNotNA) {
-                       a <- as.data.table(x[])[whNotNA]
-        #               set(a, NULL, "pixelID", whNotNA)
-                       a <- dtReplaceNAwith0(a)
-                       a
-                     })
+  # whNotNA <- which(!is.na(rasterToMatch[]))
+  rastersDT <- lapply(annualStacks, whNotNA = whNotNA, function(x, whNotNA) {
+    a <- as.data.table(x[])[whNotNA]
+    a <- dtReplaceNAwith0(a)
+    a
+  })
   lapply(rastersDT, function(x) {
     for (col in colnames(x)) {
       set(x, NULL, col, asInteger(x[[col]]*1000))  
@@ -596,8 +594,6 @@ annualStacksToDTx1000 <- function(annualStacks, whNotNA, ...) {
   })
 
   rastersDT  
-  #, use.names = TRUE, idcol = "year")
-  
 }
 
 
