@@ -69,7 +69,8 @@ defineModule(sim, list(
                             default value is 1, which disables parallel
                             computing."),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
-                    desc = "optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled."),
+                    desc = paste0("optional. An expression to evaluate on each cluster node. ",
+                                  "Ignored when parallel computing is disabled.")),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
@@ -78,20 +79,32 @@ defineModule(sim, list(
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start
                             time of the simulation."),
-    defineParameter(name = ".runInterval", class = "numeric", default = NA,
-                    desc = "optional. Interval between two runs of this module,
-                            expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation."),
-    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA,
+    defineParameter(name = ".runInterval", class = "numeric", default = NA, 
+                    desc = paste0("optional. Interval between two runs of this module,",
+                                  "expressed in units of simulation time. By default, NA, which ",
+                                  "means that this module only runs once per simulation.")),
+    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA,
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant"),
-    defineParameter(name = "termsNAtoZ", class = "character", default = NULL,
+    defineParameter(".useCache", "logical", FALSE, NA, NA, 
+                    desc = paste0("Should this entire module be run",
+                           " with caching activated? This is generally intended for data-type ",
+                           "modules, where stochasticity and time are not relevant")),
+    defineParameter(name = "termsNAtoZ", class = "character", default = NULL, 
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
                                   "module will convert those to 0's internally")),
-    defineParameter(name = "verbose", class = "logical", default = FALSE,
-                    desc = "optional. Should it calculate and print median of spread Probability during calculations?")
+    defineParameter(name = "verbose", class = "logical", default = FALSE, 
+                    desc = paste0("optional. Should it calculate and print median of spread ",
+                                  "Probability during calculations?")),
+    defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55, 
+                    desc = paste0("optional. Maximum fire spread average to be passed to the ",
+                                  ".objFun for optimimzation. Default is 0.255")),
+    defineParameter(name = "parallelMachinesIP", class = "character", default = NULL, 
+                    desc = paste0("optional. If not NULL, will try to create a cluster using the ",
+                                  "IP's addresses provided. It will devide the cores between all", 
+                                  "machines as equaly as possible"))
   ),
   inputObjects = rbind(
     expectsInput(
@@ -201,15 +214,14 @@ spreadFitInit <- function(sim)
 spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-
+  
   hash <- fastdigest(sim$annualStacks)
   whNotNA <- which(!is.na(rasterToMatch[]))
-  system.time({
-    annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
-                           whNotNA = whNotNA,
-                           .fastHash = hash,
-                           omitArgs = c("annualStacks", "rasterToMatch"))
-  })
+  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
+                                 whNotNA = whNotNA,
+                                 .fastHash = hash,
+                                 omitArgs = c("annualStacks", "rasterToMatch")))
+  
   hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
   system.time({
     nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, sim$nonAnnualStacks,
@@ -228,17 +240,13 @@ spreadFitRun <- function(sim)
     as.data.table() %>%
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
-
+  print("before makeBufferedFires")
+  browser()
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = rasterToMatch, useParallel = TRUE,
+                        rasterToMatch = rasterToMatch, useParallel = FALSE, 
                         omitArgs = "useParallel")
   names(fireBuffered) <- names(lociList)
-
-  # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
-  # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
-  # nonNAList
-
-  # This up, is this: bufferedRealHistoricalFiresList
+  
 # All being passed should be lists of tables
   fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
 
@@ -272,6 +280,8 @@ spreadFitRun <- function(sim)
         pixelIDs <- rbindlist(subDTs)$pixelID
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
+
+  # This below is to test the code without running DEOptim
   if (FALSE) {
     for (i in 1:100) {
       landscape = sim$rasterToMatch
@@ -279,8 +289,6 @@ spreadFitRun <- function(sim)
       nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
       fireBufferedListDT = lapply(fireBufferedListDT, setDF)
       historicalFires = lapply(lociList, setDF)
-
-
       seed <- sample(1e6, 1)
       set.seed(seed)
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
@@ -295,15 +303,15 @@ spreadFitRun <- function(sim)
       ))
     }
   }
-
-  ####################################################################
+  ####################################################################  
   # Final preparations of objects for .objfun
-  ####################################################################
-  landscape = sim$rasterToMatch
-  annualDTx1000 = lapply(annualDTx1000, setDF)
-  nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-  fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-  historicalFires = lapply(lociList, setDF)
+  ####################################################################  
+  
+  landscape <- sim$rasterToMatch
+  annualDTx1000 <- lapply(annualDTx1000, setDF)
+  nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
+  fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
+  historicalFires <- lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
   source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
@@ -311,13 +319,16 @@ spreadFitRun <- function(sim)
 
   ####################################################################
   #  Cluster
-  ####################################################################
-  control <- list(itermax = P(sim)$iterDEoptim,
+  ####################################################################  
+  
+  control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
   logPath <- file.path(Paths$outputPath,
                        paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
+  
+  browser() # Make a cluster accross machines
   cl <- makeCluster(P(sim)$cores, outfile = logPath)
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
