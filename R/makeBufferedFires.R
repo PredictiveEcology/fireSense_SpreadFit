@@ -25,7 +25,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     names(firePolyRas) <- yr
     # Do the calculation for each fire
     fireIDS <- unique(firePolyRas[!is.na(firePolyRas)])
-    allFires <- lapply(fireIDS, function(fireID){
+    allFires <- stack(lapply(fireIDS, function(fireID){
       valsFireRas  <- which(firePolyRas[] == fireID)
       adj <- adjacent(firePolyRas, valsFireRas, directions = 8, pairs = FALSE)
       tb <- data.table(V1 = c(0, 1), N = c(1, 2))
@@ -58,9 +58,9 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
         }
         if (tb[1, N] > tb[2, N]*upperTolerance) break
       }
-      print("Inside the lapply year --> each fire")
-      browser()
-    })
+    }))
+    print("Need to stack these rasters, and sum(na.rm = TRUE)")
+    browser() 
     return(rasBuffer)
   }))
   names(historicalFire) <- names(fireLocationsPolys)
