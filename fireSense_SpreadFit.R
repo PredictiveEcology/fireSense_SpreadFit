@@ -96,7 +96,11 @@ defineModule(sim, list(
                                   "Probability during calculations?")),
     defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55, 
                     desc = paste0("optional. Maximum fire spread average to be passed to the ",
-                                  ".objFun for optimimzation. Default is 0.255"))
+                                  ".objFun for optimimzation. Default is 0.255")),
+    defineParameter(name = "parallelMachinesIP", class = "character", default = NULL, 
+                    desc = paste0("optional. If not NULL, will try to create a cluster using the ",
+                                  "IP's addresses provided. It will devide the cores between all", 
+                                  "machines as equaly as possible"))
   ),
   inputObjects = rbind( 
     expectsInput(
@@ -230,7 +234,8 @@ spreadFitRun <- function(sim)
     as.data.table() %>%
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
-  
+  print("before makeBufferedFires")
+  browser()
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = FALSE, 
                         omitArgs = "useParallel")
@@ -316,6 +321,8 @@ spreadFitRun <- function(sim)
                        paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
+  
+  browser() # Make a cluster accross machines
   cl <- makeCluster(P(sim)$cores, outfile = logPath)
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
