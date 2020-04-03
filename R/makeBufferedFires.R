@@ -20,6 +20,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     fireLocationsPoly <- reproducible::projectInputs(x = fireLocationsPolys[[yr]],
                                                      targetCRS = crs(rasterToMatch))
     sf_fPY <- sf::st_as_sf(fireLocationsPoly)
+    print("MakeBufferedFires")
     browser()
     firePolyRas <- fasterize::fasterize(sf = sf_fPY, raster = raster(rasterToMatch), field = NULL)
     names(firePolyRas) <- yr
