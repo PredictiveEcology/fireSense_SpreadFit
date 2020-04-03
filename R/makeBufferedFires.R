@@ -25,7 +25,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     names(firePolyRas) <- yr
     # Do the calculation for each fire
     fireIDS <- unique(firePolyRas[!is.na(firePolyRas)])
-    allFires <- stack(lapply(fireIDS, function(fireID){
+    allFires <- lapply(fireIDS, function(fireID){
       valsFireRas  <- which(firePolyRas[] == fireID)
       adj <- adjacent(firePolyRas, valsFireRas, directions = 8, pairs = FALSE)
       tb <- data.table(V1 = c(0, 1), N = c(1, 2))
@@ -62,17 +62,17 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
         print("NULL raster? Debug")
         browser()
       }
+      attr(rasBuffer, "buffer") <- adj
       return(rasBuffer)
-    }))
+    })
     # Convert to data table to speed up putting the rasters back together
-    stkDT <- as.data.table(allFires[])
+    adjAll <- unlist(lapply(allFires, attr, which = "buffer"))
+    stkDT <- as.data.table(stack(allFires[]))
     stkDT[, fires := rowSums(.SD, na.rm = TRUE)]
     rasBuffer <- setValues(raster(firePolyRas), stkDT$fires)
     # Put NA's back
-    naVec <- which(is.na(firePolyRas[]))
-    rasBuffer[rasBuffer < 1] <- 0
     rasBuffer[rasBuffer > 1] <- 1
-    rasBuffer[naVec] <- NA
+    rasBuffer[adjAll] <- NA
     print("Check the raster rasBuffer")
     browser()
   }))
