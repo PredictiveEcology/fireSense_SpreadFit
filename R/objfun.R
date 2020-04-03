@@ -90,7 +90,10 @@ logistic4p <- function(x, par) {
           allowOverlap = TRUE,
           quick = TRUE)
         fireSizes <- tabulate(spreadState[["id"]]) # Here tabulate() is equivalent to table() but faster
-        if (length(fireSizes) == 0) browser()
+        if (length(fireSizes) == 0) {
+          print("We have a fire size == 0. Entering debug mode")
+          browser()
+          }
         burnedProb <- spreadState[, .N, by = "indices"]
         setnames(burnedProb, "indices", "pixelID")
         setDT(annualFireBufferedDT)
