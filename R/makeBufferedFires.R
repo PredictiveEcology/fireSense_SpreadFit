@@ -21,41 +21,46 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
                                                      targetCRS = crs(rasterToMatch))
     sf_fPY <- sf::st_as_sf(fireLocationsPoly)
     print("MakeBufferedFires")
-    browser()
-    firePolyRas <- fasterize::fasterize(sf = sf_fPY, raster = raster(rasterToMatch), field = NULL)
+    firePolyRas <- fasterize::fasterize(sf = sf_fPY, raster = raster(rasterToMatch), field = "NFIREID")
     names(firePolyRas) <- yr
-    valsFireRas  <- which(firePolyRas[]==1)
-    adj <- adjacent(firePolyRas, valsFireRas, directions = 8, pairs = FALSE)
-    tb <- data.table(V1 = c(0, 1), N = c(1, 2))
-    stateToCheck <- paste0("isFALSE(isTRUE(tb[1, N] < tb[2, N]*upperTolerance) & ",
-                           "isTRUE(tb[1, N] > tb[2, N]*lowerTolerance))")
-    while (eval(parse(text = stateToCheck))){
-      adj <- adjacent(firePolyRas, adj, directions = 8, pairs = FALSE)
-      rasBuffer <- raster(firePolyRas)
-      rasBuffer[adj] <- 0
-      rasBuffer[valsFireRas] <- 1
-      tb <- data.table(table(rasBuffer[]))
-      perc <- round((tb[1, N]/tb[2, N])*100, 0)
-      direcion <- ifelse(perc > 100, "larger", "smaller")
-      perc <- ifelse(direcion == "larger", perc - 100, 100 - perc)
-      if (verbose){
-        if (all(direcion == "larger", perc/100 > upperTolerance-1)){
-          message(crayon::red(paste0("Buffered area is ", perc,
-                                     "% ", direcion, " than fires. Outside of bounds, ",
-                                     "returning for ", yr)))
-        } else {
-          if(eval(parse(text = stateToCheck))){
-            message(crayon::yellow(paste0("Buffered area is ", perc,
-                                          "% ", direcion, " than fires. Trying again for ", yr)))
+    # Do the calculation for each fire
+    fireIDS <- unique(firePolyRas[!is.na(firePolyRas)])
+    allFires <- lapply(fireIDS, function(fireID){
+      valsFireRas  <- which(firePolyRas[] == fireID)
+      adj <- adjacent(firePolyRas, valsFireRas, directions = 8, pairs = FALSE)
+      tb <- data.table(V1 = c(0, 1), N = c(1, 2))
+      stateToCheck <- paste0("isFALSE(isTRUE(tb[1, N] < tb[2, N]*upperTolerance) & ",
+                             "isTRUE(tb[1, N] > tb[2, N]*lowerTolerance))")
+      while (eval(parse(text = stateToCheck))){
+        adj <- adjacent(firePolyRas, adj, directions = 8, pairs = FALSE)
+        rasBuffer <- raster(firePolyRas)
+        rasBuffer[adj] <- 0
+        rasBuffer[valsFireRas] <- 1
+        tb <- data.table(table(rasBuffer[]))
+        perc <- round((tb[1, N]/tb[2, N])*100, 0)
+        direcion <- ifelse(perc > 100, "larger", "smaller")
+        perc <- ifelse(direcion == "larger", perc - 100, 100 - perc)
+        if (verbose){
+          if (all(direcion == "larger", perc/100 > upperTolerance-1)){
+            message(crayon::red(paste0("Buffered area is ", perc,
+                                       "% ", direcion, " than fires. Outside of bounds, ",
+                                       "returning for ", yr)))
           } else {
-            message(crayon::green(paste0("Buffered area is ", perc,
-                                         "% ", direcion, " than fires. Within bounds for ", 
-                                         yr)))
+            if(eval(parse(text = stateToCheck))){
+              message(crayon::yellow(paste0("Buffered area is ", perc,
+                                            "% ", direcion, " than fires. Trying again for ", yr)))
+            } else {
+              message(crayon::green(paste0("Buffered area is ", perc,
+                                           "% ", direcion, " than fires. Within bounds for ", 
+                                           yr)))
+            }
           }
         }
+        if (tb[1, N] > tb[2, N]*upperTolerance) break
       }
-      if (tb[1, N] > tb[2, N]*upperTolerance) break
-    }
+      print("Inside the lapply year --> each fire")
+      browser()
+    })
     return(rasBuffer)
   }))
   names(historicalFire) <- names(fireLocationsPolys)

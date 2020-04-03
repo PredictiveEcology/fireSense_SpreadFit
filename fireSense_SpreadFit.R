@@ -238,7 +238,9 @@ spreadFitRun <- function(sim)
   browser()
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = FALSE, 
-                        omitArgs = "useParallel")
+                        omitArgs = "useParallel", verbose = TRUE,
+                        lowerTolerance = 3.8, 
+                        upperTolerance = 4.2)
   names(fireBuffered) <- names(lociList)
   
 # All being passed should be lists of tables
