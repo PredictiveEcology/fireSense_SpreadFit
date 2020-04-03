@@ -411,34 +411,3 @@ spreadFitSave <- function(sim)
 
   return(invisible(sim))
 }
-
-annualStacksToDTx1000 <- function(annualStacks, whNotNA, ...) {
-  # whNotNA <- which(!is.na(rasterToMatch[]))
-  rastersDT <- lapply(annualStacks, whNotNA = whNotNA, function(x, whNotNA) {
-    a <- as.data.table(x[])[whNotNA]
-    a <- dtReplaceNAwith0(a)
-    a
-  })
-  lapply(rastersDT, function(x) {
-    for (col in colnames(x)) {
-      set(x, NULL, col, asInteger(x[[col]]*1000))
-    }
-  })
-
-  rastersDT
-}
-
-simplifyFireBuffered <- function(fireBuffered) {
-  lapply(fireBuffered, function(r) {
-    ras <- raster(r)
-    nonNA <- which(!is.na(r[]))
-    ras[r[] == 1] <- 0L
-    ras[r[] == 0] <- 1L
-    data.table(buffer = ras[][nonNA], pixelID = nonNA)
-  })
-}
-
-
-logistic5p <- function(x, par) {
-  par[1L] + (par[2L] - par[1L]) / (1 + (x/par[3L])^(-par[4L])) ^ par[5L]
-}
