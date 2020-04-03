@@ -241,8 +241,7 @@ spreadFitRun <- function(sim)
     as.data.table() %>%
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
-  print("before makeBufferedFires")
-  browser()
+
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = FALSE, 
                         omitArgs = "useParallel", verbose = TRUE,
