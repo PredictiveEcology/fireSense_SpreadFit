@@ -236,11 +236,6 @@ spreadFitRun <- function(sim)
                         omitArgs = "useParallel")
   names(fireBuffered) <- names(lociList)
   
-  # nonNA <- which(!is.na(bufferedRealHistoricalFiresList[]))
-  # return(bufferedRealHistoricalFiresList, nonNA = nonNA)
-  # nonNAList
-  
-  # This up, is this: bufferedRealHistoricalFiresList
 # All being passed should be lists of tables
   fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
   
