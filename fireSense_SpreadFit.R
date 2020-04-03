@@ -65,7 +65,8 @@ defineModule(sim, list(
                             default value is 1, which disables parallel 
                             computing."),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
-                    desc = "optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled."),
+                    desc = paste0("optional. An expression to evaluate on each cluster node. ",
+                                  "Ignored when parallel computing is disabled.")),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = "non-negative integer. If > 0, tracing information on
                             the progress of the optimization are printed every
@@ -75,19 +76,24 @@ defineModule(sim, list(
                     desc = "when to start this module? By default, the start 
                             time of the simulation."),
     defineParameter(name = ".runInterval", class = "numeric", default = NA, 
-                    desc = "optional. Interval between two runs of this module,
-                            expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation."),
+                    desc = paste0("optional. Interval between two runs of this module,",
+                                  "expressed in units of simulation time. By default, NA, which ",
+                                  "means that this module only runs once per simulation.")),
     defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA, 
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, "Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant"),
+    defineParameter(".useCache", "logical", FALSE, NA, NA, 
+                    desc = paste0("Should this entire module be run",
+                           " with caching activated? This is generally intended for data-type ",
+                           "modules, where stochasticity and time are not relevant")),
     defineParameter(name = "termsNAtoZ", class = "character", default = NULL, 
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
                                   "module will convert those to 0's internally")),
     defineParameter(name = "verbose", class = "logical", default = FALSE, 
-                    desc = "optional. Should it calculate and print median of spread Probability during calculations?")
+                    desc = paste0("optional. Should it calculate and print median of spread ",
+                                  "Probability during calculations?"))
   ),
   inputObjects = rbind( 
     expectsInput(
@@ -230,7 +236,7 @@ spreadFitRun <- function(sim)
       }
     }
     
-# TODOAdd test for firePolygon to be a list of shapefiles
+# TODO Add test for firePolygon to be a list of shapefiles
     
     missing <- !allxy %in% ls(mod_env, all.names = TRUE)
     
@@ -278,9 +284,7 @@ spreadFitRun <- function(sim)
       #second <- liklihood here
       scale(first) # + scale(second)
     }
-  }
-  else ## Fires started at different time intervals
-  {
+  } else { ## Fires started at different time intervals
     for(x in P(sim)$data)
     {
       if (!is.null(sim[[x]]))
@@ -327,7 +331,6 @@ spreadFitRun <- function(sim)
       }), use.names = TRUE, idcol = "year")
     set(rastersDT, NULL, "pixelID", rep(1:ncell(rasters[[1]]), length.out = NROW(rastersDT)))
     
-    
     rastersDT1 <- na.omit(rastersDT, cols = c(names(rasters[[1]])))
     
     ## Get loci from the raster sim$landscape for the fire locations
@@ -341,6 +344,7 @@ spreadFitRun <- function(sim)
     lociData <- data.table(slot(object = lociDF, name = "data"))
     
     dtReplaceNAwith0(DT = lociData, colsToUse = P(sim)$termsNAtoZ)
+    
     #TODO Functions temporarily in R folder of the module. Will be moved to a package
     lociPerDate <- split(x = lociData, mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])
     
@@ -384,13 +388,13 @@ spreadFitRun <- function(sim)
   }
   }
 }
-  
   hash <- fastdigest(sim$annualStacks)
   whNotNA <- which(!is.na(rasterToMatch[]))
   system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
                                  whNotNA = whNotNA,
                                  .fastHash = hash,
                                  omitArgs = c("annualStacks", "rasterToMatch")))
+  
   hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
   system.time(nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, sim$nonAnnualStacks, 
                                  whNotNA = whNotNA,
@@ -451,38 +455,16 @@ spreadFitRun <- function(sim)
         pixelIDs <- rbindlist(subDTs)$pixelID
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
-  if (FALSE) {
-    for (i in 1:100) {
-      landscape = sim$rasterToMatch
-      annualDTx1000 = lapply(annualDTx1000, setDF)
-      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-      historicalFires = lapply(lociList, setDF)
-      
-      
-      seed <- sample(1e6, 1)
-      set.seed(seed)
-      pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
-      system.time(a <- .objfun(par = pars,
-                               formula = formula, #loci = loci,
-                               landscape = sim$rasterToMatch,
-                               annualDTx1000 = lapply(annualDTx1000, setDF),
-                               nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
-                               fireBufferedListDT = lapply(fireBufferedListDT, setDF),
-                               historicalFires = lapply(lociList, setDF),
-                               verbose = TRUE
-      ))
-    }
-  }
-  
+
   ####################################################################  
   # Final preparations of objects for .objfun
   ####################################################################  
-  landscape = sim$rasterToMatch
-  annualDTx1000 = lapply(annualDTx1000, setDF)
-  nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-  fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-  historicalFires = lapply(lociList, setDF)
+  
+  landscape <- sim$rasterToMatch
+  annualDTx1000 <- lapply(annualDTx1000, setDF)
+  nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
+  fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
+  historicalFires <- lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
   source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
@@ -491,6 +473,7 @@ spreadFitRun <- function(sim)
   ####################################################################  
   #  Cluster
   ####################################################################  
+  
   control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
   logPath <- file.path(Paths$outputPath, 
