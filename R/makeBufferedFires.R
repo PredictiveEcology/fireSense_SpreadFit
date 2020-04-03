@@ -58,10 +58,14 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
         }
         if (tb[1, N] > tb[2, N]*upperTolerance) break
       }
+      if (is.null(rasBuffer)){
+        print("NULL raster? Debug")
+        browser()
+      }
+      return(rasBuffer)
     }))
     print("Need to stack these rasters, and sum(na.rm = TRUE)")
     browser() 
-    return(rasBuffer)
   }))
   names(historicalFire) <- names(fireLocationsPolys)
   return(historicalFire)
