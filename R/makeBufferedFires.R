@@ -34,7 +34,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
       while (eval(parse(text = stateToCheck))){
         adj <- adjacent(firePolyRas, adj, directions = 8, pairs = FALSE)
         rasBuffer <- raster(firePolyRas)
-        rasBuffer[adj] <- 0
+        rasBuffer[adj] <- -1
         rasBuffer[valsFireRas] <- 1
         tb <- data.table(table(rasBuffer[]))
         perc <- round((tb[1, N]/tb[2, N])*100, 0)
@@ -64,7 +64,20 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
       }
       return(rasBuffer)
     }))
-    print("Need to stack these rasters, and sum(na.rm = TRUE)")
+    # Convert to data table to speed up putting the rasters back together
+    stkDT <- as.data.table(allFires[])
+    print("Need to stack these rasters, and sum(na.rm = TRUE). Check stkDT for non-NA") 
+    browser()
+    stkDT[, fires := rowSums(.SD, na.rm = TRUE)]
+    rasBuffer <- setValues(raster(firePolyRas), stkDT$fires)
+    rasBuffer[rasBuffer < 1] <- 0
+    rasBuffer[rasBuffer > 1] <- 1
+    # 
+    # stkDT$pixelID <- 1:NROW(stkDT)
+    # stkDT <- na.omit(stkDT, cols = names(stkDT)[names(stkDT) != "pixelID"])
+    # stkDT[, fires := rowSums(.SD, na.rm = TRUE), 
+    #       .SDcols = names(stkDT[names(stkDT) != "pixelID"])]
+    # 
     browser() 
   }))
   names(historicalFire) <- names(fireLocationsPolys)
