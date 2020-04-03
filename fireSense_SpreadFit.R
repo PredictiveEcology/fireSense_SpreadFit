@@ -456,6 +456,28 @@ spreadFitRun <- function(sim)
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
 
+  # This below is to test the code without running DEOptim
+  if (FALSE) {
+    for (i in 1:100) {
+      landscape = sim$rasterToMatch
+      annualDTx1000 = lapply(annualDTx1000, setDF)
+      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+      historicalFires = lapply(lociList, setDF)
+      seed <- sample(1e6, 1)
+      set.seed(seed)
+      pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
+      system.time(a <- .objfun(par = pars,
+                               formula = formula, #loci = loci,
+                               landscape = sim$rasterToMatch,
+                               annualDTx1000 = lapply(annualDTx1000, setDF),
+                               nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
+                               fireBufferedListDT = lapply(fireBufferedListDT, setDF),
+                               historicalFires = lapply(lociList, setDF),
+                               verbose = TRUE
+      ))
+    }
+  }
   ####################################################################  
   # Final preparations of objects for .objfun
   ####################################################################  
