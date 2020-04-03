@@ -91,6 +91,13 @@ defineModule(sim, list(
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
                                   "module will convert those to 0's internally")),
+    defineParameter(name = "toleranceFireBuffer", class = "numeric", default = c(3.8, 4.2), 
+                    desc = paste0("Lower and upper tolerance for fire buffering. ",
+                                  "This is used for the function makeBufferedFires, and used ",
+                                  "to generate the probability of distribution of fires for ", 
+                                  "the negative likelihood (in the objective function of the ",
+                                  "optimizer). For now, we believe that the buffer needs to be @x4 ",
+                                  "bigger than the fire")),
     defineParameter(name = "verbose", class = "logical", default = FALSE, 
                     desc = paste0("optional. Should it calculate and print median of spread ",
                                   "Probability during calculations?")),
@@ -239,8 +246,8 @@ spreadFitRun <- function(sim)
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = FALSE, 
                         omitArgs = "useParallel", verbose = TRUE,
-                        lowerTolerance = 3.8, 
-                        upperTolerance = 4.2)
+                        lowerTolerance = P(sim)$toleranceFireBuffer[1], 
+                        upperTolerance = P(sim)$toleranceFireBuffer[2])
   names(fireBuffered) <- names(lociList)
   
 # All being passed should be lists of tables
