@@ -79,31 +79,31 @@ defineModule(sim, list(
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start
                             time of the simulation."),
-    defineParameter(name = ".runInterval", class = "numeric", default = NA, 
+    defineParameter(name = ".runInterval", class = "numeric", default = NA,
                     desc = paste0("optional. Interval between two runs of this module,",
                                   "expressed in units of simulation time. By default, NA, which ",
                                   "means that this module only runs once per simulation.")),
-    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA, 
+    defineParameter(name = ".saveInitialTime", class = "numeric", default = NA,
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA,
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, 
+    defineParameter(".useCache", "logical", FALSE, NA, NA,
                     desc = paste0("Should this entire module be run",
                            " with caching activated? This is generally intended for data-type ",
                            "modules, where stochasticity and time are not relevant")),
-    defineParameter(name = "termsNAtoZ", class = "character", default = NULL, 
+    defineParameter(name = "termsNAtoZ", class = "character", default = NULL,
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
                                   "module will convert those to 0's internally")),
-    defineParameter(name = "verbose", class = "logical", default = FALSE, 
+    defineParameter(name = "verbose", class = "logical", default = FALSE,
                     desc = paste0("optional. Should it calculate and print median of spread ",
                                   "Probability during calculations?")),
-    defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55, 
+    defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55,
                     desc = paste0("optional. Maximum fire spread average to be passed to the ",
                                   ".objFun for optimimzation. Default is 0.255")),
-    defineParameter(name = "parallelMachinesIP", class = "character", default = NULL, 
+    defineParameter(name = "parallelMachinesIP", class = "character", default = NULL,
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
-                                  "IP's addresses provided. It will devide the cores between all", 
+                                  "IP's addresses provided. It will devide the cores between all",
                                   "machines as equaly as possible"))
   ),
   inputObjects = rbind(
@@ -214,14 +214,14 @@ spreadFitInit <- function(sim)
 spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-  
+
   hash <- fastdigest(sim$annualStacks)
   whNotNA <- which(!is.na(rasterToMatch[]))
-  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
+  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
                                  whNotNA = whNotNA,
                                  .fastHash = hash,
                                  omitArgs = c("annualStacks", "rasterToMatch")))
-  
+
   hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
   system.time({
     nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, sim$nonAnnualStacks,
@@ -243,10 +243,10 @@ spreadFitRun <- function(sim)
   print("before makeBufferedFires")
   browser()
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = rasterToMatch, useParallel = FALSE, 
+                        rasterToMatch = rasterToMatch, useParallel = FALSE,
                         omitArgs = "useParallel")
   names(fireBuffered) <- names(lociList)
-  
+
 # All being passed should be lists of tables
   fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
 
@@ -303,10 +303,10 @@ spreadFitRun <- function(sim)
       ))
     }
   }
-  ####################################################################  
+  ####################################################################
   # Final preparations of objects for .objfun
-  ####################################################################  
-  
+  ####################################################################
+
   landscape <- sim$rasterToMatch
   annualDTx1000 <- lapply(annualDTx1000, setDF)
   nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
@@ -319,15 +319,15 @@ spreadFitRun <- function(sim)
 
   ####################################################################
   #  Cluster
-  ####################################################################  
-  
-  control <- list(itermax = P(sim)$iterDEoptim, 
+  ####################################################################
+
+  control <- list(itermax = P(sim)$iterDEoptim,
                   trace = P(sim)$trace)
   logPath <- file.path(Paths$outputPath,
                        paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
-  
+
   browser() # Make a cluster accross machines
   cl <- makeCluster(P(sim)$cores, outfile = logPath)
   # cl <- makeCluster(2, outfile = logPath)
@@ -427,7 +427,6 @@ annualStacksToDTx1000 <- function(annualStacks, whNotNA, ...) {
 
   rastersDT
 }
-
 
 simplifyFireBuffered <- function(fireBuffered) {
   lapply(fireBuffered, function(r) {
