@@ -93,7 +93,10 @@ defineModule(sim, list(
                                   "module will convert those to 0's internally")),
     defineParameter(name = "verbose", class = "logical", default = FALSE, 
                     desc = paste0("optional. Should it calculate and print median of spread ",
-                                  "Probability during calculations?"))
+                                  "Probability during calculations?")),
+    defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55, 
+                    desc = paste0("optional. Maximum fire spread average to be passed to the ",
+                                  ".objFun for optimimzation. Default is 0.255"))
   ),
   inputObjects = rbind( 
     expectsInput(

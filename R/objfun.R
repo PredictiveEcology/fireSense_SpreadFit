@@ -12,7 +12,8 @@ logistic4p <- function(x, par) {
                     historicalFires,
                     fireBufferedListDT,
                     wADtest = 1, # not used yet
-                    verbose = TRUE){ 
+                    verbose = TRUE,
+                    maxFireSpread = 0.255){ 
   
   # Optimization's objective function
   data.table::setDTthreads(1)
@@ -71,7 +72,7 @@ logistic4p <- function(x, par) {
       set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
       
       medSP <- median(shortAnnDTx1000[, mean(spreadProb, na.rm = TRUE)], na.rm = TRUE)
-      if (medSP <= 0.25 & medSP >= 0.16) {
+      if (medSP <= maxFireSpread & medSP >= 0.16) {
         if (verbose) {
           print(paste0(Sys.getpid(), "-- year: ",yr, ", spreadProb raster: median in buffered pixels = ", 
                        round(medSP, 3)))
