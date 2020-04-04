@@ -25,7 +25,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     names(firePolyRas) <- yr
     # Do the calculation for each fire
     fireIDS <- unique(firePolyRas[!is.na(firePolyRas)])
-    allFires <- lapply(fireIDS, function(fireID){
+    allFires <- suppressWarnings(do.call(what = fun, args = list(X = fireIDS, FUN = function(fireID){
       valsFireRas  <- which(firePolyRas[] == fireID)
       adj <- adjacent(firePolyRas, valsFireRas, directions = 8, pairs = FALSE)
       tb <- data.table(V1 = c(0, 1), N = c(1, 2))
@@ -64,18 +64,24 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
       }
       attr(rasBuffer, "buffer") <- adj
       return(rasBuffer)
-    })
+    })))
     # Convert to data table to speed up putting the rasters back together
-    browser()
     adjAll <- unlist(lapply(allFires, attr, which = "buffer"))
-    stkDT <- as.data.table(stack(allFires[]))
+    allFires <- lapply(allFires, function(ras){
+      attr(ras, "buffer") <- NULL
+      return(ras)
+      })
+    stk <- stack(allFires)
+    stkDT <- as.data.table(stk[])
     stkDT[, fires := rowSums(.SD, na.rm = TRUE)]
     rasBuffer <- setValues(raster(firePolyRas), stkDT$fires)
     # Put NA's back
-    rasBuffer[rasBuffer > 1] <- 1
-    rasBuffer[adjAll] <- NA
-    print("Check the raster rasBuffer")
-    browser()
+    rasBuffer[rasBuffer > 1] <- 1 # Just making sure all fires are 1 (the same pixel might have burned                                     more then one time)
+    fires  <- which(rasBuffer[] == 1)
+    rasBuffer[] <- NA
+    rasBuffer[adjAll] <- 0 # Buffer
+    rasBuffer[fires] <- 1 # Fires
+    return(rasBuffer)
   }))
   names(historicalFire) <- names(fireLocationsPolys)
   return(historicalFire)
