@@ -327,6 +327,7 @@ spreadFitRun <- function(sim)
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
                                covMinMax = covMinMax,
+                               maxFireSpread = P(sim)$maxFireSpread,
                                verbose = TRUE
       ))
     }
@@ -400,6 +401,7 @@ spreadFitRun <- function(sim)
                                  control = do.call("DEoptim.control", control),
                                  formula = P(sim)$formula,
                                  covMinMax = covMinMax,
+                                 maxFireSpread = P(sim)$maxFireSpread,
                                  verbose = P(sim)$verbose,
                                  omitArgs = c("verbose")
   ))
