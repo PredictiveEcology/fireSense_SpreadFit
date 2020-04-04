@@ -64,6 +64,10 @@ defineModule(sim, list(
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
                             computing."),
+    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
+                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
+                                 "this allows covariate estimates to be on the same scale",
+                                 "and will likely speed up convergence"),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
                     desc = paste0("optional. An expression to evaluate on each cluster node. ",
                                   "Ignored when parallel computing is disabled.")),
@@ -221,7 +225,7 @@ spreadFitRun <- function(sim)
   
   hash <- fastdigest(sim$annualStacks)
   whNotNA <- which(!is.na(rasterToMatch[]))
-  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
+  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
                                  whNotNA = whNotNA,
                                  .fastHash = hash,
                                  omitArgs = c("annualStacks", "rasterToMatch")))
@@ -283,15 +287,29 @@ spreadFitRun <- function(sim)
         pixelIDs <- rbindlist(subDTs)$pixelID
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
-
+  
+  covMinMax <- if (P(sim)$rescaleAll) {
+    nonAnnRescales <- rbindlist(nonAnnualDTx1000)
+    vals <- setdiff(colnames(nonAnnRescales), "pixelID")
+    covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
+    
+    annRescales <- rbindlist(annualDTx1000)
+    vals <- setdiff(colnames(annRescales), c("buffer", "pixelID"))
+    covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+    cbind(covMinMax1, covMinMax2)
+  } else {
+    NULL
+  }
+  
   # This below is to test the code without running DEOptim
+  browser() # Make a cluster accross machines
   if (FALSE) {
     for (i in 1:100) {
-      landscape = sim$rasterToMatch
-      annualDTx1000 = lapply(annualDTx1000, setDF)
-      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-      historicalFires = lapply(lociList, setDF)
+      #landscape = sim$rasterToMatch
+      #annualDTx1000 = lapply(annualDTx1000, setDF)
+      #nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+      #fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+      #historicalFires = lapply(lociList, setDF)
       seed <- sample(1e6, 1)
       set.seed(seed)
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
@@ -302,6 +320,7 @@ spreadFitRun <- function(sim)
                                nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
+                               covMinMax = covMinMax,
                                verbose = TRUE
       ))
     }
@@ -317,10 +336,10 @@ spreadFitRun <- function(sim)
   historicalFires <- lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
-  source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
-  logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
-  
-  ####################################################################  
+  # source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
+  # logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
+
+  ####################################################################
   #  Cluster
   ####################################################################  
   
@@ -337,6 +356,13 @@ spreadFitRun <- function(sim)
   } else {
     cl <- makeCluster(P(sim)$cores, outfile = logPath)
   }
+
+  
+  numCores <- if (length(P(sim)$cores) > 1) length(P(sim)$cores) else P(sim)$cores
+  hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
+  message("Starting ", numCores, " clusters on ", paste(hosts, collapse = ", "))
+  st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
+  message("it took ", round(st[3],2), "s to start ", numCores, " threads")
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
   
@@ -349,7 +375,7 @@ spreadFitRun <- function(sim)
   parallel::clusterEvalQ(
     cl, 
     for (i in c("kSamples", "magrittr", "raster", "data.table",
-                "SpaDES.tools")) 
+                "SpaDES.tools", "fireSenseUtils"))
       library(i, character.only = TRUE)
     )
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
@@ -359,16 +385,17 @@ spreadFitRun <- function(sim)
   # DEOptim call
   #####################################################################
   data.table::setDTthreads(1)
-  DE <- Cache(DEoptim,
-    get(".objfun", envir = .GlobalEnv), 
+  st1 <- system.time(DE <- Cache(DEoptim,
+    fireSenseUtils::.objfun,
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
-    formula = P(sim)$formula, 
+    formula = P(sim)$formula,
+    covMinMax = covMinMax,
     verbose = P(sim)$verbose,
     omitArgs = c("verbose")
-  )
-  
+  ))
+
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
   browser()
