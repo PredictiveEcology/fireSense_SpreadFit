@@ -327,8 +327,8 @@ spreadFitRun <- function(sim)
   historicalFires <- lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
-  source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
-  logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
+  #source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
+  #logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
 
   ####################################################################
   #  Cluster
@@ -341,7 +341,11 @@ spreadFitRun <- function(sim)
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
 
-  cl <- makeCluster(P(sim)$cores, outfile = logPath)
+  numCores <- if (length(P(sim)$cores) > 1) length(P(sim)$cores) else P(sim)$cores
+  hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
+  message("Starting ", numCores, " clusters on ", paste(hosts, collapse = ", "))
+  st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
+  message("it took ", round(st[3],2), "s to start ", numCores, " threads")
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
 
@@ -354,7 +358,7 @@ spreadFitRun <- function(sim)
   parallel::clusterEvalQ(
     cl,
     for (i in c("kSamples", "magrittr", "raster", "data.table",
-                "SpaDES.tools"))
+                "SpaDES.tools", "fireSenseUtils"))
       library(i, character.only = TRUE)
     )
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
@@ -364,17 +368,17 @@ spreadFitRun <- function(sim)
   # DEOptim call
   #####################################################################
   data.table::setDTthreads(1)
-  DE <- Cache(DEoptim,
-    get(".objfun", envir = .GlobalEnv),
-    lower = P(sim)$lower,
-    upper = P(sim)$upper,
-    control = do.call("DEoptim.control", control),
-    formula = P(sim)$formula,
-    covMinMax = setDF(covMinMax),
-    verbose = P(sim)$verbose,
-    omitArgs = c("verbose")
-  )
-
+  st1 <- system.time(DE <- Cache(DEoptim,
+                                 fireSenseUtils::.objfun,
+                                 lower = P(sim)$lower,
+                                 upper = P(sim)$upper,
+                                 control = do.call("DEoptim.control", control),
+                                 formula = P(sim)$formula,
+                                 covMinMax = covMinMax,
+                                 verbose = P(sim)$verbose,
+                                 omitArgs = c("verbose")
+  ))
+  
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
   browser()
