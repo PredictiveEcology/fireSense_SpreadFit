@@ -64,6 +64,10 @@ defineModule(sim, list(
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel 
                             computing."),
+    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
+                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
+                                 "this allows covariate estimates to be on the same scale",
+                                 "and will likely speed up convergence"),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
                     desc = "optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled."),
     defineParameter(name = "trace", class = "numeric", default = 0,
@@ -198,196 +202,10 @@ spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
   
-  if (FALSE) {
-  # Load inputs in the data container
-  # list2env(as.list(envir(sim)), envir = mod)
-  
-  mod_env <- new.env(parent = emptyenv()) # 'emptyenv()' Avoid memory leak and C recursive problem
-  ## Map the "fireAttributesFireSense_SpreadFit" parameter of this module to the "fireAttributesFireSense_SpreadFit" object in the module environment
-  assign("fireAttributesFireSense_SpreadFit", value = sim[[P(sim)$fireAttributes]], envir = mod_env)
-  .doDataChecks(moduleName = moduleName, envir = mod_env, attribs = P(sim)$fireAttributes, fml = P(sim)$formula)
-  
-  # Recovering fire sizes
-  sizes <- mod_env[["fireAttributesFireSense_SpreadFit"]][["size"]]
-  
-  terms <- P(sim)$formula %>% terms.formula %>% delete.response ## If the formula has a LHS remove it
-  allxy <- all.vars(terms)
-  if (is.null(mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])) ## All fires started during the same time interval
-  {
-    for(x in P(sim)$data)
-    {
-      if (!is.null(sim[[x]]))
-      {
-        if (is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
-        {
-          list2env(setNames(unstack(sim[[x]]), names(sim[[x]])), envir = mod_env)
-        } 
-        else if (is(sim[[x]], "RasterLayer")) 
-        {
-          mod_env[[x]] <- sim[[x]]
-        } 
-        else stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
-      }
-    }
-    
-# TODOAdd test for firePolygon to be a list of shapefiles
-    
-    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
-    
-    if (s <- sum(missing))
-      stop(moduleName, "> '", allxy[missing][1L], "'",
-           if (s > 1) paste0(" (and ", s-1L, " other", if (s>2) "s", ")"),
-           " not found in data objects.")
-    
-    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>% raster::brick
-    
-    list2env(
-      with(
-        slot(
-          ## Get loci from the raster sim$landscape for the fire locations
-          raster::extract(rasters[[1L]], fireAttributesFireSense_SpreadFit, cellnumbers = TRUE, df = TRUE, sp = TRUE),
-          "data"
-        ),
-        chk_duplicatedStartPixels(cells, sizes)
-      ),
-      envir = environment()
-    )
-    
-    objfun <- function(par, rasters, formula, loci, sizes, fireSense_SpreadFitRaster)
-    {
-      r <- predict(rasters, model = formula, fun = fireSense_SpreadFitRaster, na.rm = TRUE, par = par[5:length(par)]) %>%
-        calc(function(x) par[1L] + (par[2L] - par[1L]) / (1 + x^(-par[3L])) ^ par[4L]) ## 5-parameters logistic
-      
-      spreadState <- SpaDES.tools::spread(
-        landscape = r,
-        loci = loci, 
-        spreadProb = r,
-        returnIndices = TRUE
-      )
-      
-      spreadState[ , fire_id := .GRP, by = "initialLocus"] # Add an fire_id column
-      
-      first <- ad.test(
-        list(
-          tabulate( # Here tabulate() is equivalent to table() but faster
-            spreadState[["fire_id"]]
-          ),
-          sizes
-        )
-      )[["ad"]][1,1]
-      #second <- liklihood here
-      scale(first) # + scale(second)
-    }
-  }
-  else ## Fires started at different time intervals
-  {
-    for(x in P(sim)$data)
-    {
-      if (!is.null(sim[[x]]))
-      {
-        if (is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick"))
-        {
-          mod_env[[x]] <- sim[[x]]
-        } 
-        else 
-          stop(moduleName, "> '", x, "' is not a RasterLayer, a RasterStack or a RasterBrick.")
-      }
-    }
-    
-    missing <- !allxy %in% ls(mod_env, all.names = TRUE)
-    
-    if (any(missing))
-      stop(moduleName, "> '", paste(allxy[missing], collapse = "', '"), "' not found in data objects nor in the simList environment.")
-    
-    badClass <- !unlist(
-      lapply(
-        allxy, 
-        function(x) is(sim[[x]], "RasterLayer") || is(sim[[x]], "RasterStack") || is(sim[[x]], "RasterBrick")
-      )
-    )
-    
-    if (any(badClass))
-      stop(moduleName, "> '", paste(allxy[badClass], collapse = "', '"), "' does not match a RasterLayer, a RasterStack or a RasterBrick.")
-
-    # move to RAM
-    
-    out <- lapply(mget(allxy, envir = envir(sim)), function(x) {
-      raster::unstack(x)
-    })
-    out2 <- purrr::transpose(out)
-    names(out2) <- as.character(1991:2017)
-    
-    rasters <- mget(allxy, envir = mod_env, inherits = FALSE) %>%
-      lapply(function(x) if( is(x, "RasterStack") || is(x, "RasterBrick") ) unstack(x) else list(x)) %>%
-      c(list(FUN = function(...) stack(list(...)), SIMPLIFY = FALSE)) %>%
-      do.call("mapply", args = .)
-    names(rasters) <- as.character(1991:2017)
-    rastersDT <- rbindlist(lapply(rasters[1:2], function(x) {
-      a <- as.data.table(x[])
-      }), use.names = TRUE, idcol = "year")
-    set(rastersDT, NULL, "pixelID", rep(1:ncell(rasters[[1]]), length.out = NROW(rastersDT)))
-    
-    
-    rastersDT1 <- na.omit(rastersDT, cols = c(names(rasters[[1]])))
-    
-    ## Get loci from the raster sim$landscape for the fire locations
-    lociDF <- raster::extract(x = rasters[[1L]], 
-                              y = sim[["fireAttributesFireSense_SpreadFit"]],
-                         cellnumbers = TRUE,
-                         df = TRUE,
-                         sp = TRUE)
-    
-    # This has lots of NAs (probably the 0's in the original data), these should be converted to/ensured that are zeros 
-    lociData <- data.table(slot(object = lociDF, name = "data"))
-    
-    dtReplaceNAwith0(DT = lociData, colsToUse = P(sim)$termsNAtoZ)
-    #TODO Functions temporarily in R folder of the module. Will be moved to a package
-    lociPerDate <- split(x = lociData, mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]])
-    
-    #NOTE: somehow we might still have some NA's coming from the weather data. We should exclude these points, BUT warn the user
-    originalNROW <- sum(unlist(lapply(X = lociPerDate, FUN = NROW)))
-    lociPerDate <- lapply(X = split(x = lociData, mod_env[["fireAttributesFireSense_SpreadFit"]][["date"]]), FUN = na.omit)
-    # Assertion:
-    currentNROW <- sum(unlist(lapply(X = lociPerDate, FUN = NROW)))
-    if (currentNROW != originalNROW)
-      warning(paste0("There are ", originalNROW - currentNROW,
-                     " rows that contain NA's in the dataset. These will be excluded for ",
-                     "the fitting, but should be revised", immediate. = TRUE))
-    
-    # Removing duplicated fires on the same pixel on the same year
-    lociPerDate <- lapply(lociPerDate, function(x){
-      with(x, chk_duplicatedStartPixels(cells, size))
-      })
-
-    list2env(with(lociPerDate, list(loci = eapply(environment(), FUN = function(x) x[["loci"]]),
-                                    sizes = eapply(environment(), FUN = function(x) x[["sizes"]]))),
-             envir = environment())
-    
-  control <- list(itermax = P(sim)$iterDEoptim, trace = P(sim)$trace)
-  
-  if (P(sim)$cores > 1) # Creates cluster
-  {
-    if (.Platform$OS.type == "unix")
-      mkCluster <- parallel::makeForkCluster
-    else
-      mkCluster <- parallel::makePSOCKcluster
-    
-    message(crayon::blurred(paste0("Starting parallel model fitting for ",
-                                   "fireSense_SpreadFit. Log: ", file.path(Paths$outputPath, 
-                                                                           "fireSense_SpreadFit_log"))))
-    
-    cl <- mkCluster(P(sim)$cores, outfile = file.path(Paths$outputPath, "fireSense_SpreadFit_log"))
-    on.exit(stopCluster(cl))
-    parallel::clusterEvalQ(cl, for (i in c("kSamples", "magrittr", "raster")) library(i, character.only = TRUE))
-    parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
-    control$cluster <- cl
-  }
-  }
-}
   
   hash <- fastdigest(sim$annualStacks)
   whNotNA <- which(!is.na(rasterToMatch[]))
-  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks, 
+  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
                                  whNotNA = whNotNA,
                                  .fastHash = hash,
                                  omitArgs = c("annualStacks", "rasterToMatch")))
@@ -407,7 +225,7 @@ spreadFitRun <- function(sim)
     as.data.table() %>%
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
-  
+  print("before makeBufferedFires")
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = TRUE, 
                         omitArgs = "useParallel")
@@ -451,15 +269,29 @@ spreadFitRun <- function(sim)
         pixelIDs <- rbindlist(subDTs)$pixelID
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
+  
+  covMinMax <- if (P(sim)$rescaleAll) {
+    nonAnnRescales <- rbindlist(nonAnnualDTx1000)
+    vals <- setdiff(colnames(nonAnnRescales), "pixelID")
+    covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
+    
+    annRescales <- rbindlist(annualDTx1000)
+    vals <- setdiff(colnames(annRescales), c("buffer", "pixelID"))
+    covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+    cbind(covMinMax1, covMinMax2)
+  } else {
+    NULL
+  }
+  
+  # This below is to test the code without running DEOptim
+  browser() # Make a cluster accross machines
   if (FALSE) {
     for (i in 1:100) {
-      landscape = sim$rasterToMatch
-      annualDTx1000 = lapply(annualDTx1000, setDF)
-      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-      historicalFires = lapply(lociList, setDF)
-      
-      
+      #landscape = sim$rasterToMatch
+      #annualDTx1000 = lapply(annualDTx1000, setDF)
+      #nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
+      #fireBufferedListDT = lapply(fireBufferedListDT, setDF)
+      #historicalFires = lapply(lociList, setDF)
       seed <- sample(1e6, 1)
       set.seed(seed)
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
@@ -470,6 +302,7 @@ spreadFitRun <- function(sim)
                                nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
+                               covMinMax = covMinMax,
                                verbose = TRUE
       ))
     }
@@ -485,10 +318,10 @@ spreadFitRun <- function(sim)
   historicalFires = lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
-  source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
-  logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
-  
-  ####################################################################  
+  # source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
+  # logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
+
+  ####################################################################
   #  Cluster
   ####################################################################  
   control <- list(itermax = P(sim)$iterDEoptim, 
@@ -497,7 +330,13 @@ spreadFitRun <- function(sim)
                        paste0("fireSense_SpreadFit_log", Sys.getpid()))
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
-  cl <- makeCluster(P(sim)$cores, outfile = logPath)
+
+  
+  numCores <- if (length(P(sim)$cores) > 1) length(P(sim)$cores) else P(sim)$cores
+  hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
+  message("Starting ", numCores, " clusters on ", paste(hosts, collapse = ", "))
+  st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
+  message("it took ", round(st[3],2), "s to start ", numCores, " threads")
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
   
@@ -510,7 +349,7 @@ spreadFitRun <- function(sim)
   parallel::clusterEvalQ(
     cl, 
     for (i in c("kSamples", "magrittr", "raster", "data.table",
-                "SpaDES.tools")) 
+                "SpaDES.tools", "fireSenseUtils"))
       library(i, character.only = TRUE)
     )
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
@@ -520,16 +359,17 @@ spreadFitRun <- function(sim)
   # DEOptim call
   #####################################################################
   data.table::setDTthreads(1)
-  DE <- Cache(DEoptim,
-    get(".objfun", envir = .GlobalEnv), 
+  st1 <- system.time(DE <- Cache(DEoptim,
+    fireSenseUtils::.objfun,
     lower = P(sim)$lower,
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
-    formula = P(sim)$formula, 
+    formula = P(sim)$formula,
+    covMinMax = covMinMax,
     verbose = P(sim)$verbose,
     omitArgs = c("verbose")
-  )
-  
+  ))
+
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
   browser()
