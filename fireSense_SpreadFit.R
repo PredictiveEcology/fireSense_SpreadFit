@@ -336,8 +336,8 @@ spreadFitRun <- function(sim)
   historicalFires <- lapply(lociList, setDF)
 
   # source any functions that are needed into .GlobalEnv so it doesn't have sim env
-  # source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R"))
-  # logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
+  source(file.path("~/GitHub/NWT/modules/fireSense_SpreadFit/R/objfun.R")) # Sourcing because I still don't have the package
+  logistic4p <- get("logistic4p", envir = .GlobalEnv, inherits = FALSE)
 
   ####################################################################
   #  Cluster
@@ -345,27 +345,30 @@ spreadFitRun <- function(sim)
   
   control <- list(itermax = P(sim)$iterDEoptim, 
                   trace = P(sim)$trace)
-  logPath <- file.path(Paths$outputPath, 
-                       paste0("fireSense_SpreadFit_log", Sys.getpid()))
-  message(crayon::blurred(paste0("Starting parallel model fitting for ",
-                                 "fireSense_SpreadFit. Log: ", logPath)))
-  
   browser() # Make a cluster accross machines
   if (!is.null(parallelMachinesIP)){
-
+    message("Starting ", P(sim)$cores, " clusters on ", paste(P(sim)$parallelMachinesIP,
+                                                          collapse = ", "))
+    if ((P(sim)$cores %% 2) != 0) params(sim)$cores <- P(sim)$cores - 1
+    clusters <- c(rep("localhost", P(sim)$cores/2),
+                  rep(P(sim)$parallelMachinesIP, P(sim)$cores/2))
+    logPath <- file.path(Paths$outputPath, 
+                         paste0("fireSense_SpreadFit_log", Sys.getpid()))
+    message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                   "fireSense_SpreadFit. Log: ", logPath)))
+    st <- system.time(cl <- makeCluster(clusters, outfile = logPath))
+    hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
+    
   } else {
-    cl <- makeCluster(P(sim)$cores, outfile = logPath)
+    message("Starting ", P(sim)$cores, " clusters on this machine")
+    logPath <- file.path(Paths$outputPath, 
+                         paste0("fireSense_SpreadFit_log", Sys.getpid()))
+    message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                   "fireSense_SpreadFit. Log: ", logPath)))
+    st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
   }
-
-  
-  numCores <- if (length(P(sim)$cores) > 1) length(P(sim)$cores) else P(sim)$cores
-  hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
-  message("Starting ", numCores, " clusters on ", paste(hosts, collapse = ", "))
-  st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
-  message("it took ", round(st[3],2), "s to start ", numCores, " threads")
-  # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
-  
+  message("it took ", round(st[3],2), "s to start ", P(sim)$cores, " threads")
   clusterExport(cl, list("landscape", 
                          "annualDTx1000",
                          "nonAnnualDTx1000",
