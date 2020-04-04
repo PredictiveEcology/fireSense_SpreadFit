@@ -66,6 +66,7 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
       return(rasBuffer)
     })
     # Convert to data table to speed up putting the rasters back together
+    browser()
     adjAll <- unlist(lapply(allFires, attr, which = "buffer"))
     stkDT <- as.data.table(stack(allFires[]))
     stkDT[, fires := rowSums(.SD, na.rm = TRUE)]
