@@ -107,7 +107,8 @@ defineModule(sim, list(
     defineParameter(name = "parallelMachinesIP", class = "character", default = NULL, 
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
                                   "IP's addresses provided. It will devide the cores between all", 
-                                  "machines as equaly as possible"))
+                                  "machines as equaly as possible. Currently, supports only ",
+                                  "2 machines"))
   ),
   inputObjects = rbind( 
     expectsInput(
@@ -331,7 +332,11 @@ spreadFitRun <- function(sim)
                                  "fireSense_SpreadFit. Log: ", logPath)))
   
   browser() # Make a cluster accross machines
-  cl <- makeCluster(P(sim)$cores, outfile = logPath)
+  if (!is.null(parallelMachinesIP)){
+
+  } else {
+    cl <- makeCluster(P(sim)$cores, outfile = logPath)
+  }
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
   
@@ -402,6 +407,13 @@ spreadFitSave <- function(sim)
 
 .inputObjects <- function(sim) {
   
+  if (length(P(sim)$parallelMachinesIP) > 1){
+    warning("Currently, only 2 machines (local and one more) can ",
+         "be use to parallelize this module. Only first one will be used", 
+         immediate. = TRUE)
+    params(sim)$parallelMachinesIP <- P(sim)$parallelMachinesIP[1]
+  }
+    
   cloudFolderID <- "https://drive.google.com/open?id=1PoEkOkg_ixnAdDqqTQcun77nUvkEHDc0"
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
