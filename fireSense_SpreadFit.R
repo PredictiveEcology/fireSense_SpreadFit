@@ -73,9 +73,9 @@ defineModule(sim, list(
                             default value is 1, which disables parallel
                             computing."),
     defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
-                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
+                    desc = paste0("Should all covariates to globally rescaled from 0 to 1;",
                                  "this allows covariate estimates to be on the same scale",
-                                 "and will likely speed up convergence"),
+                                 "and will likely speed up convergence")),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
                     desc = paste0("optional. An expression to evaluate on each cluster node. ",
                                   "Ignored when parallel computing is disabled.")),
