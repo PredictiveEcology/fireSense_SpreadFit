@@ -50,6 +50,10 @@ defineModule(sim, list(
                             steps. If the 'date' column is not present, all
                             fires are assumed to have started at the same time
                             interval."),
+    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
+                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
+                                 "this allows covariate estimates to be on the same scale",
+                                 "and will likely speed up convergence")),
     defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = "see `?DEoptim`. Lower limits for the logistic function
                             parameters (lower bound, upper bound, slope, asymmetry)
@@ -241,7 +245,6 @@ spreadFitRun <- function(sim)
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
   print("before makeBufferedFires")
-  browser()
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
                         rasterToMatch = rasterToMatch, useParallel = FALSE,
                         omitArgs = "useParallel")
@@ -281,17 +284,26 @@ spreadFitRun <- function(sim)
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
 
+  covMinMax <- if (P(sim)$rescaleAll) {
+    nonAnnRescales <- rbindlist(nonAnnualDTx1000)
+    vals <- setdiff(colnames(nonAnnRescales), "pixelID")
+    covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
+    
+    annRescales <- rbindlist(annualDTx1000)
+    vals <- setdiff(colnames(annRescales), c("buffer", "pixelID"))
+    covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+    cbind(covMinMax1, covMinMax2)
+  } else {
+    NULL
+  }
+
   # This below is to test the code without running DEOptim
   if (FALSE) {
     for (i in 1:100) {
-      landscape = sim$rasterToMatch
-      annualDTx1000 = lapply(annualDTx1000, setDF)
-      nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF)
-      fireBufferedListDT = lapply(fireBufferedListDT, setDF)
-      historicalFires = lapply(lociList, setDF)
       seed <- sample(1e6, 1)
       set.seed(seed)
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
+      #pars <- runif(length(P(sim)$lower), lower, upper)
       system.time(a <- .objfun(par = pars,
                                formula = formula, #loci = loci,
                                landscape = sim$rasterToMatch,
@@ -299,6 +311,7 @@ spreadFitRun <- function(sim)
                                nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
+                               covMinMax = covMinMax,
                                verbose = TRUE
       ))
     }
@@ -328,7 +341,6 @@ spreadFitRun <- function(sim)
   message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                  "fireSense_SpreadFit. Log: ", logPath)))
 
-  browser() # Make a cluster accross machines
   cl <- makeCluster(P(sim)$cores, outfile = logPath)
   # cl <- makeCluster(2, outfile = logPath)
   on.exit(stopCluster(cl))
@@ -358,6 +370,7 @@ spreadFitRun <- function(sim)
     upper = P(sim)$upper,
     control = do.call("DEoptim.control", control),
     formula = P(sim)$formula,
+    covMinMax = setDF(covMinMax),
     verbose = P(sim)$verbose,
     omitArgs = c("verbose")
   )
