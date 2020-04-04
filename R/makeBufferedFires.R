@@ -15,7 +15,8 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
   library("future")
   library("future.apply")
   fun <- ifelse (useParallel, future_lapply, lapply)
-  historicalFire <- do.call(what = fun, args = list(X = names(fireLocationsPolys), FUN = function(yr){
+  historicalFire <- lapply(X = names(fireLocationsPolys), FUN = function(yr){
+  message(crayon::yellow(paste0("Starting fires in year ", yr)))
     # Projection is not the same, so I need to convert the polygon
     fireLocationsPoly <- reproducible::projectInputs(x = fireLocationsPolys[[yr]],
                                                      targetCRS = crs(rasterToMatch))
@@ -82,7 +83,9 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     rasBuffer[adjAll] <- 0 # Buffer
     rasBuffer[fires] <- 1 # Fires
     return(rasBuffer)
-  }))
+  })
+  message(crayon::green(paste0("Finished fires in year ", yr)))
+  print(Sys.time() - t1)
   names(historicalFire) <- names(fireLocationsPolys)
   return(historicalFire)
   if (verbose)
