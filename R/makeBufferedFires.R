@@ -21,7 +21,6 @@ makeBufferedFires <- function(fireLocationsPolys, rasterToMatch,
     fireLocationsPoly <- reproducible::projectInputs(x = fireLocationsPolys[[yr]],
                                                      targetCRS = crs(rasterToMatch))
     sf_fPY <- sf::st_as_sf(fireLocationsPoly)
-    print("MakeBufferedFires")
     firePolyRas <- fasterize::fasterize(sf = sf_fPY, raster = raster(rasterToMatch), field = "NFIREID")
     names(firePolyRas) <- yr
     # Do the calculation for each fire
