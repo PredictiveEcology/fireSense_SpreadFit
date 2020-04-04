@@ -72,6 +72,10 @@ defineModule(sim, list(
                             cores to be used for parallel computation. The
                             default value is 1, which disables parallel
                             computing."),
+    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
+                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
+                                 "this allows covariate estimates to be on the same scale",
+                                 "and will likely speed up convergence"),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
                     desc = paste0("optional. An expression to evaluate on each cluster node. ",
                                   "Ignored when parallel computing is disabled.")),
@@ -99,7 +103,14 @@ defineModule(sim, list(
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
                                   "module will convert those to 0's internally")),
-    defineParameter(name = "verbose", class = "logical", default = FALSE,
+    defineParameter(name = "toleranceFireBuffer", class = "numeric", default = c(3.8, 4.2), 
+                    desc = paste0("Lower and upper tolerance for fire buffering. ",
+                                  "This is used for the function makeBufferedFires, and used ",
+                                  "to generate the probability of distribution of fires for ", 
+                                  "the negative likelihood (in the objective function of the ",
+                                  "optimizer). For now, we believe that the buffer needs to be @x4 ",
+                                  "bigger than the fire")),
+    defineParameter(name = "verbose", class = "logical", default = FALSE, 
                     desc = paste0("optional. Should it calculate and print median of spread ",
                                   "Probability during calculations?")),
     defineParameter(name = "maxFireSpread", class = "numeric", default = 2.55,
@@ -107,8 +118,9 @@ defineModule(sim, list(
                                   ".objFun for optimimzation. Default is 0.255")),
     defineParameter(name = "parallelMachinesIP", class = "character", default = NULL,
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
-                                  "IP's addresses provided. It will devide the cores between all",
-                                  "machines as equaly as possible"))
+                                  "IP's addresses provided. It will devide the cores between all", 
+                                  "machines as equaly as possible. Currently, supports only ",
+                                  "2 machines"))
   ),
   inputObjects = rbind(
     expectsInput(
@@ -244,10 +256,12 @@ spreadFitRun <- function(sim)
     as.data.table() %>%
     set(NULL, setdiff(colnames(.), c("size", "date", "cells")), NULL)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
-  print("before makeBufferedFires")
+
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = rasterToMatch, useParallel = FALSE,
-                        omitArgs = "useParallel")
+                        rasterToMatch = rasterToMatch, useParallel = TRUE, 
+                        omitArgs = "useParallel", verbose = TRUE,
+                        lowerTolerance = P(sim)$toleranceFireBuffer[1], 
+                        upperTolerance = P(sim)$toleranceFireBuffer[2])
   names(fireBuffered) <- names(lociList)
 
 # All being passed should be lists of tables
@@ -283,7 +297,7 @@ spreadFitRun <- function(sim)
         pixelIDs <- rbindlist(subDTs)$pixelID
         nonAnnDTx1000[pixelID %in% pixelIDs]
       })
-
+  
   covMinMax <- if (P(sim)$rescaleAll) {
     nonAnnRescales <- rbindlist(nonAnnualDTx1000)
     vals <- setdiff(colnames(nonAnnRescales), "pixelID")
@@ -296,8 +310,9 @@ spreadFitRun <- function(sim)
   } else {
     NULL
   }
-
+  
   # This below is to test the code without running DEOptim
+  browser() # Make a cluster accross machines
   if (FALSE) {
     for (i in 1:100) {
       seed <- sample(1e6, 1)
@@ -336,20 +351,30 @@ spreadFitRun <- function(sim)
 
   control <- list(itermax = P(sim)$iterDEoptim,
                   trace = P(sim)$trace)
-  logPath <- file.path(Paths$outputPath,
-                       paste0("fireSense_SpreadFit_log", Sys.getpid()))
-  message(crayon::blurred(paste0("Starting parallel model fitting for ",
-                                 "fireSense_SpreadFit. Log: ", logPath)))
-
-  numCores <- if (length(P(sim)$cores) > 1) length(P(sim)$cores) else P(sim)$cores
-  hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
-  message("Starting ", numCores, " clusters on ", paste(hosts, collapse = ", "))
-  st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
-  message("it took ", round(st[3],2), "s to start ", numCores, " threads")
-  # cl <- makeCluster(2, outfile = logPath)
+  if (!is.null(parallelMachinesIP)){
+    message("Starting ", P(sim)$cores, " clusters on ", paste(P(sim)$parallelMachinesIP,
+                                                          collapse = ", "))
+    if ((P(sim)$cores %% 2) != 0) params(sim)$cores <- P(sim)$cores - 1
+    clusters <- c(rep("localhost", P(sim)$cores/2),
+                  rep(P(sim)$parallelMachinesIP, P(sim)$cores/2))
+    logPath <- file.path(Paths$outputPath, 
+                         paste0("fireSense_SpreadFit_log", Sys.getpid()))
+    message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                   "fireSense_SpreadFit. Log: ", logPath)))
+    st <- system.time(cl <- makeCluster(clusters, outfile = logPath))
+    hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
+    
+  } else {
+    message("Starting ", P(sim)$cores, " clusters on this machine")
+    logPath <- file.path(Paths$outputPath, 
+                         paste0("fireSense_SpreadFit_log", Sys.getpid()))
+    message(crayon::blurred(paste0("Starting parallel model fitting for ",
+                                   "fireSense_SpreadFit. Log: ", logPath)))
+    st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
+  }
   on.exit(stopCluster(cl))
-
-  clusterExport(cl, list("landscape",
+  message("it took ", round(st[3],2), "s to start ", P(sim)$cores, " threads")
+  clusterExport(cl, list("landscape", 
                          "annualDTx1000",
                          "nonAnnualDTx1000",
                          "fireBufferedListDT",
@@ -416,7 +441,14 @@ spreadFitSave <- function(sim)
 }
 
 .inputObjects <- function(sim) {
-
+  
+  if (length(P(sim)$parallelMachinesIP) > 1){
+    warning("Currently, only 2 machines (local and one more) can ",
+         "be use to parallelize this module. Only first one will be used", 
+         immediate. = TRUE)
+    params(sim)$parallelMachinesIP <- P(sim)$parallelMachinesIP[1]
+  }
+    
   cloudFolderID <- "https://drive.google.com/open?id=1PoEkOkg_ixnAdDqqTQcun77nUvkEHDc0"
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
