@@ -258,7 +258,7 @@ spreadFitRun <- function(sim)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
 
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = rasterToMatch, useParallel = TRUE, 
+                        rasterToMatch = rasterToMatch, useParallel = FALSE, 
                         omitArgs = "useParallel", verbose = TRUE,
                         lowerTolerance = P(sim)$toleranceFireBuffer[1], 
                         upperTolerance = P(sim)$toleranceFireBuffer[2])
