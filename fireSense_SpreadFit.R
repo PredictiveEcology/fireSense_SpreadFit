@@ -143,6 +143,12 @@ defineModule(sim, list(
                     "the most current versions of the database (Nov or Sept 2019)")
     ),
     expectsInput(
+      objectName = "polyCentroids",
+      objectClass = "list",
+      sourceURL = NA_character_,
+      desc = paste0("List of years of SpatialPoints representing fire polygon's centroids.")
+    ),
+    expectsInput(
       objectName = "dataFireSense_SpreadFit",
       objectClass = "RasterLayer, RasterStack",
       sourceURL = NA_character_,
@@ -462,10 +468,13 @@ spreadFitSave <- function(sim)
   }
   
   if (!suppliedElsewhere("polyCentroids", sim)){
-    browser()
-    sim$polyCentroids <- Cache(rgeos::gCentroid, spgeom = sim$firePolys, byid = TRUE, id = "",
-                               userTags = c("years:1991_2017"))
+   sim$polyCentroids <- lapply(X = names(sim$firePolys), FUN = function(yr){
+      ras <- sim$firePolys[[yr]]
+      ras$ID <- 1:NROW(ras)
+      cent <- rgeos::gCentroid(ras, byid = TRUE)
+      return(cent)
+    })
+    names(sim$polyCentroids) <- names(sim$firePolys)
   }
-
   return(invisible(sim))
 }
