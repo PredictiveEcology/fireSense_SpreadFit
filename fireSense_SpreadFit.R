@@ -21,6 +21,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
+                  "rgeos",
                   "PredictiveEcology/fireSenseUtils@development",
                   "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
@@ -458,6 +459,12 @@ spreadFitSave <- function(sim)
   if (!suppliedElsewhere("firePolys", sim)){
     sim$firePolys <- Cache(getFirePolygons, years = 1991:2017, studyArea = sim$studyArea,
                            pathInputs = Paths$inputPath, userTags = c("years:1991_2017"))
+  }
+  
+  if (!suppliedElsewhere("polyCentroids", sim)){
+    browser()
+    sim$polyCentroids <- Cache(rgeos::gCentroid, spgeom = sim$firePolys, byid = TRUE, id = "",
+                               userTags = c("years:1991_2017"))
   }
 
   return(invisible(sim))
