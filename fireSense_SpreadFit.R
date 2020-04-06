@@ -21,6 +21,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
+                  "rgeos",
                   "PredictiveEcology/fireSenseUtils@development",
                   "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
@@ -140,6 +141,12 @@ defineModule(sim, list(
       desc = paste0("List of years of SpatialPolygonsDataFrame representing fire polygons.",
                     "This defaults to https://cwfis.cfs.nrcan.gc.ca/downloads/nbac/ and uses ",
                     "the most current versions of the database (Nov or Sept 2019)")
+    ),
+    expectsInput(
+      objectName = "polyCentroids",
+      objectClass = "list",
+      sourceURL = NA_character_,
+      desc = paste0("List of years of SpatialPoints representing fire polygon's centroids.")
     ),
     expectsInput(
       objectName = "dataFireSense_SpreadFit",
@@ -459,6 +466,15 @@ spreadFitSave <- function(sim)
     sim$firePolys <- Cache(getFirePolygons, years = 1991:2017, studyArea = sim$studyArea,
                            pathInputs = Paths$inputPath, userTags = c("years:1991_2017"))
   }
-
+  
+  if (!suppliedElsewhere("polyCentroids", sim)){
+   sim$polyCentroids <- lapply(X = names(sim$firePolys), FUN = function(yr){
+      ras <- sim$firePolys[[yr]]
+      ras$ID <- 1:NROW(ras)
+      cent <- rgeos::gCentroid(ras, byid = TRUE)
+      return(cent)
+    })
+    names(sim$polyCentroids) <- names(sim$firePolys)
+  }
   return(invisible(sim))
 }
