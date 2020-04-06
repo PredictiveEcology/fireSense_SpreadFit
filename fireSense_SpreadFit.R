@@ -312,7 +312,7 @@ spreadFitRun <- function(sim)
   }
   
   # This below is to test the code without running DEOptim
-  browser() # Make a cluster accross machines
+  # Make a cluster accross machines
   if (FALSE) {
     for (i in 1:100) {
       seed <- sample(1e6, 1)
@@ -352,7 +352,7 @@ spreadFitRun <- function(sim)
 
   control <- list(itermax = P(sim)$iterDEoptim,
                   trace = P(sim)$trace)
-  if (!is.null(parallelMachinesIP)){
+  if (!is.null(P(sim)$parallelMachinesIP)){
     message("Starting ", P(sim)$cores, " clusters on ", paste(P(sim)$parallelMachinesIP,
                                                           collapse = ", "))
     if ((P(sim)$cores %% 2) != 0) params(sim)$cores <- P(sim)$cores - 1
@@ -408,15 +408,15 @@ spreadFitRun <- function(sim)
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
-  browser()
 
+  terms <- terms(formula)
   sim$fireSense_SpreadFitted <- list(
     formula = P(sim)$formula,
     coef = setNames(
       val,
       nm = c(
         "d", "a", "b", "g",
-        if (!is.null(attr(terms, "intercept"))) "Intercept" else NULL,
+        if (attr(terms, "intercept") != 0) "Intercept" else NULL,
         attr(terms, "term.labels")
       )
     ),
