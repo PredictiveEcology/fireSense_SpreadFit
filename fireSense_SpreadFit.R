@@ -21,7 +21,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos","future", "purrr",
+                  "rgeos","future", 
                   "PredictiveEcology/fireSenseUtils@development",
                   "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
@@ -382,7 +382,7 @@ spreadFitRun <- function(sim)
                                    "fireSense_SpreadFit. Log: ", logPath)))
     
     # Make sure logPath can be written in the workers -- need to create the dir
-    st <- system.time(cl <- makeClusterPSOCK(unique(P(sim)$cores), revtunnel = TRUE))
+    st <- system.time(cl <- future::makeClusterPSOCK(unique(P(sim)$cores), revtunnel = TRUE))
     clusterExport(cl, list("logPath"), envir = environment())
     parallel::clusterEvalQ(
       cl, {
@@ -392,7 +392,7 @@ spreadFitRun <- function(sim)
     stopCluster(cl)
     
     
-    st <- system.time(cl <- makeClusterPSOCK(P(sim)$cores, revtunnel = TRUE, outfile = logPath))
+    st <- system.time(cl <- future::makeClusterPSOCK(P(sim)$cores, revtunnel = TRUE, outfile = logPath))
     
     # st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
   }
