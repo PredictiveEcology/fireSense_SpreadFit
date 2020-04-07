@@ -21,7 +21,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos",
+                  "rgeos","future", "purrr",
                   "PredictiveEcology/fireSenseUtils@development",
                   "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
@@ -326,6 +326,7 @@ spreadFitRun <- function(sim)
       set.seed(seed)
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
       #pars <- runif(length(P(sim)$lower), lower, upper)
+      pars <- best
       system.time(a <- .objfun(par = pars,
                                formula = formula, #loci = loci,
                                landscape = sim$rasterToMatch,
@@ -373,15 +374,32 @@ spreadFitRun <- function(sim)
     hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
     
   } else {
-    message("Starting ", P(sim)$cores, " clusters on this machine")
+    message("Starting ", paste(paste(unique(P(sim)$cores)), "x", purrr::map_int(P(sim)$cores, length), 
+                               collapse = ", "), " clusters")
     logPath <- file.path(Paths$outputPath, 
                          paste0("fireSense_SpreadFit_log", Sys.getpid()))
     message(crayon::blurred(paste0("Starting parallel model fitting for ",
                                    "fireSense_SpreadFit. Log: ", logPath)))
-    st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
+    
+    # Make sure logPath can be written in the workers -- need to create the dir
+    st <- system.time(cl <- makeClusterPSOCK(unique(P(sim)$cores), revtunnel = TRUE))
+    clusterExport(cl, list("logPath"), envir = environment())
+    parallel::clusterEvalQ(
+      cl, {
+        reproducible::checkPath(dirname(logPath), create = TRUE)
+      }
+    )
+    stopCluster(cl)
+    
+    
+    st <- system.time(cl <- makeClusterPSOCK(P(sim)$cores, revtunnel = TRUE, outfile = logPath))
+    
+    # st <- system.time(cl <- makeCluster(P(sim)$cores, outfile = logPath))
   }
   on.exit(stopCluster(cl))
-  message("it took ", round(st[3],2), "s to start ", P(sim)$cores, " threads")
+  message("it took ", round(st[3],2), "s to start ", 
+          paste(paste(unique(P(sim)$cores)), "x", purrr::map_int(P(sim)$cores, length), 
+                collapse = ", "), " threads")
   clusterExport(cl, list("landscape", 
                          "annualDTx1000",
                          "nonAnnualDTx1000",
@@ -389,11 +407,12 @@ spreadFitRun <- function(sim)
                          "historicalFires",
                          "logistic4p"), envir = environment())
   parallel::clusterEvalQ(
-    cl,
-    for (i in c("kSamples", "magrittr", "raster", "data.table",
-                "SpaDES.tools", "fireSenseUtils"))
-      library(i, character.only = TRUE)
-    )
+    cl, {
+      for (i in c("kSamples", "magrittr", "raster", "data.table",
+                  "SpaDES.tools", "fireSenseUtils"))
+        library(i, character.only = TRUE)
+    }
+  )
   parallel::clusterCall(cl, eval, P(sim)$clusterEvalExpr, env = .GlobalEnv)
   control$cluster <- cl
 
