@@ -374,7 +374,7 @@ spreadFitRun <- function(sim)
     hosts <- if (length(P(sim)$cores) > 1) unique(P(sim)$cores) else "this machine"
     
   } else {
-    message("Starting ", paste(paste(unique(P(sim)$cores)), "x", purrr::map_int(P(sim)$cores, length), 
+    message("Starting ", paste(paste(unique(P(sim)$cores)), "x", table(P(sim)$cores), 
                                collapse = ", "), " clusters")
     logPath <- file.path(Paths$outputPath, 
                          paste0("fireSense_SpreadFit_log", Sys.getpid()))
@@ -398,7 +398,7 @@ spreadFitRun <- function(sim)
   }
   on.exit(stopCluster(cl))
   message("it took ", round(st[3],2), "s to start ", 
-          paste(paste(unique(P(sim)$cores)), "x", purrr::map_int(P(sim)$cores, length), 
+          paste(paste(unique(P(sim)$cores)), "x", table(P(sim)$cores), 
                 collapse = ", "), " threads")
   clusterExport(cl, list("landscape", 
                          "annualDTx1000",
