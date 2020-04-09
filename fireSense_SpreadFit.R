@@ -132,7 +132,7 @@ defineModule(sim, list(
                                   "IP's addresses provided. It will devide the cores between all",
                                   "machines as equaly as possible. Currently, supports only ",
                                   "2 machines"))
-    ),
+  ),
   inputObjects = rbind(
     expectsInput(
       objectName = "studyArea",
@@ -182,15 +182,34 @@ defineModule(sim, list(
       times and should not be spread at the same time interval,
       but are still used to describe the same fire size
       distribution. In this case, the number of layers in the
-      RasterStack should equal the number of distinct dates in column 'date'."
-    )
+      RasterStack should equal the number of distinct dates in column 'date'."),
+    expectsInput(
+      objectName = "studyArea",
+      objectClass = "SpatialPolygonDataFrame",
+      desc = "Study area for the prediction. Defaults to NWT",
+      sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU"
     ),
+    expectsInput(
+      objectName = "rasterToMatch",
+      objectClass = "RasterLayer",
+      desc = paste0("All spatial outputs will be reprojected and resampled ",
+                    "to it. Defaults to NWT"),
+      sourceURL = "https://drive.google.com/open?id=1fo08FMACr_aTV03lteQ7KsaoN9xGx1Df"
+    ),
+    expectsInput(
+      objectName = "flammableRTM",
+      objectClass = "RasterLayer",
+      desc = paste0("RasterToMatch where non-flammable pixels (LCC05 %in% c(33,36:39)) ",
+                    "Defaults to NWT"),
+      sourceURL = NA
+    )
+  ),
   outputObjects = createsOutput(
     objectName = "fireSense_SpreadFitted",
     objectClass = "fireSense_SpreadFit",
     desc = "A fitted model object of class fireSense_SpreadFit."
   )
-    ))
+))
 
 ## event types
 #   - type `init` is required for initialization
@@ -245,14 +264,18 @@ spreadFitInit <- function(sim)
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
 
   if (anyNA(P(sim)$lower))
-  {
     stop(moduleName, "> The 'lower' parameter should be supplied.")
-  }
 
   if (anyNA(P(sim)$upper))
-  {
     stop(moduleName, "> The 'upper' parameter should be supplied.")
-  }
+
+  ####################### Assertions class 5
+  # TODO
+  # browser()
+  # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
+  # All class5 pixels are either 1 or 0
+  #
+  #######################
 
   invisible(sim)
 }
@@ -262,7 +285,8 @@ spreadFitRun <- function(sim)
   moduleName <- current(sim)$moduleName
 
   hash <- fastdigest(sim$annualStacks)
-  whNotNA <- which(!is.na(rasterToMatch[]))
+  whNotNA <- which(!is.na(sim$flammableRTM[]))
+
   system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
                                      whNotNA = whNotNA,
                                      .fastHash = hash,
@@ -281,7 +305,7 @@ spreadFitRun <- function(sim)
   finalCols <- c("size", "date", "cells")
   if (isTRUE(P(sim)$useCentroids)) {2
     keepCols <- c("POLY_HA", "YEAR")
-    lociDF <- purrr::map(sim$polyCentroids, ras = sim$rasterToMatch,
+    lociDF <- purrr::map(sim$polyCentroids, ras = sim$flammableRTM,
                          function(.x, ras) {
                            raster::extract(x = ras,
                                            y = spTransform(.x[, keepCols], crs(ras)),
@@ -297,7 +321,7 @@ spreadFitRun <- function(sim)
 
 
   } else {
-    lociDF <- raster::extract(x = sim$rasterToMatch,
+    lociDF <- raster::extract(x = sim$flammableRTM,
                               y = sim[["fireAttributesFireSense_SpreadFit"]],
                               cellnumbers = TRUE,
                               df = TRUE,
@@ -308,7 +332,7 @@ spreadFitRun <- function(sim)
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
 
   fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = rasterToMatch, useParallel = TRUE,
+                        rasterToMatch = sim$flammableRTM, useParallel = TRUE,
                         omitArgs = "useParallel", verbose = TRUE,
                         lowerTolerance = P(sim)$toleranceFireBuffer[1],
                         upperTolerance = P(sim)$toleranceFireBuffer[2])
@@ -372,7 +396,7 @@ spreadFitRun <- function(sim)
       #pars <- best
       system.time(a <- .objfun(par = pars,
                                formula = formula, #loci = loci,
-                               landscape = sim$rasterToMatch,
+                               landscape = sim$flammableRTM,
                                annualDTx1000 = lapply(annualDTx1000, setDF),
                                nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
@@ -387,7 +411,7 @@ spreadFitRun <- function(sim)
   # Final preparations of objects for .objfun
   ####################################################################
 
-  landscape <- sim$rasterToMatch
+  landscape <- sim$flammableRTM
   annualDTx1000 <- lapply(annualDTx1000, setDF)
   nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
   fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
@@ -580,5 +604,61 @@ spreadFitSave <- function(sim)
 
     }
   }
+
+  if (!suppliedElsewhere(object = "studyArea", sim = sim)){
+    sim$studyArea <- Cache(prepInputs,
+                           url = extractURL("studyArea"),
+                           destinationPath = dataPath(sim),
+                           cloudFolderID = sim$cloudFolderID,
+                           omitArgs = c("destinationPath", "cloudFolderID"))
+  }
+
+  if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)){
+    sim$rasterToMatch <- Cache(prepInputs, url = extractURL("rasterToMatch"),
+                               studyArea = sim$studyArea,
+                               targetFile = "RTM.tif", destinationPath = dataPath(sim),
+                               overwrite = TRUE, filename2 = NULL,
+                               omitArgs = c("destinationPath", "cloudFolderID",
+                                            "useCloud", "overwrite", "filename2"))
+  }
+
+  if (!suppliedElsewhere("flammableRTM", sim)){
+    waterRaster <- Cache(prepInputsLayers_DUCKS, destinationPath = dataPath(sim),
+                             studyArea = sim$studyArea, lccLayer = P(sim)$baseLayer,
+                             rasterToMatch = sim$rasterToMatch,
+                             userTags = c("objectName:wetLCC"))
+
+    waterVals <- raster::getValues(waterRaster) # Uplands = 3, Water = 1, Wetlands = 2, so 2 and 3 to NA
+    waterVals[!is.na(waterVals) & waterVals != 1] <- NA
+    waterRaster <- raster::setValues(waterRaster, waterVals)
+
+    rstLCC <- Cache(prepInputs,
+                    targetFile = file.path(dPath, "LCC2005_V1_4a.tif"),
+                    archive = asPath("LandCoverOfCanada2005_V1_4.zip"),
+                    url = extractURL("rstLCC"),
+                    destinationPath = dPath,
+                    studyArea = sim$studyArea,
+                    rasterToMatch = sim$rasterToMatch,
+                    maskWithRTM = TRUE,
+                    method = "bilinear",
+                    datatype = "INT2U",
+                    filename2 = TRUE, overwrite = TRUE,
+                    userTags = c("prepInputsrstLCC_rtm", currentModule(sim)),
+                    omitArgs = c("destinationPath", "targetFile", "userTags"))
+
+    # Ice/snow = 39
+    # Water (LCC05) = 37:38
+    # Rocks = 33
+    # Urban = 36
+
+    nonFlammClass <- c(33, 36:39)
+    flammableRTM <- sim$rasterToMatch
+    # Remove LCC non flammable classes first
+    flammableRTM[rstLCC[] %in% nonFlammClass] <- NA
+    # Remove more detailed water from DUCKS layer
+    flammableRTM[waterRaster[] == 1] <- NA
+    sim$flammableRTM <- flammableRTM
+  }
+
   return(invisible(sim))
 }
