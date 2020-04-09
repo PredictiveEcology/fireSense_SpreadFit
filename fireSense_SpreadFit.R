@@ -250,6 +250,7 @@ spreadFitInit <- function(sim)
   ####################### Assertions class 5
   browser()
   # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
+  # All class5 pixels are either 1 or 0 
   
   #######################
   
