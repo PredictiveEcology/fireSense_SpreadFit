@@ -135,19 +135,6 @@ defineModule(sim, list(
   ),
   inputObjects = rbind(
     expectsInput(
-      objectName = "studyArea",
-      objectClass = "SpatialPointsDataFrame",
-      sourceURL = NA_character_,
-      desc = "The study area. All other spatial objects will be cropped and masked to this."
-    ),
-    expectsInput(
-      objectName = "rasterToMatch",
-      objectClass = "RasterLayer",
-      sourceURL = NA_character_,
-      desc = paste("The raster that has the resolution, origin, and extent desired for other",
-                   "spatial objects. All other rasters will be projected to this."
-      )),
-    expectsInput(
       objectName = "fireAttributesFireSense_SpreadFit",
       objectClass = "SpatialPointsDataFrame",
       sourceURL = NA_character_,
