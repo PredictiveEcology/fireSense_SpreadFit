@@ -242,15 +242,17 @@ spreadFitInit <- function(sim)
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
 
   if (anyNA(P(sim)$lower))
-  {
     stop(moduleName, "> The 'lower' parameter should be supplied.")
-  }
-
+    
   if (anyNA(P(sim)$upper))
-  {
     stop(moduleName, "> The 'upper' parameter should be supplied.")
-  }
 
+  ####################### Assertions class 5
+  browser()
+  # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
+  
+  #######################
+  
   invisible(sim)
 }
 
