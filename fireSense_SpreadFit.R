@@ -75,8 +75,8 @@ defineModule(sim, list(
                             computing."),
     defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
                     desc = paste0("Should all covariates to globally rescaled from 0 to 1;",
-                                 "this allows covariate estimates to be on the same scale",
-                                 "and will likely speed up convergence")),
+                                  "this allows covariate estimates to be on the same scale",
+                                  "and will likely speed up convergence")),
     defineParameter(name = "clusterEvalExpr", class = "expression", default = expression(),
                     desc = paste0("optional. An expression to evaluate on each cluster node. ",
                                   "Ignored when parallel computing is disabled.")),
@@ -98,8 +98,8 @@ defineModule(sim, list(
                     desc = "optional. Interval between save events."),
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     desc = paste0("Should this entire module be run",
-                           " with caching activated? This is generally intended for data-type ",
-                           "modules, where stochasticity and time are not relevant")),
+                                  " with caching activated? This is generally intended for data-type ",
+                                  "modules, where stochasticity and time are not relevant")),
     defineParameter(name = "termsNAtoZ", class = "character", default = NULL,
                     desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
                                   "not zeroed) you can pass the names of these terms and the ",
@@ -195,34 +195,34 @@ defineModule(sim, list(
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 {
   moduleName <- current(sim)$moduleName
-
+  
   switch(
     eventType,
     init = {
       sim <- spreadFitInit(sim)
-
+      
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
-
+      
       if (!is.na(P(sim)$.saveInitialTime))
         sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
     },
     run = {
       sim <- spreadFitRun(sim)
-
+      
       if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
         sim <- scheduleEvent(sim, time(sim) + P(sim)$.runInterval, moduleName, "run")
     },
     save = {
       sim <- spreadFitSave(sim)
-
+      
       if (!is.na(P(sim)$.saveInterval))
         sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
-
+      
     },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
-
+  
   invisible(sim)
 }
 
@@ -240,18 +240,19 @@ spreadFitInit <- function(sim)
   stopifnot(P(sim)$cores >= 0)
   if (!is(P(sim)$formula, "formula"))
     stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
-
+  
   if (anyNA(P(sim)$lower))
     stop(moduleName, "> The 'lower' parameter should be supplied.")
-    
+  
   if (anyNA(P(sim)$upper))
     stop(moduleName, "> The 'upper' parameter should be supplied.")
-
+  
   ####################### Assertions class 5
-  browser()
+  # TODO
+  # browser() 
   # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
   # All class5 pixels are either 1 or 0 
-  
+  # 
   #######################
   
   invisible(sim)
