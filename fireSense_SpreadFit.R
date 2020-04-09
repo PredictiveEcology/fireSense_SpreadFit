@@ -287,6 +287,7 @@ spreadFitRun <- function(sim)
                               omitArgs = c("annualStacks", "rasterToMatch"))
   })
 
+  browser()
   # TODO HAVE A SHAPEFILE of the ecoregions/ecodistricts and make this optimization perform in
   #each ecoregion
   finalCols <- c("size", "date", "cells")
