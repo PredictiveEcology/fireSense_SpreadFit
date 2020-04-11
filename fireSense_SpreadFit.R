@@ -1,5 +1,3 @@
-# Everything in this file gets sourced during simInit, and all functions and objects
-# are put into the simList. To use objects and functions, use sim$xxx.
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
   description = "Fit statistical models that can be used to parameterize the
@@ -270,14 +268,81 @@ spreadFitInit <- function(sim)
 spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
+
+  # Create buffers
+  whNotNA <- which(!is.na(sim$flammableRTM[]))
+  yearLabels <- names(sim$annualStacks)
+  names(yearLabels) <- yearLabels
+  names(sim$firePolys) <- yearLabels
+  # Cause #1 of omitted polygons --> they are too small to be seen during fasterize e.g., they take up less than 50% of any
+  #   one pixel
+  (st <- system.time(fireBufferedListDT <- Cache(bufferToArea,
+                                                 poly = sim$firePolys, 
+                                                 rasterToMatch = sim$flammableRTM, 
+                                                 verb = TRUE, areaMultiplier = multiplier,
+                                                 field = "NFIREID")))
+  # names(fireBufferedListDT) <- yearLabels
+  names(sim$polyCentroids) <- yearLabels
+  
+  # sim$polyCentroids <- lapply(yearLabels, function(yr) {
+  #   whToUse <- sim$polyCentroids[[yr]]$NFIREID %in% fireBufferedListDT[[yr]]$ids
+  #   idsNotInBuffer <- sim$polyCentroids[[yr]]$NFIREID[!whToUse]
+  #   if (NROW(idsNotInBuffer) > 0) {
+  #     polyCentroids <- sim$polyCentroids[[yr]][whToUse,]
+  #   } else {
+  #     polyCentroids <- sim$polyCentroids[[yr]]
+  #   }
+  # })
+  i <- 1
+  sim$polyCentroids <- purrr::pmap(list(cent = sim$polyCentroids,
+                                        buff = fireBufferedListDT),
+                                   .f = function(cent, buff) {
+                                    # browser(expr = i == 1)
+                                     #i <- 2
+    whToUse <- cent$NFIREID %in% buff$ids
+    idsNotInBuffer <- cent$NFIREID[!whToUse]
+    if (NROW(idsNotInBuffer) > 0) {
+      polyCentroids <- cent[whToUse,]
+    } else {
+      polyCentroids <- cent
+    }
+    # browser()
+    # inOrigFire <- buff[buffer == 1]
+    # centDT <- data.table(pixelID = cellFromXY(spTransform(cent, crs(sim$rasterToMatch)), object = sim$rasterToMatch),
+    #            ids = cent$NFIREID)
+    # notInAFire <- centDT[!inOrigFire, on = c("pixelID")]
+    # if (NROW(notInAFire)) {
+    #   
+    # }
+    polyCentroids
+    
+  })
+  
+  # a <- rbindlist(fireBufferedListDT, idcol = "year")
+  # b <- lapply(sim$polyCentroids, function(p) 
+  #   data.table(pixelID = cellFromXY(spTransform(p, crs(sim$rasterToMatch)), object = sim$rasterToMatch),
+  #              ids = p$NFIREID))
+  # b <- rbindlist(b, idcol = "year")
+  # inOrigFire <- a[buffer == 1]
+  # notInABuffer <- b[!inOrigFire, on = c("year", "pixelID")]
+  # needNearest <- notInABuffer[,c("year", "pixelID")][inOrigFire, on = c("year", "pixelID")]
+  # needNearest[, c("x","y") := as.data.table(xyFromCell(rasterToMatch,  pixelID))]
+  # ii <- 1
+  # 
+  # needNearest[, Map(pixelID, rasterToMatch, function(pixelID, rasterToMatch) {
+  #   browser(expr = ii == 1)
+  #   i <- 2
+  #   from <- cbind(x,y,ids)
+  #   to <- cbind(b[b$year == year])
+  # }), by = "ids"]
+  
   
   hash <- fastdigest(sim$annualStacks)
-  whNotNA <- which(!is.na(sim$flammableRTM[]))
-  
   system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
                                      whNotNA = whNotNA,
                                      .fastHash = hash,
                                      omitArgs = c("annualStacks", "rasterToMatch")))
+  names(annualDTx1000) <- yearLabels
   
   hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
   system.time({
@@ -290,7 +355,7 @@ spreadFitRun <- function(sim)
   # TODO HAVE A SHAPEFILE of the ecoregions/ecodistricts and make this optimization perform in
   #each ecoregion
   finalCols <- c("size", "date", "cells")
-  if (isTRUE(P(sim)$useCentroids)) {2
+  if (isTRUE(P(sim)$useCentroids)) {
     keepCols <- c("POLY_HA", "YEAR")
     lociDF <- purrr::map(sim$polyCentroids, ras = sim$flammableRTM,
                          function(.x, ras) {
@@ -318,23 +383,10 @@ spreadFitRun <- function(sim)
   }
   lociList <- split(lociDF, f = lociDF$date, keep.by = FALSE)
   
-  fireBuffered <- Cache(makeBufferedFires, fireLocationsPolys = sim$firePolys,
-                        rasterToMatch = sim$flammableRTM, useParallel = TRUE,
-                        omitArgs = "useParallel", verbose = TRUE,
-                        lowerTolerance = P(sim)$toleranceFireBuffer[1],
-                        upperTolerance = P(sim)$toleranceFireBuffer[2])
-  names(fireBuffered) <- names(lociList)
-  
-  # All being passed should be lists of tables
-  fireBufferedListDT <- Cache(simplifyFireBuffered, fireBuffered)
-  
   # re-add pixelID to objects for join with fireBufferedListDT
-  annualDTx1000 <- lapply(annualDTx1000, function(x) {
-    setDT(x)
-    set(x, NULL, "pixelID", whNotNA)
-    x
-  })
-  annualDTx1000 <- Map(merge, fireBufferedListDT, annualDTx1000, MoreArgs = list(by = "pixelID"))
+  st1 <- system.time(annualDTx1000 <- Cache(shrinkToBuffer, annualDTx1000, whNotNA, fireBufferedListDT,
+                                            omitArgs = "annualDTx1000", .hash = hash))
+  names(annualDTx1000) <- yearLabels
   nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, function(x) {
     setDT(x)
     set(x, NULL, "pixelID", whNotNA)
@@ -374,8 +426,7 @@ spreadFitRun <- function(sim)
   
   # This below is to test the code without running DEOptim
   # Make a cluster accross machines
-  browser()
-  if (FALSE) {
+  if (TRUE) {
     for (i in 1:100) {
       seed <- sample(1e6, 1)
       set.seed(seed)
@@ -395,6 +446,7 @@ spreadFitRun <- function(sim)
       ))
     }
   }
+  browser()
   ####################################################################
   # Final preparations of objects for .objfun
   ####################################################################
@@ -594,7 +646,6 @@ spreadFitSave <- function(sim)
     sim$flammableRTM <- flammableRTM
   }
   
-  browser()
   if (!suppliedElsewhere("firePolys", sim)){
     sim$firePolys <- Cache(getFirePolygons, years = P(sim)$fireYears,
                            studyArea = aggregate(sim$studyArea),
@@ -651,4 +702,13 @@ spreadFitSave <- function(sim)
   }
   
   return(invisible(sim))
+}
+
+shrinkToBuffer <- function(annualDTx1000, whNotNA, fireBufferedListDT, ...) {
+  annualDTx1000 <- lapply(annualDTx1000, function(x) {
+    setDT(x)
+    set(x, NULL, "pixelID", whNotNA)
+    x
+  })
+  annualDTx1000 <- Map(merge, fireBufferedListDT, annualDTx1000, MoreArgs = list(by = "pixelID"))
 }
