@@ -71,6 +71,9 @@ defineModule(sim, list(
                     parameters (lower bound, upper bound, slope, asymmetry)
                     and the statistical model parameters (in the order they
                     appear in the formula)."),
+    defineParameter(name = "objfunFireReps", class = "integer", default = 10,
+                    desc = "integer defining the number of replicates the objective function
+                            will attempt each fire"),
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations
                     allowed (DEoptim optimizer). Default is 500."),
@@ -282,6 +285,12 @@ spreadFitRun <- function(sim)
                                                  verb = TRUE, areaMultiplier = multiplier,
                                                  field = "NFIREID")))
   # names(fireBufferedListDT) <- yearLabels
+  fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
+    if (!is.data.table(.x)) 
+      as.data.table(.x)
+    else 
+      .x
+  })
   names(sim$polyCentroids) <- yearLabels
   
   # sim$polyCentroids <- lapply(yearLabels, function(yr) {
@@ -293,30 +302,10 @@ spreadFitRun <- function(sim)
   #     polyCentroids <- sim$polyCentroids[[yr]]
   #   }
   # })
-  i <- 1
-  sim$polyCentroids <- purrr::pmap(list(cent = sim$polyCentroids,
-                                        buff = fireBufferedListDT),
-                                   .f = function(cent, buff) {
-                                    # browser(expr = i == 1)
-                                     #i <- 2
-    whToUse <- cent$NFIREID %in% buff$ids
-    idsNotInBuffer <- cent$NFIREID[!whToUse]
-    if (NROW(idsNotInBuffer) > 0) {
-      polyCentroids <- cent[whToUse,]
-    } else {
-      polyCentroids <- cent
-    }
-    # browser()
-    # inOrigFire <- buff[buffer == 1]
-    # centDT <- data.table(pixelID = cellFromXY(spTransform(cent, crs(sim$rasterToMatch)), object = sim$rasterToMatch),
-    #            ids = cent$NFIREID)
-    # notInAFire <- centDT[!inOrigFire, on = c("pixelID")]
-    # if (NROW(notInAFire)) {
-    #   
-    # }
-    polyCentroids
-    
-  })
+  sim$polyCentroids <- cleanUpPolyCentroids(cent = sim$polyCentroids,
+                                            buff = fireBufferedListDT,
+                                            ras = sim$flammableRTM, 
+                                            idCol = "NFIREID")
   
   # a <- rbindlist(fireBufferedListDT, idcol = "year")
   # b <- lapply(sim$polyCentroids, function(p) 
@@ -426,7 +415,7 @@ spreadFitRun <- function(sim)
   
   # This below is to test the code without running DEOptim
   # Make a cluster accross machines
-  if (TRUE) {
+  if (FALSE) {
     for (i in 1:100) {
       seed <- sample(1e6, 1)
       set.seed(seed)
@@ -446,7 +435,6 @@ spreadFitRun <- function(sim)
       ))
     }
   }
-  browser()
   ####################################################################
   # Final preparations of objects for .objfun
   ####################################################################
@@ -536,6 +524,7 @@ spreadFitRun <- function(sim)
                                  formula = P(sim)$formula,
                                  covMinMax = covMinMax,
                                  maxFireSpread = P(sim)$maxFireSpread,
+                                 Nreps = P(sim)$objfunFireReps,
                                  verbose = P(sim)$verbose,
                                  omitArgs = c("verbose")
   ))
@@ -650,6 +639,10 @@ spreadFitSave <- function(sim)
     sim$firePolys <- Cache(getFirePolygons, years = P(sim)$fireYears,
                            studyArea = aggregate(sim$studyArea),
                            pathInputs = Paths$inputPath, userTags = paste0("years:", range(P(sim)$fireYears)))
+    # THere are duplicate NFIREID
+    sim$firePolys <- lapply(sim$firePolys, function(x) {
+      x <- x[!duplicated(x$NFIREID),]
+    })
   }
   if (isTRUE(P(sim)$useCentroids)) {
     if (!suppliedElsewhere("polyCentroids", sim)){
