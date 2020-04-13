@@ -53,6 +53,9 @@ defineModule(sim, list(
                     steps. If the 'date' column is not present, all
                     fires are assumed to have started at the same time
                     interval."),
+    defineParameter(name = "minBufferSize", class = "numeric", default = 1000,
+                    desc = paste("Minimum size of buffer and nonbuffer. This is imposed",
+                                 "after multiplier on the makeBufferArea fn")),
     defineParameter(name = "useCentroids", class = "logical", default = TRUE,
                     desc = paste("Should fire ignitions start at the sim$firePolygons",
                                  "centroids (TRUE) or at the ignition points in the",
@@ -283,7 +286,8 @@ spreadFitRun <- function(sim)
                                                  poly = sim$firePolys, 
                                                  rasterToMatch = sim$flammableRTM, 
                                                  verb = TRUE, areaMultiplier = multiplier,
-                                                 field = "NFIREID")))
+                                                 field = "NFIREID",
+                                                 minSize = P(sim)$minBufferSize)))
   # names(fireBufferedListDT) <- yearLabels
   fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
     if (!is.data.table(.x)) 
