@@ -55,7 +55,7 @@ defineModule(sim, list(
                     interval."),
     defineParameter(name = "minBufferSize", class = "numeric", default = 1000,
                     desc = paste("Minimum size of buffer and nonbuffer. This is imposed",
-                                 "after multiplier on the makeBufferArea fn")),
+                                 "after multiplier on the bufferToArea fn")),
     defineParameter(name = "useCentroids", class = "logical", default = TRUE,
                     desc = paste("Should fire ignitions start at the sim$firePolygons",
                                  "centroids (TRUE) or at the ignition points in the",
