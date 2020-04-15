@@ -426,6 +426,7 @@ spreadFitRun <- function(sim)
       (pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
       #pars <- runif(length(P(sim)$lower), lower, upper)
       #pars <- best
+      print(pars)
       system.time(a <- .objfun(par = pars,
                                formula = formula, #loci = loci,
                                landscape = sim$flammableRTM,
@@ -434,7 +435,7 @@ spreadFitRun <- function(sim)
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
                                covMinMax = covMinMax,
-                               Nreps = 2,#P(sim)$objfunFireReps,
+                               Nreps = 30,#P(sim)$objfunFireReps,
                                maxFireSpread = P(sim)$maxFireSpread,
                                verbose = TRUE
       ))
