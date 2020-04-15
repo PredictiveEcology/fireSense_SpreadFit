@@ -416,6 +416,12 @@ spreadFitRun <- function(sim)
   } else {
     NULL
   }
+  NPar <- length(P(sim)$lower)
+  NP <- NPar * 10
+  bestParsSoFar <- c(0.296, 1.50, 1.73, 2.79, 0.31, 0.22, 0.43, 1.73, 1.77)
+  betaVals <- data.frame(l = P(sim)$lower, u = P(sim)$upper, m = bestParsSoFar)
+  initialpop <- as.matrix(as.data.table(purrr::pmap(
+    betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 35))))
   
   # This below is to test the code without running DEOptim
   # Make a cluster accross machines
@@ -423,11 +429,12 @@ spreadFitRun <- function(sim)
     for (i in 1:100) {
       seed <- sample(1e6, 1)
       set.seed(seed)
-      (pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
+      # (pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
+      pars <- initialpop[sample(NROW(initialpop), 1),]
       #pars <- runif(length(P(sim)$lower), lower, upper)
       #pars <- best
       print(pars)
-      system.time(a <- .objfun(par = pars,
+      system.time(a <- .objfun(par = bestParsSoFar,
                                formula = formula, #loci = loci,
                                landscape = sim$flammableRTM,
                                annualDTx1000 = lapply(annualDTx1000, setDF),
@@ -459,9 +466,11 @@ spreadFitRun <- function(sim)
   #  Cluster
   ####################################################################
   
+  
   control <- list(itermax = P(sim)$iterDEoptim,
                   trace = P(sim)$trace,
-                  strategy = P(sim)$strategy)
+                  strategy = P(sim)$strategy,
+                  initialpop = initialpop)
   if (!is.null(P(sim)$parallelMachinesIP)){
     message("Starting ", P(sim)$cores, " clusters on ", paste(P(sim)$parallelMachinesIP,
                                                               collapse = ", "))
