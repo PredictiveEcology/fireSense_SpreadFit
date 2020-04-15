@@ -306,7 +306,7 @@ spreadFitRun <- function(sim)
   #     polyCentroids <- sim$polyCentroids[[yr]]
   #   }
   # })
-  sim$polyCentroids <- cleanUpPolyCentroids(cent = sim$polyCentroids,
+  sim$polyCentroids <- Cache(cleanUpPolyCentroids, cent = sim$polyCentroids,
                                             buff = fireBufferedListDT,
                                             ras = sim$flammableRTM, 
                                             idCol = "NFIREID")
