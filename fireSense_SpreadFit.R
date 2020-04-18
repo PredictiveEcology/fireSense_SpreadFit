@@ -453,8 +453,13 @@ spreadFitRun <- function(sim)
   # This below is to test the code without running DEOptim
   # Make a cluster accross machines
   if (isRstudioServer()) {
-    vals <<- list()
-    for (i in 1:100) {
+    minIndex <- if (!exists("vals1", envir = .GlobalEnv)) {
+      vals1 <<- list()
+      0
+    } else {
+      length(vals1) 
+    }
+    for (i in 1:100 + minIndex) {
       seed <- sample(1e6, 1)
       set.seed(seed)
       # (pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
@@ -563,13 +568,13 @@ spreadFitRun <- function(sim)
                                fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                                historicalFires = lapply(lociList, setDF),
                                tests = c("mad", "SNLL_FS"),
-                               # tests = c("SNLL_FS"),
+                               #tests = c("SNLL_FS"),
                                covMinMax = covMinMax,
                                Nreps = 30,#P(sim)$objfunFireReps,
                                maxFireSpread = P(sim)$maxFireSpread,
                                verbose = TRUE
       ))
-      vals[[i]] <<- list(pars = pars, objfun = a)
+      vals1[[i]] <<- list(pars = pars, objfun = a)
     }
     browser()
   }
