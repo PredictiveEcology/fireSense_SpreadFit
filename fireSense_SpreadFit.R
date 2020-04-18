@@ -656,8 +656,8 @@ spreadFitRun <- function(sim)
   # DEOptim call
   #####################################################################
   data.table::setDTthreads(1)
-  for (iter in seq_len(P(sim)$iterDEoptim / 10) * 10) {
-    control$itermax <- 10
+  #for (iter in seq_len(P(sim)$iterDEoptim / 10) * 10) {
+    control$itermax <- 100
     control$initialpop <- initialpop
     st1 <- system.time(DE <- Cache(DEoptim,
                                    fireSenseUtils::.objfun,
@@ -674,7 +674,8 @@ spreadFitRun <- function(sim)
                                    omitArgs = c("verbose")
     ))
     initialpop <- DE$member$pop
-  }
+  #}
+    browser()
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
