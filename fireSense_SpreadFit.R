@@ -76,7 +76,7 @@ defineModule(sim, list(
                     appear in the formula)."),
     defineParameter(name = "objfunFireReps", class = "integer", default = 10,
                     desc = "integer defining the number of replicates the objective function
-                            will attempt each fire"),
+                    will attempt each fire"),
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations
                     allowed (DEoptim optimizer). Default is 500."),
@@ -274,7 +274,7 @@ spreadFitInit <- function(sim)
 spreadFitRun <- function(sim)
 {
   moduleName <- current(sim)$moduleName
-
+  
   # Create buffers
   whNotNA <- which(!is.na(sim$flammableRTM[]))
   yearLabels <- names(sim$annualStacks)
@@ -309,9 +309,9 @@ spreadFitRun <- function(sim)
   
   # Returns crs of sim$flammableRTM
   sim$polyCentroids <- Cache(cleanUpPolyCentroids, cent = sim$polyCentroids,
-                                            buff = fireBufferedListDT,
-                                            ras = sim$flammableRTM, 
-                                            idCol = "NFIREID")
+                             buff = fireBufferedListDT,
+                             ras = sim$flammableRTM, 
+                             idCol = "NFIREID")
   
   # a <- rbindlist(fireBufferedListDT, idcol = "year")
   # b <- lapply(sim$polyCentroids, function(p) 
@@ -444,11 +444,20 @@ spreadFitRun <- function(sim)
   bestParsSoFar <- c(0.264, 6.28, 0.79, 1.26, 0.68, 1.84, 0.39, 1.65, 2.23) # MAD = 506
   #bestParsSoFar <- c(0.262, 5.34, 3.78, 2.36, 1.51, 1.49, 2.83, 1.72, 0.01) # MAD = 511
   #bestParsSoFar <- c(0.253, 6.05, 2.60, 0.33, 1.42, 0.73, 2.50, 1.01, 0.43) # MAD = 498
+  bestParsSoFar <- c(0.261, 3.55, 3.25, 4.40, 0.92, 0.59, 0.04, 0.45, 0.27) # MAD 483
+  bestParsSoFar <- c(0.245, 6.77, 1.90, 4.24, 1.10, 0.45, 0.026, 0.45, 0.31) # SNLL 8082
+  
+  #Iteration: 37 bestvalit: 8011.000000 bestmemit:    0.252165    2.759695    2.560914    4.611344    1.250372    0.462948    0.032621    0.559400    0.460017
+  bestParsSoFar <- c(0.2432273, 8.1549921, 2.3991438, 4.7441794, 1.0863016, 1.7622997, 1.7679929, 2.1236577, 2.4785546) # "  22017 mad: 576.4 ;   SNLL_FSTest: 7522.5 ; "
+  #bestParsSoFar <- c(0.2853945, 2.5878158, 1.9309804, 0.3124527, 1.1377146, 1.9889269, 0.4055745, 2.3172345, 0.6643902) # After 2014 and 1995 only: mad: 3748.2 ;   SNLL_FSTest: 989.4
+  bestParsSoFar <- c(0.277, 1.568, 2.029, 5.79, 2.85, 0.19, 0.11, 2.785, 0.77) # mad: 467.7; SNLL_FSTest: 7560.7
+  bestParsSoFar <- c(0.2661138, 2.5002498, 3.7850266, 3.8305076, 2.5334282, 0.8581038, 1.3695494, 0.7245241, 1.0475760)#mad: 491.9 ;   SNLL_FSTest: 7432.7 ; SNLL_FSTest initial: 1067.1 ; "
+  bestParsSoFar <- c(0.2567797, 6.9269317, 1.0723940, 2.9256403, 1.4193608, 1.1382110, 2.8699367, 2.8805758, 2.1623407) # "  22017 mad: 2384.8 ;   SNLL_FSTest: 1098.6 ; " "  22017 mad: 535.8 ;   SNLL_FSTest: 7287.9 ; "
+  
   betaVals <- data.frame(l = P(sim)$lower, u = P(sim)$upper, m = bestParsSoFar)
   initialpop <- as.matrix(as.data.table(
-    purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 15))
+    purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 345))
   ))
-  
   
   # This below is to test the code without running DEOptim
   # Make a cluster accross machines
@@ -459,12 +468,13 @@ spreadFitRun <- function(sim)
     } else {
       length(vals1) 
     }
-    for (i in 1:100 + minIndex) {
+    for (i in 1:1000 + minIndex) {
       seed <- sample(1e6, 1)
       set.seed(seed)
       # (pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
       # pars <- initialpop[sample(NROW(initialpop), 1),]
       pars <- runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper)
+      # pars <- c(0.2700851, 0.4019623, 3.7311704, 4.3402906, 1.8856528, 0.2896241, 0.8758985, 1.5229701, 2.5847575)
       #pars <- best
       if (FALSE) {
         rOrig <- raster(sim$flammableRTM)
@@ -599,8 +609,8 @@ spreadFitRun <- function(sim)
   
   control <- list(itermax = P(sim)$iterDEoptim,
                   trace = P(sim)$trace,
-                  strategy = P(sim)$strategy,
-                  initialpop = initialpop)
+                  strategy = P(sim)$strategy)#,
+  #initialpop = initialpop)
   if (!is.null(P(sim)$parallelMachinesIP)){
     message("Starting ", P(sim)$cores, " clusters on ", paste(P(sim)$parallelMachinesIP,
                                                               collapse = ", "))
@@ -661,26 +671,26 @@ spreadFitRun <- function(sim)
   # DEOptim call
   #####################################################################
   data.table::setDTthreads(1)
-  #for (iter in seq_len(P(sim)$iterDEoptim / 10) * 10) {
+  for (iter in seq_len(P(sim)$iterDEoptim / 10) * 10) {
     control$itermax <- 100
     control$initialpop <- initialpop
-    st1 <- system.time(DE <- Cache(DEoptim,
-                                   fireSenseUtils::.objfun,
-                                   lower = P(sim)$lower,
-                                   upper = P(sim)$upper,
-                                   control = do.call("DEoptim.control", control),
-                                   formula = P(sim)$formula,
-                                   covMinMax = covMinMax,
-                                   # tests = c("mad", "SNLL_FS"),
-                                   tests = c("SNLL_FS"),
-                                   maxFireSpread = P(sim)$maxFireSpread,
-                                   Nreps = P(sim)$objfunFireReps,
-                                   verbose = P(sim)$verbose,
-                                   omitArgs = c("verbose")
+    st1 <- system.time(DE <<- Cache(DEoptim,
+                                    fireSenseUtils::.objfun,
+                                    lower = P(sim)$lower,
+                                    upper = P(sim)$upper,
+                                    control = do.call("DEoptim.control", control),
+                                    formula = P(sim)$formula,
+                                    covMinMax = covMinMax,
+                                    # tests = c("mad", "SNLL_FS"),
+                                    tests = c("SNLL_FS"),
+                                    maxFireSpread = P(sim)$maxFireSpread,
+                                    Nreps = P(sim)$objfunFireReps,
+                                    verbose = P(sim)$verbose,
+                                    omitArgs = c("verbose")
     ))
     initialpop <- DE$member$pop
-  #}
-    browser()
+  }
+  browser()
   
   val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
   AD <- DE$optim$bestval
