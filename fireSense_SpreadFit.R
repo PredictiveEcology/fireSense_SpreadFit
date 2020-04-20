@@ -673,7 +673,6 @@ spreadFitRun <- function(sim)
   data.table::setDTthreads(1)
   for (iter in seq_len(P(sim)$iterDEoptim / 10) * 10) {
     control$itermax <- 100
-    control$initialpop <- initialpop
     st1 <- system.time(DE <<- Cache(DEoptim,
                                     fireSenseUtils::.objfun,
                                     lower = P(sim)$lower,
@@ -689,6 +688,7 @@ spreadFitRun <- function(sim)
                                     omitArgs = c("verbose")
     ))
     initialpop <- DE$member$pop
+    control$initialpop <- initialpop
   }
   browser()
   
