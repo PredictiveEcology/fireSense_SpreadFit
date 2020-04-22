@@ -485,7 +485,6 @@ spreadFitRun <- function(sim)
     
     val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
     bestFit <- DE$optim$bestval
-    browser()
     
     terms <- terms(formula)
     sim$fireSense_SpreadFitted <- list(
