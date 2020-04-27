@@ -84,8 +84,12 @@ defineModule(sim, list(
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations
                     allowed (DEoptim optimizer). Default is 500."),
+    defineParameter(name = "iterStep", class = "integer", default = 25,
+                    desc = "Passed to runDEoptim"),
     defineParameter(name = "strategy", class = "integer", default = 6,
                     desc = "Passed to DEoptim.control"),
+    defineParameter(name = "visualizeDEoptim", class = "logical", default = TRUE,
+                    desc = "Passed to runDEoptim"),
     defineParameter(name = "cores", class = "integer", default = 1,
                     desc = "non-negative integer. Defines the number of logical
                     cores to be used for parallel computation. The
