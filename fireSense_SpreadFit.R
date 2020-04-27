@@ -418,7 +418,7 @@ spreadFitRun <- function(sim)
     for (i in 1:10) {
       seed <- sample(1e6, 1)
       set.seed(seed)
-      pars <- lapply(1:96, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
+      pars <- lapply(1:1, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
       print(pars)
       st1 <- system.time(
         a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfun, 
@@ -441,7 +441,6 @@ spreadFitRun <- function(sim)
       )
       vals1 <- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
     }
-    browser()
   } else {
     ####################################################################
     # Final preparations of objects for .objfun
@@ -483,8 +482,13 @@ spreadFitRun <- function(sim)
       visualizeDE(DE, cachePath(sim))
     }
     
-    val <- DE %>% `[[` ("optim") %>% `[[` ("bestmem")
-    bestFit <- DE$optim$bestval
+    DE2 <- if (is(DE, "list")) {
+      DE2 <- tail(DE, 1)[[1]]
+    } else {
+      DE
+    }
+    val <- DE2 %>% `[[` ("optim") %>% `[[` ("bestmem")
+    bestFit <- DE2$optim$bestval
     
     terms <- terms(formula)
     sim$fireSense_SpreadFitted <- list(
