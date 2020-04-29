@@ -20,6 +20,7 @@ defineModule(sim, list(
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
                   "rgeos","future",
+                  "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
                   "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
   parameters = rbind(
@@ -523,12 +524,11 @@ spreadFitRun <- function(sim)
               minFireSize = 2,
               # tests = "SNLL_FS",
               tests = "SNLL",
-              Nreps = 3,
+              Nreps = P(sim)$objfunFireReps,
               plot.it = TRUE,
               #bufferedRealHistoricalFiresList,
               verbose = TRUE) #fireSense_SpreadFitRaster
       dev.off()
-      browser()
       
       if (FALSE) { # THIS IS PLOTTING STUFF
         
@@ -755,18 +755,22 @@ spreadFitSave <- function(sim)
     if (!suppliedElsewhere("polyCentroids", sim)){
       message("... preparing polyCentroids")
       yr <- min(P(sim)$fireYears)
-      sim$firePoints <- Cache(lapply, X = sim$firePolys,
+      sim$firePoints <- Cache(mclapply, X = sim$firePolys, 
+                              mc.cores = pemisc::optimalClusterNum(2e3, maxNumClusters = length(sim$firePolys)),
                                  function(X){
                                    print(yr)
                                    ras <- X
                                    ras$ID <- 1:NROW(ras)
-                                   cent <- sf::st_centroid(sf::st_as_sf(ras), of_largest_polygon = TRUE)
-                                   cent <- as(cent, "Spatial")
+                                   # cent <- sf::st_centroid(sf::st_as_sf(ras), of_largest_polygon = TRUE)
+                                   centCoords <- rgeos::gCentroid(ras, byid = TRUE)
+                                   cent <- SpatialPointsDataFrame(centCoords, 
+                                                                  as.data.frame(ras))
+                                   # cent <- as(cent, "Spatial")
                                    # cent <- rgeos::gCentroid(ras, byid = TRUE)
                                    yr <<- yr + 1
-                                   
                                    return(cent)
-                                 })
+                                 },
+                              omitArgs = c("mc.cores"))
       names(sim$firePoints) <- names(sim$firePolys)
     }
   } else {
