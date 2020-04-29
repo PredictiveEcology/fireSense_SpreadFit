@@ -290,7 +290,11 @@ spreadFitRun <- function(sim)
                                                  rasterToMatch = sim$flammableRTM, 
                                                  verb = TRUE, areaMultiplier = multiplier,
                                                  field = "NFIREID",
-                                                 minSize = P(sim)$minBufferSize)))
+                                                 minSize = P(sim)$minBufferSize,
+                                                 # cacheId = "033f259a4ad010dd",
+                                                 useCloud = P(sim)$useCloud_DE,
+                                                 cloudFolderID = P(sim)$cloudFolderID_DE
+    )))
   fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
     if (!is.data.table(.x)) 
       as.data.table(.x)
@@ -491,6 +495,139 @@ spreadFitRun <- function(sim)
     } else {
       DE
     }
+    if (isTRUE(P(sim)$visualizeDEoptim)) {
+      hfs <- rbindlist(historicalFires)
+      sam <- hfs[, list(keepInd = .I[SpaDES.tools:::resample(1:.N, min(.N, 49))]), 
+                 by = "date"]$keepInd
+      hfs <- hfs[sam]
+      fbl <- rbindlist(fireBufferedListDT, idcol = "date")
+      # hfs[, date := as.integer(date)]
+      fbl[, date := as.integer(date)]
+      fbl <- fbl[hfs[, c("size", "date", "ids")], on = c("date", "ids")]
+      fbl <- split(fbl, by = "date")
+      # fbl <- fbl[order(names(fbl))]
+      hfs[, ids := as.character(ids)]
+      hfs <- split(hfs, by = "date")
+      hfs <- hfs[order(names(hfs))]
+      # annualDTx1000 <- annualDTx1000[names(hfs)]
+      pdf(paste0("FireHistsYr_Test.pdf"), width = 10, height = 7)
+      out <- .objfun(par = DE2$optim$bestmem,
+              landscape = sim$flammableRTM,
+              annualDTx1000 = annualDTx1000,
+              nonAnnualDTx1000 = nonAnnualDTx1000,
+              fireBufferedListDT = fbl,
+              historicalFires = hfs,
+              formula = P(sim)$formula, #loci, sizes,
+              covMinMax = covMinMax,
+              maxFireSpread = 0.28, # 0.257 makes gigantic fires
+              minFireSize = 2,
+              # tests = "SNLL_FS",
+              tests = "SNLL",
+              Nreps = 3,
+              plot.it = TRUE,
+              #bufferedRealHistoricalFiresList,
+              verbose = TRUE) #fireSense_SpreadFitRaster
+      dev.off()
+      browser()
+      
+      if (FALSE) { # THIS IS PLOTTING STUFF
+        
+        if (FALSE) {
+          hfs <- rbindlist(historicalFires)
+          sam <- sample(NROW(hfs), 20)
+          hfs <- hfs[sam]
+          fbl <- rbindlist(fireBufferedListDT, idcol = "date")
+          # hfs[, date := as.integer(date)]
+          fbl[, date := as.integer(date)]
+          fbl <- fbl[hfs, on = c("date", "ids")]
+          fbl <- split(fbl, by = "ids")
+          fbl <- fbl[order(names(fbl))]
+          hfs[, ids := as.character(ids)]
+          setorder(hfs, ids)
+          r <- sim$flammableRTM
+          # setDT(annualFireBufferedDT)
+          starts <- unique(hfs$cells)
+          names(starts) <- hfs$ids
+          
+          spreadState <- lapply(seq_len(Nreps), function(i) {
+            SpaDES.tools::spread(
+              landscape = r,
+              maxSize = maxSizes,
+              loci = loci,
+              spreadProb = cells,
+              returnIndices = TRUE,
+              allowOverlap = FALSE,
+              quick = TRUE)
+          })
+          
+          
+          out <- purrr::pmap(list(size = hfs$size, date = hfs$date, 
+                      ids = hfs$ids, cells = hfs$cells, 
+                      fbl = fbl),
+                      function(size, date, ids, cells, fbl) {
+            ss <- spread(r, spreadProb = 1, loci = cells, returnIndices = TRUE)
+            out <- data.table(pixelID = ss$indices, ids = ss$id, prob = cells[ss$indices])
+          })
+          out <- annualFireBufferedDT[out, on = "pixelID"]
+          out[, burnedClass := buffer]
+        }
+        r <- raster(sim$flammableRTM)
+        r[out$pixelID] <- out$prob
+        #clearPlot();Plot(r)
+        #ex <- new("Extent", xmin = -1130927.72835113, xmax = -1029209.34163701,
+        #          ymin = 8098144.00948992, ymax = 8224186.35824437)
+        #exOther <- new("Extent", xmin = -1295020.59748428, xmax = -1180126.3836478,
+        #               ymin = 8093087.29559748, ymax = 8233774.08805031)
+        #exVSmall <- new("Extent", xmin = -1090977.9019513, xmax = -1070305.44912111,
+        #                ymin = 8150890.10159652, ymax = 8173152.74310595)
+        bigFire <- raster(r)
+        bigFire[out$pixelID] <- out$ids
+        keepFire <- tail(sort(table(out$ids)),1)
+        keepFire <- as.numeric(names(keepFire))
+        # keepFire <- 65
+        bigFire[bigFire != keepFire] <- NA
+        bf <- trim(bigFire)
+        ex <- extent(bf)
+        # ex <- exVSmall
+        # ex <- clickExtent()
+        # ex <- new("Extent", xmin = -1098283.46889952, xmax = -1037633.32535885,
+        #            ymin = 7969991.96172249, ymax = 8030642.10526316)
+        predictedFireProb <- crop(r, ex)
+        # clearPlot();Plot(r)
+        actualFire <- raster(r)
+        actualFire[out$pixelID] <- out$burnedClass
+        actualFire <- crop(actualFire, ex)
+        levels(actualFire) <- data.frame(ID = 0:2, class = c("unburned", "burned", "ignited"))
+        predictedLiklihood <- dbinom(prob = out$prob,
+                                     size = 1,
+                                     x = out$burned,
+                                     log = TRUE
+        )
+        spreadProbMap <- raster(r)
+        spreadProbMap[out$pixelID] <- cells[out$pixelID]
+        spreadProbMap <- crop(spreadProbMap, ex)
+        spreadProbMap[spreadProbMap >= par[1]] <- par[1]
+        ccc <- cells[out$pixelID];
+        ccc <- ccc[ccc > 0];
+        lowerLim <- quantile(ccc, 0.05);
+        ccc <- ccc[ccc > lowerLim];
+        spreadProbMap[spreadProbMap <= lowerLim] <- lowerLim
+        predLiklihood <- raster(r)
+        predLiklihood[out$pixelID] <- predictedLiklihood
+        predLiklihood <- crop(predLiklihood, ex)
+        spIgnits <- SpatialPoints(coords = xyFromCell(r, loci[36]))
+        spIgnits <- buffer(spIgnits, width = 5000)
+        spIgnits <- crop(spIgnits, ex)
+        clearPlot(); Plot(actualFire, predictedFireProb, predLiklihood, spreadProbMap)
+        Plot(spIgnits, addTo = "spreadProbMap", gp = gpar(fill = rep("black", 10)))
+        Plot(spIgnits, addTo = "actualFire", gp = gpar(fill = rep("black", 10)))
+        Plot(spIgnits, addTo = "predictedFireProb", gp = gpar(fill = rep("black", 10)))
+        Plot(predLiklihood, cols = "RdYlGn", new = TRUE, legendRange = range(round(predLiklihood[], 0), na.rm = TRUE))
+        
+      }
+      
+    }
+    
     val <- DE2 %>% `[[` ("optim") %>% `[[` ("bestmem")
     bestFit <- DE2$optim$bestval
     
@@ -603,9 +740,14 @@ spreadFitSave <- function(sim)
   if (!suppliedElsewhere("firePolys", sim)){
     sim$firePolys <- Cache(getFirePolygons, years = P(sim)$fireYears,
                            studyArea = aggregate(sim$studyArea),
+                           # rasterToMatch = sim$flammableRTM,
+                           # cacheId = "905a9bf194245088",
+                           useCloud = P(sim)$useCloud_DE,
+                           cloudFolderID = P(sim)$cloudFolderID_DE,
                            pathInputs = Paths$inputPath, userTags = paste0("years:", range(P(sim)$fireYears)))
     # THere are duplicate NFIREID
-    sim$firePolys <- lapply(sim$firePolys, function(x) {
+    sim$firePolys <- Cache(lapply, sim$firePolys, function(x) {
+      x <- spTransform(x, crs(sim$studyArea))
       x <- x[!duplicated(x$NFIREID),]
     })
   }
