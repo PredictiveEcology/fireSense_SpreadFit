@@ -439,7 +439,7 @@ spreadFitRun <- function(sim)
                         nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
                         fireBufferedListDT = lapply(fireBufferedListDT, setDF),
                         historicalFires = lapply(lociList, setDF),
-                        tests = c("mad", "SNLL_FS"),
+                        tests = c("SNLL_FS"),
                         #tests = c("SNLL_FS"),
                         covMinMax = covMinMax,
                         Nreps = P(sim)$objfunFireReps,
@@ -491,12 +491,12 @@ spreadFitRun <- function(sim)
                 cloudFolderID = P(sim)$cloudFolderID_DE
     )
     if (isTRUE(P(sim)$visualizeDEoptim)) {
-      if (isRstudioServer()) {
+      if (!isRstudioServer()) {
         png(filename = paste0("DE_pars", rndstr(1, 6), ".png"),
             width = 1000, height = 1200)
       }
       visualizeDE(DE, cachePath(sim))
-      if (isRstudioServer()) {
+      if (!isRstudioServer()) {
         dev.off()
       }
       
