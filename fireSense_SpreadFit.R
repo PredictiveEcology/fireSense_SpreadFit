@@ -427,7 +427,7 @@ spreadFitRun <- function(sim)
     for (i in 1:10) {
       seed <- sample(1e6, 1)
       set.seed(seed)
-      pars <- lapply(1:1, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
+      pars <- lapply(1:96, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
       print(pars)
       st1 <- system.time(
         a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfun, 
@@ -442,13 +442,15 @@ spreadFitRun <- function(sim)
                         tests = c("mad", "SNLL_FS"),
                         #tests = c("SNLL_FS"),
                         covMinMax = covMinMax,
-                        Nreps = 30,#P(sim)$objfunFireReps,
+                        Nreps = P(sim)$objfunFireReps,
                         maxFireSpread = P(sim)$maxFireSpread,
                         verbose = TRUE
                       )
         )
       )
-      vals1 <- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
+      vals1 <<- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
+      browser()
+      
     }
   } else {
     ####################################################################
@@ -461,6 +463,7 @@ spreadFitRun <- function(sim)
     fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
     historicalFires <- lapply(lociList, setDF)
     
+    # pdf("parameter plots DEoptim 300 iterations.pdf")
     DE <- Cache(runDEoptim, 
                 landscape = landscape,
                 annualDTx1000 = annualDTx1000,
@@ -488,8 +491,17 @@ spreadFitRun <- function(sim)
                 cloudFolderID = P(sim)$cloudFolderID_DE
     )
     if (isTRUE(P(sim)$visualizeDEoptim)) {
+      if (isRstudioServer()) {
+        png(filename = paste0("DE_pars", rndstr(1, 6), ".png"),
+            width = 1000, height = 1200)
+      }
       visualizeDE(DE, cachePath(sim))
+      if (isRstudioServer()) {
+        dev.off()
+      }
+      
     }
+    # dev.off()
     
     DE2 <- if (is(DE, "list")) {
       DE2 <- tail(DE, 1)[[1]]
