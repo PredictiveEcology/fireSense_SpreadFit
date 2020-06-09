@@ -77,14 +77,26 @@ defineModule(sim, list(
                     parameters (lower bound, upper bound, slope, asymmetry)
                     and the statistical model parameters (in the order they
                     appear in the formula)."),
+    defineParameter(name = "initialpop", class = "numeric", default = NULL,
+                    desc = paste("A numeric matrix of dimensions NCOL = length(lower)",
+                                 "and NROW = NP. This will be passed into DEoptim",
+                                 "through control$initialpop = P(sim)$initialpop if it is",
+                                 "not NULL")),
     defineParameter(name = "objfunFireReps", class = "integer", default = 100,
                     desc = "integer defining the number of replicates the objective function
                             will attempt each fire. Since the default approach is
                             using EnvStats::demp, it should be at least 100 to get a 
                             smooth distribution for a likelihood"),
+    defineParameter(name = "objFunCoresInternal", class = "integer", default = 1L,
+                    desc = "integer defining the number of cores to pass to mcmapply(mc.cores = ...)
+                            This will fork this many to do the years loop internally. This would
+                            be in addition to P(sim)$cores and is effecively a multiplier. The computer
+                            needs to have P(sim)$cores * objFunCoresInternal threads or it will stall"),
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = "integer defining the maximum number of iterations
                     allowed (DEoptim optimizer). Default is 500."),
+    defineParameter(name = "NP", class = "integer", default = NULL,
+                    desc = "Number of Populations. See DEoptim.control"),
     defineParameter(name = "iterStep", class = "integer", default = 25,
                     desc = "Passed to runDEoptim"),
     defineParameter(name = "strategy", class = "integer", default = 6,
@@ -291,10 +303,12 @@ spreadFitRun <- function(sim)
                                                  rasterToMatch = sim$flammableRTM, 
                                                  verb = TRUE, areaMultiplier = multiplier,
                                                  field = "NFIREID",
+                                                 cores = 27,
                                                  minSize = P(sim)$minBufferSize,
                                                  # cacheId = "033f259a4ad010dd",
                                                  useCloud = P(sim)$useCloud_DE,
-                                                 cloudFolderID = P(sim)$cloudFolderID_DE
+                                                 cloudFolderID = P(sim)$cloudFolderID_DE,
+                                                 omitArgs = "cores"
     )))
   fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
     if (!is.data.table(.x)) 
@@ -429,26 +443,33 @@ spreadFitRun <- function(sim)
       set.seed(seed)
       pars <- lapply(1:96, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
       print(pars)
+      a <- list()
+      browser()
       st1 <- system.time(
-        a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfun, 
-                      mc.preschedule = FALSE,
-                      MoreArgs = list(
-                        formula = formula, #loci = loci,
-                        landscape = sim$flammableRTM,
-                        annualDTx1000 = lapply(annualDTx1000, setDF),
-                        nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
-                        fireBufferedListDT = lapply(fireBufferedListDT, setDF),
-                        historicalFires = lapply(lociList, setDF),
-                        tests = c("SNLL_FS"),
-                        #tests = c("SNLL_FS"),
-                        covMinMax = covMinMax,
-                        Nreps = P(sim)$objfunFireReps,
-                        maxFireSpread = P(sim)$maxFireSpread,
-                        verbose = TRUE
-                      )
+        #for (i in seq(pars)) {
+        #  print(i)
+          a[[i]] <- mcmapply(mc.cores = min(4, length(pars)), 
+                             par = pars[i], FUN = .objfun, 
+                             mc.preschedule = FALSE,
+                             MoreArgs = list(
+                               formula = formula, #loci = loci,
+                               landscape = sim$flammableRTM,
+                               annualDTx1000 = lapply(annualDTx1000, setDF),
+                               nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
+                               fireBufferedListDT = lapply(fireBufferedListDT, setDF),
+                               historicalFires = lapply(lociList, setDF),
+                               tests = c("SNLL_FS"),
+                               objFunCoresInternal = P(sim)$objFunCoresInternal,
+                               #tests = c("SNLL_FS"),
+                               covMinMax = covMinMax,
+                               Nreps = P(sim)$objfunFireReps,
+                               maxFireSpread = P(sim)$maxFireSpread,
+                               verbose = TRUE
+                             )
+          )
+        #}
         )
-      )
-      vals1 <<- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
+        vals1 <<- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
       browser()
       
     }
@@ -464,6 +485,7 @@ spreadFitRun <- function(sim)
     historicalFires <- lapply(lociList, setDF)
     
     # pdf("parameter plots DEoptim 300 iterations.pdf")
+    browser()
     DE <- Cache(runDEoptim, 
                 landscape = landscape,
                 annualDTx1000 = annualDTx1000,
@@ -471,6 +493,9 @@ spreadFitRun <- function(sim)
                 fireBufferedListDT = fireBufferedListDT,
                 historicalFires = historicalFires,
                 itermax = P(sim)$iterDEoptim,
+                iterStep = P(sim)$iterStep,
+                initialpop = P(sim)$initialpop,
+                NP = P(sim)$NP,
                 trace = P(sim)$trace,
                 strategy = P(sim)$strategy,
                 cores = P(sim)$cores,
@@ -478,6 +503,7 @@ spreadFitRun <- function(sim)
                 cachePath = cachePath(sim),
                 lower = P(sim)$lower,
                 upper = P(sim)$upper,
+                objFunCoresInternal = P(sim)$objFunCoresInternal,
                 formula = P(sim)$formula,
                 covMinMax = covMinMax,
                 # tests = c("mad", "SNLL_FS"),
