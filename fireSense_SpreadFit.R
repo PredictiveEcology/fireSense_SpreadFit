@@ -9,7 +9,8 @@ defineModule(sim, list(
   keywords = c("fire", "spread", "POM", "percolation"),
   authors = c(
     person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut")),
-    person("Eliot", "McIntire", email = "eliot.mcintire@canada.ca", role = c("aut", "cre"))
+    person("Eliot", "McIntire", email = "eliot.mcintire@canada.ca", role = c("aut", "cre")),
+    person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut"))
   ),
   childModules = character(),
   version = list(fireSense_SpreadFit = "0.0.1", SpaDES.core = "0.1.0"),
@@ -19,26 +20,16 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos","future",
+                  "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
-                  "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
+                  "PredictiveEcology/Require@development",
+                  "PredictiveEcology/fireSenseUtils@development", #  (>=0.0.0.9008)
+                  "PredictiveEcology/SpaDES.tools@allowOverlap"), #  (>=0.3.4.9002)),
   parameters = rbind(
-    defineParameter(name = "formula", class = "formula", default = NA,
+    defineParameter(name = "formula", class = "formula", 
+                    default = formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5),
                     desc = 'a formula describing the model to be fitted. Only
                     the RHS needs to be provided.'),
-    # defineParameter(name = "data", class = "character",
-    #                 default = "dataFireSense_SpreadFit",
-    #                 desc = "a character vector indicating the names of objects in
-    #                 the `simList` environment in which to look for variables
-    #                 present in the model formula. `data` objects can be
-    #                 RasterLayers, RasterStacks or RasterBricks. RasterStacks
-    #                 and RasterBricks can be used in cases where fires have
-    #                 started at different times and should not be spread at
-    #                 the same time interval, but are still used to describe
-    #                 the same fire size distribution. In this case, the
-    #                 number of layers in the RasterStack should equal the
-    #                 number of distinct dates in column 'date'."),
     defineParameter(name = "debugMode", class = "logical",
                     default = FALSE,
                     desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
@@ -63,10 +54,6 @@ defineModule(sim, list(
                     desc = paste("Should fire ignitions start at the sim$firePolygons",
                                  "centroids (TRUE) or at the ignition points in the",
                                  "sim$firePoints")),
-    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
-                    desc = paste("Should all covariates to globally rescaled from 0 to 1;",
-                                 "this allows covariate estimates to be on the same scale",
-                                 "and will likely speed up convergence")),
     defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = "see `?DEoptim`. Lower limits for the logistic function
                     parameters (lower bound, upper bound, slope, asymmetry)
@@ -120,6 +107,8 @@ defineModule(sim, list(
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start
                     time of the simulation."),
+    defineParameter(name = ".plot", class = "logical", default = FALSE,
+                    desc = "Should outputs be plotted?"),
     defineParameter(name = ".runInterval", class = "numeric", default = NA,
                     desc = paste0("optional. Interval between two runs of this module,",
                                   "expressed in units of simulation time. By default, NA, which ",
@@ -132,17 +121,6 @@ defineModule(sim, list(
                     desc = paste0("Should this entire module be run",
                                   " with caching activated? This is generally intended for data-type ",
                                   "modules, where stochasticity and time are not relevant")),
-    # defineParameter(name = "termsNAtoZ", class = "character", default = NULL,
-    #                 desc = paste0("If your data has terms that have NA (i.e. rasters that were ",
-    #                               "not zeroed) you can pass the names of these terms and the ",
-    #                               "module will convert those to 0's internally")),
-    # defineParameter(name = "toleranceFireBuffer", class = "numeric", default = c(3.8, 4.2),
-    #                 desc = paste0("Lower and upper tolerance for fire buffering. ",
-    #                               "This is used for the function makeBufferedFires, and used ",
-    #                               "to generate the probability of distribution of fires for ",
-    #                               "the negative likelihood (in the objective function of the ",
-    #                               "optimizer). For now, we believe that the buffer needs to be @x4 ",
-    #                               "bigger than the fire")),
     defineParameter(name = "verbose", class = "logical", default = FALSE,
                     desc = paste0("optional. Should it calculate and print median of spread ",
                                   "Probability during calculations?")),
@@ -153,7 +131,16 @@ defineModule(sim, list(
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
                                   "IP's addresses provided. It will devide the cores between all",
                                   "machines as equaly as possible. Currently, supports only ",
-                                  "2 machines"))
+                                  "2 machines")),
+    defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
+                    desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
+                                  "and will only load the latest uploaded version of the DEOptim object")),
+    defineParameter(name = "urlDEOptimObject", class = "character", 
+                    default = paste0("https://drive.google.com/file/d/",
+                                     "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
+                    desc = paste0("optional. If onlyLoadDEOptim == TRUE, you can pass the url to the  ",
+                                  "DEOptim object. The default is the object from the run on 11JUN20",
+                                  " from the logistic2p"))
     ),
   inputObjects = rbind(
     expectsInput(
@@ -186,12 +173,9 @@ defineModule(sim, list(
       sourceURL = NA_character_,
       desc = "One or more objects of class 'RasterLayer', 'RasterStack'
       or 'RasterBrick', in which to look for variables present
-      in the model formula. RasterStacks and RasterBricks can
-      be used in cases where fires have started at different
-      times and should not be spread at the same time interval,
-      but are still used to describe the same fire size
-      distribution. In this case, the number of layers in the
-      RasterStack should equal the number of distinct dates in column 'date'."),
+      in the model formula. Currently, contains two lists of a raster stack each: 
+      annualStacks: MDC;
+      nonAnnualStacks: vegetation cohorts"),
     expectsInput(
       objectName = "studyArea",
       objectClass = "SpatialPolygonDataFrame",
@@ -213,15 +197,24 @@ defineModule(sim, list(
       sourceURL = NA
     )
     ),
-  outputObjects = createsOutput(
+  outputObjects = rbind( 
+    createsOutput(
     objectName = "fireSense_SpreadFitted",
     objectClass = "fireSense_SpreadFit",
     desc = "A fitted model object of class fireSense_SpreadFit."
+    ),
+    createsOutput(
+      objectName = "covMinMax",
+      objectClass = "data.table",
+      desc = "Matrix of covariates min and max"
+    ),
+    createsOutput(
+      objectName = "DE",
+      objectClass = "data.table",
+      desc = "DEOptim object"
+    )
   )
   ))
-
-## event types
-#   - type `init` is required for initialization
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 {
@@ -230,347 +223,351 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   switch(
     eventType,
     init = {
-      sim <- spreadFitInit(sim)
+      # Data sanity checks
+      moduleName <- current(sim)$moduleName
+      # Checking parameters
+      stopifnot(P(sim)$trace >= 0)
+      stopifnot(P(sim)$cores >= 0)
+      if (!is(P(sim)$formula, "formula")){
+        params(sim)$fireSense_SpreadFit$formula <- formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5)
+        warning(moduleName, "> The supplied object for the 'formula' parameter is not of class formula. Replacing by default", 
+                immediate. = TRUE)}
       
-      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+      if (anyNA(P(sim)$lower))
+        stop(moduleName, "> The 'lower' parameter should be supplied.")
       
-      if (!is.na(P(sim)$.saveInitialTime))
-        sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, moduleName, "save", .last())
+      if (anyNA(P(sim)$upper))
+        stop(moduleName, "> The 'upper' parameter should be supplied.")
+      
+      ####################### Assertions class 5
+      # TODO
+      # browser()
+      # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
+      # All class5 pixels are either 1 or 0
+      #
+      #######################
+      if (P(sim)$onlyLoadDEOptim){
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
+      } else {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+      }
+      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
+      if(P(sim)$.plot)
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
     },
     run = {
-      sim <- spreadFitRun(sim)
       
-      if (!is.na(P(sim)$.runInterval)) # Assumes time only moves forward
-        sim <- scheduleEvent(sim, time(sim) + P(sim)$.runInterval, moduleName, "run")
-    },
-    save = {
-      sim <- spreadFitSave(sim)
-      
-      if (!is.na(P(sim)$.saveInterval))
-        sim <- scheduleEvent(sim, currentTime + P(sim)$.saveInterval, moduleName, "save", .last())
-      
-    },
-    warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
-                  "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
-  )
-  
-  invisible(sim)
-}
+      ###################################################
+      # Create buffers ##################################
+      ###################################################
 
-## event functions
-#   - follow the naming convention `modulenameEventtype()`;
-#   - `modulenameInit()` function is required for initialization;
-#   - keep event functions short and clean, modularize by calling subroutines from section below.
+      # Extract from sim$dataFireSense_SpreadFit the annualStacks and 
+      # nonAnnualStacks
+      annualStacks <- sim$dataFireSense_SpreadFit[["annualStacks"]]
+      nonAnnualStacks <- sim$dataFireSense_SpreadFit[["nonAnnualStacks"]]
 
-### template initialization
-spreadFitInit <- function(sim)
-{
-  moduleName <- current(sim)$moduleName
-  # Checking parameters
-  stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$cores >= 0)
-  if (!is(P(sim)$formula, "formula"))
-    stop(moduleName, "> The supplied object for the 'formula' parameter is not of class formula.")
-  
-  if (anyNA(P(sim)$lower))
-    stop(moduleName, "> The 'lower' parameter should be supplied.")
-  
-  if (anyNA(P(sim)$upper))
-    stop(moduleName, "> The 'upper' parameter should be supplied.")
-  
-  ####################### Assertions class 5
-  # TODO
-  # browser()
-  # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
-  # All class5 pixels are either 1 or 0
-  #
-  #######################
-  
-  invisible(sim)
-}
+      yearLabels <- names(annualStacks)
+      names(yearLabels) <- yearLabels
+      names(sim$firePolys) <- yearLabels
+      (st <- system.time(fireBufferedListDT <- Cache(bufferToArea,
+                                                     poly = sim$firePolys, 
+                                                     rasterToMatch = sim$flammableRTM, 
+                                                     verb = TRUE, areaMultiplier = multiplier,
+                                                     field = "NFIREID",
+                                                     cores = 27,
+                                                     minSize = P(sim)$minBufferSize,
+                                                     # cacheId = "fbd1cfa8d565e9b0",
+                                                     useCloud = P(sim)$useCloud_DE,
+                                                     cloudFolderID = P(sim)$cloudFolderID_DE,
+                                                     omitArgs = "cores"
+      )))
+      fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
+        if (!is.data.table(.x)) 
+          as.data.table(.x)
+        else 
+          .x
+      })
+      names(sim$firePoints) <- yearLabels
+      
+      ###################################################
+      # Post buffering, new issues --> must make sure points and buffers match
+      ###################################################
+      sim$firePoints <- Cache(harmonizeBufferAndPoints, cent = sim$firePoints,
+                              buff = fireBufferedListDT,
+                              ras = sim$flammableRTM, 
+                              idCol = "NFIREID", 
+                              userTags = c("module:fireSense_Spreadfit", 
+                                           "objectName:firePoints", 
+                                           "goal:matchBufferAndPoints",
+                                           "outFun:Cache"))
+      
+      ###################################################
+      # Convert stacks to lists of data.table objects --> much more compact
+      ###################################################
+      # First for stacks that are "annual"
+      whNotNA <- which(!is.na(sim$flammableRTM[]))
+      hash <- fastdigest(annualStacks)
+      annualDTx1000 <- Cache(annualStacksToDTx1000, annualStacks,
+                                         whNotNA = whNotNA,
+                                         .fastHash = hash,
+                                         omitArgs = c("annualStacks", 
+                                                      "rasterToMatch"))
+      names(annualDTx1000) <- yearLabels
+      
+      # Second for stacks that are "not annual"
+      hashNonAnnual <- fastdigest(nonAnnualStacks)
+        nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, nonAnnualStacks,
+                                  whNotNA = whNotNA,
+                                  .fastHash = hashNonAnnual,
+                                  omitArgs = c("annualStacks", "rasterToMatch"))
 
-spreadFitRun <- function(sim)
-{
   
-  ###################################################
-  # Create buffers ##################################
-  ###################################################
-  yearLabels <- names(sim$annualStacks)
-  names(yearLabels) <- yearLabels
-  names(sim$firePolys) <- yearLabels
-  (st <- system.time(fireBufferedListDT <- Cache(bufferToArea,
-                                                 poly = sim$firePolys, 
-                                                 rasterToMatch = sim$flammableRTM, 
-                                                 verb = TRUE, areaMultiplier = multiplier,
-                                                 field = "NFIREID",
-                                                 cores = 27,
-                                                 minSize = P(sim)$minBufferSize,
-                                                 # cacheId = "033f259a4ad010dd",
-                                                 useCloud = P(sim)$useCloud_DE,
-                                                 cloudFolderID = P(sim)$cloudFolderID_DE,
-                                                 omitArgs = "cores"
-    )))
-  fireBufferedListDT <- purrr::map(fireBufferedListDT, function(.x) {
-    if (!is.data.table(.x)) 
-      as.data.table(.x)
-    else 
-      .x
-  })
-  names(sim$firePoints) <- yearLabels
-  
-  ###################################################
-  # Post buffering, new issues --> must make sure points and buffers match
-  ###################################################
-  sim$firePoints <- Cache(harmonizeBufferAndPoints, cent = sim$firePoints,
-                                            buff = fireBufferedListDT,
-                                            ras = sim$flammableRTM, 
-                                            idCol = "NFIREID")
-  
-  
-  ###################################################
-  # Convert stacks to lists of data.table objects --> much more compact
-  ###################################################
-  # First for stacks that are "annual"
-  whNotNA <- which(!is.na(sim$flammableRTM[]))
-  hash <- fastdigest(sim$annualStacks)
-  system.time(annualDTx1000 <- Cache(annualStacksToDTx1000, sim$annualStacks,
-                                     whNotNA = whNotNA,
-                                     .fastHash = hash,
-                                     omitArgs = c("annualStacks", "rasterToMatch")))
-  names(annualDTx1000) <- yearLabels
-  
-  # Second for stacks that are "not annual"
-  hashNonAnnual <- fastdigest(sim$nonAnnualStacks)
-  system.time({
-    nonAnnualDTx1000 <- Cache(annualStacksToDTx1000, sim$nonAnnualStacks,
-                              whNotNA = whNotNA,
-                              .fastHash = hashNonAnnual,
-                              omitArgs = c("annualStacks", "rasterToMatch"))
-  })
-  
-  ###################################################
-  # Convert SpatialPointsDataFrame to data.table --> much more compact
-  ###################################################
-  lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
-  
-  ###################################################
-  # re-add pixelID to objects for join with fireBufferedListDT
-  ###################################################
-  st1 <- system.time(annualDTx1000 <- Cache(shrinkToBuffer, annualDTx1000, whNotNA, fireBufferedListDT,
-                                            omitArgs = "annualDTx1000", .hash = hash))
-  names(annualDTx1000) <- yearLabels
-  nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, function(x) {
-    setDT(x)
-    set(x, NULL, "pixelID", whNotNA)
-    x
-  })
-  
-  ###################################################
-  # non Annual data --> use name of each list element to assign to "which year"
-  ###################################################
-  yearSplit <- strsplit(names(nonAnnualDTx1000), "_")
-  names(yearSplit) <- as.character(seq_along(nonAnnualDTx1000))
-  indexNonAnnual <- rbindlist(
-    Map(ind = seq_along(nonAnnualDTx1000), date = yearSplit,
-        function(ind, date) data.table(ind = ind, date = date))
-  )
-  
-  ###################################################
-  # Take only pixels that burned during the years contained within each group of nonAnnualDTx1000
-  ###################################################
-  nonAnnualDTx1000 <- Map(nonAnnDTx1000 = nonAnnualDTx1000,
-                          index = seq_along(nonAnnualDTx1000),
-                          MoreArgs = list(indexNonAnnual, fireBufferedListDT),
-                          function(index, nonAnnDTx1000, indexNonAnnual, fireBufferedListDT) {
-                            subDTs <- fireBufferedListDT[indexNonAnnual[index == ind]$date]
-                            pixelIDs <- rbindlist(subDTs)$pixelID
-                            nonAnnDTx1000[pixelID %in% pixelIDs]
-                          })
-  
-  
-  ###################################################
-  # Covariate rescaling -- don't do here, but determine the ranges of each
-  #   variable --> these ranges will be passed into objfun and used in 
-  #   rescaling there
-  ###################################################
-  covMinMax <- if (P(sim)$rescaleAll) {
-    nonAnnRescales <- rbindlist(nonAnnualDTx1000)
-    vals <- setdiff(colnames(nonAnnRescales), "pixelID")
-    covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
-    
-    annRescales <- rbindlist(annualDTx1000)
-    vals <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
-    covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
-    cbind(covMinMax1, covMinMax2)
-  } else {
-    NULL
-  }
-  
-  # NPar <- length(P(sim)$lower)
-  # NP <- NPar * 10
-  # bestParsSoFar <- c(0.296, 1.50, 1.73, 2.79, 0.31, 0.22, 0.43, 1.73, 1.77)
-  # bestParsSoFar <- c(0.298, 1.60, 1.94, 2.52, 0.34, 0.24, 0.54, 1.69, 1.82) # MAD = 512
-  # bestParsSoFar <- c(0.298, 1.68, 2.04, 2.84, 0.27, 0.23, 0.54, 1.29, 1.51) # MAD = 515
-  # bestParsSoFar <- c(0.258, 4.70, 1.60, 1.30, 2.75, 1.02, 2.84, 2.82, 2.08) # MAD = 517
-  # bestParsSoFar <- c(0.264, 6.28, 0.79, 1.26, 0.68, 1.84, 0.39, 1.65, 2.23) # MAD = 506
-  # #bestParsSoFar <- c(0.262, 5.34, 3.78, 2.36, 1.51, 1.49, 2.83, 1.72, 0.01) # MAD = 511
-  # #bestParsSoFar <- c(0.253, 6.05, 2.60, 0.33, 1.42, 0.73, 2.50, 1.01, 0.43) # MAD = 498
-  # bestParsSoFar <- c(0.261, 3.55, 3.25, 4.40, 0.92, 0.59, 0.04, 0.45, 0.27) # MAD 483
-  # bestParsSoFar <- c(0.245, 6.77, 1.90, 4.24, 1.10, 0.45, 0.026, 0.45, 0.31) # SNLL 8082
-  # 
-  # #Iteration: 37 bestvalit: 8011.000000 bestmemit:    0.252165    2.759695    2.560914    4.611344    1.250372    0.462948    0.032621    0.559400    0.460017
-  # bestParsSoFar <- c(0.2432273, 8.1549921, 2.3991438, 4.7441794, 1.0863016, 1.7622997, 1.7679929, 2.1236577, 2.4785546) # "  22017 mad: 576.4 ;   SNLL_FSTest: 7522.5 ; "
-  # #bestParsSoFar <- c(0.2853945, 2.5878158, 1.9309804, 0.3124527, 1.1377146, 1.9889269, 0.4055745, 2.3172345, 0.6643902) # After 2014 and 1995 only: mad: 3748.2 ;   SNLL_FSTest: 989.4
-  # bestParsSoFar <- c(0.277, 1.568, 2.029, 5.79, 2.85, 0.19, 0.11, 2.785, 0.77) # mad: 467.7; SNLL_FSTest: 7560.7
-  # bestParsSoFar <- c(0.2661138, 2.5002498, 3.7850266, 3.8305076, 2.5334282, 0.8581038, 1.3695494, 0.7245241, 1.0475760)#mad: 491.9 ;   SNLL_FSTest: 7432.7 ; SNLL_FSTest initial: 1067.1 ; "
-  # bestParsSoFar <- c(0.2567797, 6.9269317, 1.0723940, 2.9256403, 1.4193608, 1.1382110, 2.8699367, 2.8805758, 2.1623407) # "  22017 mad: 2384.8 ;   SNLL_FSTest: 1098.6 ; " "  22017 mad: 535.8 ;   SNLL_FSTest: 7287.9 ; "
-  # 
-  # betaVals <- data.frame(l = P(sim)$lower, u = P(sim)$upper, m = bestParsSoFar)
-  # initialpop <- as.matrix(as.data.table(
-  #   purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 345))
-  # ))
-  
-  # This below is to test the code without running DEOptim
-  if (isTRUE(P(sim)$debugMode)) {
-    minIndex <- if (!exists("vals1", envir = .GlobalEnv)) {
-      vals1 <<- list()
-      0
-    } else {
-      length(vals1) 
-    }
-    for (i in 1:10) {
-      seed <- sample(1e6, 1)
-      set.seed(seed)
-      pars <- lapply(1:96, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
-      print(pars)
-      a <- list()
-      browser()
-      st1 <- system.time(
-        #for (i in seq(pars)) {
-        #  print(i)
-          a[[i]] <- mcmapply(mc.cores = min(4, length(pars)), 
-                             par = pars[i], FUN = .objfun, 
-                             mc.preschedule = FALSE,
-                             MoreArgs = list(
-                               formula = formula, #loci = loci,
-                               landscape = sim$flammableRTM,
-                               annualDTx1000 = lapply(annualDTx1000, setDF),
-                               nonAnnualDTx1000 = lapply(nonAnnualDTx1000, setDF),
-                               fireBufferedListDT = lapply(fireBufferedListDT, setDF),
-                               historicalFires = lapply(lociList, setDF),
-                               tests = c("SNLL_FS"),
-                               objFunCoresInternal = P(sim)$objFunCoresInternal,
-                               #tests = c("SNLL_FS"),
-                               covMinMax = covMinMax,
-                               Nreps = P(sim)$objfunFireReps,
-                               maxFireSpread = P(sim)$maxFireSpread,
-                               verbose = TRUE
-                             )
-          )
-        #}
-        )
-        vals1 <<- append(vals1, purrr::map2(pars, a, function(.x, .y) list(pars = .x, objfun = .y)) )
-      browser()
+      ###################################################
+      # Convert SpatialPointsDataFrame to data.table --> much more compact
+      ###################################################
       
-    }
-  } else {
-    ####################################################################
-    # Final preparations of objects for .objfun
-    ####################################################################
-    
-    landscape <- sim$flammableRTM
-    annualDTx1000 <- lapply(annualDTx1000, setDF)
-    nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
-    fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
-    historicalFires <- lapply(lociList, setDF)
-    
-    # pdf("parameter plots DEoptim 300 iterations.pdf")
-    browser()
-    DE <- Cache(runDEoptim, 
-                landscape = landscape,
-                annualDTx1000 = annualDTx1000,
-                nonAnnualDTx1000 = nonAnnualDTx1000,
-                fireBufferedListDT = fireBufferedListDT,
-                historicalFires = historicalFires,
-                itermax = P(sim)$iterDEoptim,
-                iterStep = P(sim)$iterStep,
-                initialpop = P(sim)$initialpop,
-                NP = P(sim)$NP,
-                trace = P(sim)$trace,
-                strategy = P(sim)$strategy,
-                cores = P(sim)$cores,
-                logPath = outputPath(sim),
-                cachePath = cachePath(sim),
-                lower = P(sim)$lower,
-                upper = P(sim)$upper,
-                objFunCoresInternal = P(sim)$objFunCoresInternal,
-                formula = P(sim)$formula,
-                covMinMax = covMinMax,
-                # tests = c("mad", "SNLL_FS"),
-                tests = c("SNLL_FS"),
-                maxFireSpread = P(sim)$maxFireSpread,
-                Nreps = P(sim)$objfunFireReps,
-                .verbose = P(sim)$verbose,
-                visualizeDEoptim = P(sim)$visualizeDEoptim,
-                cacheId = P(sim)$cacheId_DE,
-                useCloud = P(sim)$useCloud_DE,
-                cloudFolderID = P(sim)$cloudFolderID_DE
-    )
-    if (isTRUE(P(sim)$visualizeDEoptim)) {
-      if (!isRstudioServer()) {
-        png(filename = paste0("DE_pars", as.character(Sys.time()), "_", Sys.getpid(), ".png"),
-            width = 800, height = 1000)
-      }
-      visualizeDE(DE, cachePath(sim))
-      if (!isRstudioServer()) {
-        dev.off()
-      }
+      lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
       
-    }
-    # dev.off()
-    
-    DE2 <- if (is(DE, "list")) {
-      DE2 <- tail(DE, 1)[[1]]
-    } else {
-      DE
-    }
-    if (isTRUE(P(sim)$visualizeDEoptim)) {
-      hfs <- rbindlist(historicalFires)
-      sam <- hfs[, list(keepInd = .I[SpaDES.tools:::resample(1:.N, min(.N, 49))]), 
-                 by = "date"]$keepInd
-      hfs <- hfs[sam]
-      fbl <- rbindlist(fireBufferedListDT, idcol = "date")
-      # hfs[, date := as.integer(date)]
-      fbl[, date := as.integer(date)]
-      fbl <- fbl[hfs[, c("size", "date", "ids")], on = c("date", "ids")]
-      fbl <- split(fbl, by = "date")
-      # fbl <- fbl[order(names(fbl))]
-      hfs[, ids := as.character(ids)]
-      hfs <- split(hfs, by = "date")
-      hfs <- hfs[order(names(hfs))]
-      # annualDTx1000 <- annualDTx1000[names(hfs)]
-      pdf(paste0("FireHistsYr_Test.pdf"), width = 10, height = 7)
-      out <- .objfun(par = DE2$optim$bestmem,
-              landscape = sim$flammableRTM,
-              annualDTx1000 = annualDTx1000,
-              nonAnnualDTx1000 = nonAnnualDTx1000,
-              fireBufferedListDT = fbl,
-              historicalFires = hfs,
-              formula = P(sim)$formula, #loci, sizes,
-              covMinMax = covMinMax,
-              maxFireSpread = 0.28, # 0.257 makes gigantic fires
-              minFireSize = 2,
-              # tests = "SNLL_FS",
-              tests = "SNLL",
-              Nreps = P(sim)$objfunFireReps,
-              plot.it = TRUE,
-              #bufferedRealHistoricalFiresList,
-              verbose = TRUE) #fireSense_SpreadFitRaster
-      dev.off()
+      ###################################################
+      # re-add pixelID to objects for join with fireBufferedListDT
+      ###################################################
+      st1 <- system.time(annualDTx1000 <- Cache(shrinkToBuffer, annualDTx1000, 
+                                                whNotNA, fireBufferedListDT,
+                                                omitArgs = "annualDTx1000", 
+                                                .hash = hash,
+                                                userTags = c("module:fireSense_Spreadfit", 
+                                                             "objectName:annualDTx1000", 
+                                                             "goal:shrinkToBuffer")))
+      names(annualDTx1000) <- yearLabels
+      nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, function(x) {
+        setDT(x)
+        set(x, NULL, "pixelID", whNotNA)
+        x
+      })
       
-      if (FALSE) { # THIS IS PLOTTING STUFF
+      ###################################################
+      # non Annual data --> use name of each list element to assign to "which year"
+      ###################################################
+      yearSplit <- strsplit(names(nonAnnualDTx1000), "_")
+      names(yearSplit) <- as.character(seq_along(nonAnnualDTx1000))
+      indexNonAnnual <- rbindlist(
+        Map(ind = seq_along(nonAnnualDTx1000), date = yearSplit,
+            function(ind, date) data.table(ind = ind, date = date))
+      )
+      
+      ###################################################
+      # Take only pixels that burned during the years contained within each group of nonAnnualDTx1000
+      ###################################################
+      nonAnnualDTx1000 <- Map(nonAnnDTx1000 = nonAnnualDTx1000,
+                              index = seq_along(nonAnnualDTx1000),
+                              MoreArgs = list(indexNonAnnual, fireBufferedListDT),
+                              function(index, nonAnnDTx1000, indexNonAnnual, fireBufferedListDT) {
+                                subDTs <- fireBufferedListDT[indexNonAnnual[index == ind]$date]
+                                pixelIDs <- rbindlist(subDTs)$pixelID
+                                nonAnnDTx1000[pixelID %in% pixelIDs]
+                              })
+      
+      
+      ##########################################################################
+      # Covariate rescaling -- don't do here, but determine the ranges of each #
+      #   variable --> these ranges will be passed into objfun and used in     #
+      #   rescaling there                                                      #
+      ##########################################################################
+
+      if (P(sim)$rescaleAll) {
+        nonAnnRescales <- rbindlist(nonAnnualDTx1000)
+        vals <- setdiff(colnames(nonAnnRescales), "pixelID")
+        covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
         
-        if (FALSE) {
+        annRescales <- rbindlist(annualDTx1000)
+        vals <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
+        covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+        sim$covMinMax <- cbind(covMinMax1, covMinMax2) 
+      } else {
+        sim$covMinMax <- NULL
+      }
+      
+      # NPar <- length(P(sim)$lower)
+      # NP <- NPar * 10
+      # bestParsSoFar <- c(0.296, 1.50, 1.73, 2.79, 0.31, 0.22, 0.43, 1.73, 1.77)
+      # bestParsSoFar <- c(0.298, 1.60, 1.94, 2.52, 0.34, 0.24, 0.54, 1.69, 1.82) # MAD = 512
+      # bestParsSoFar <- c(0.298, 1.68, 2.04, 2.84, 0.27, 0.23, 0.54, 1.29, 1.51) # MAD = 515
+      # bestParsSoFar <- c(0.258, 4.70, 1.60, 1.30, 2.75, 1.02, 2.84, 2.82, 2.08) # MAD = 517
+      # bestParsSoFar <- c(0.264, 6.28, 0.79, 1.26, 0.68, 1.84, 0.39, 1.65, 2.23) # MAD = 506
+      # #bestParsSoFar <- c(0.262, 5.34, 3.78, 2.36, 1.51, 1.49, 2.83, 1.72, 0.01) # MAD = 511
+      # #bestParsSoFar <- c(0.253, 6.05, 2.60, 0.33, 1.42, 0.73, 2.50, 1.01, 0.43) # MAD = 498
+      # bestParsSoFar <- c(0.261, 3.55, 3.25, 4.40, 0.92, 0.59, 0.04, 0.45, 0.27) # MAD 483
+      # bestParsSoFar <- c(0.245, 6.77, 1.90, 4.24, 1.10, 0.45, 0.026, 0.45, 0.31) # SNLL 8082
+      # 
+      # #Iteration: 37 bestvalit: 8011.000000 bestmemit:    0.252165    2.759695    2.560914    4.611344    1.250372    0.462948    0.032621    0.559400    0.460017
+      # bestParsSoFar <- c(0.2432273, 8.1549921, 2.3991438, 4.7441794, 1.0863016, 1.7622997, 1.7679929, 2.1236577, 2.4785546) # "  22017 mad: 576.4 ;   SNLL_FSTest: 7522.5 ; "
+      # #bestParsSoFar <- c(0.2853945, 2.5878158, 1.9309804, 0.3124527, 1.1377146, 1.9889269, 0.4055745, 2.3172345, 0.6643902) # After 2014 and 1995 only: mad: 3748.2 ;   SNLL_FSTest: 989.4
+      # bestParsSoFar <- c(0.277, 1.568, 2.029, 5.79, 2.85, 0.19, 0.11, 2.785, 0.77) # mad: 467.7; SNLL_FSTest: 7560.7
+      # bestParsSoFar <- c(0.2661138, 2.5002498, 3.7850266, 3.8305076, 2.5334282, 0.8581038, 1.3695494, 0.7245241, 1.0475760)#mad: 491.9 ;   SNLL_FSTest: 7432.7 ; SNLL_FSTest initial: 1067.1 ; "
+      # bestParsSoFar <- c(0.2567797, 6.9269317, 1.0723940, 2.9256403, 1.4193608, 1.1382110, 2.8699367, 2.8805758, 2.1623407) # "  22017 mad: 2384.8 ;   SNLL_FSTest: 1098.6 ; " "  22017 mad: 535.8 ;   SNLL_FSTest: 7287.9 ; "
+      # 
+      # betaVals <- data.frame(l = P(sim)$lower, u = P(sim)$upper, m = bestParsSoFar)
+      # initialpop <- as.matrix(as.data.table(
+      #   purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 345))
+      # ))
+      
+      # This below is to test the code without running DEOptim
+      if (isTRUE(P(sim)$debugMode)) {
+        runSpreadWithoutDEoptim(sim)
+        } else {
+        ####################################################################
+        # Final preparations of objects for .objfun
+        ####################################################################
+        
+        landscape <- sim$flammableRTM
+        annualDTx1000 <- lapply(annualDTx1000, setDF)
+        nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
+        fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
+        historicalFires <- lapply(lociList, setDF)
+
+        # pdf("parameter plots DEoptim 300 iterations.pdf")
+        sim$DE <- Cache(runDEoptim,
+                    landscape = landscape,
+                    annualDTx1000 = annualDTx1000,
+                    nonAnnualDTx1000 = nonAnnualDTx1000,
+                    fireBufferedListDT = fireBufferedListDT,
+                    historicalFires = historicalFires,
+                    itermax = P(sim)$iterDEoptim,
+                    trace = P(sim)$trace,
+                    strategy = P(sim)$strategy,
+                    cores = P(sim)$cores,
+                    logPath = outputPath(sim),
+                    cachePath = cachePath(sim),
+                    lower = P(sim)$lower,
+                    upper = P(sim)$upper,
+                    formula = P(sim)$formula,
+                    covMinMax = sim$covMinMax,
+                    # tests = c("mad", "SNLL_FS"),
+                    tests = c("SNLL_FS"),
+                    maxFireSpread = P(sim)$maxFireSpread,
+                    Nreps = P(sim)$objfunFireReps,
+                    .verbose = P(sim)$verbose,
+                    visualizeDEoptim = P(sim)$visualizeDEoptim,
+                    cacheId = P(sim)$cacheId_DE,
+                    useCloud = P(sim)$useCloud_DE,
+                    cloudFolderID = P(sim)$cloudFolderID_DE # Cloud cache was being a problem
+        )
+        
+        if (isTRUE(P(sim)$visualizeDEoptim)) {
+          if (!isRstudioServer()) {
+            png(filename = paste0("DE_pars", as.character(Sys.time()), "_", Sys.getpid(), ".png"),
+                width = 800, height = 1000)
+          }
+          visualizeDE(DE, cachePath(sim))
+          if (!isRstudioServer()) {
+            dev.off()
+          }
+          
+        }
+
+        if (isTRUE(P(sim)$visualizeDEoptim)) {
+          hfs <- rbindlist(historicalFires)
+          sam <- hfs[, list(keepInd = .I[SpaDES.tools:::resample(1:.N, min(.N, 49))]), 
+                     by = "date"]$keepInd
+          hfs <- hfs[sam]
+          fbl <- rbindlist(fireBufferedListDT, idcol = "date")
+          # hfs[, date := as.integer(date)]
+          fbl[, date := as.integer(date)]
+          fbl <- fbl[hfs[, c("size", "date", "ids")], on = c("date", "ids")]
+          fbl <- split(fbl, by = "date")
+          # fbl <- fbl[order(names(fbl))]
+          hfs[, ids := as.character(ids)]
+          hfs <- split(hfs, by = "date")
+          hfs <- hfs[order(names(hfs))]
+          # annualDTx1000 <- annualDTx1000[names(hfs)]
+          pdf(paste0("FireHistsYr_Test.pdf"), width = 10, height = 7)
+          out <- .objfun(par = DE2$optim$bestmem,
+                         landscape = sim$flammableRTM,
+                         annualDTx1000 = annualDTx1000,
+                         nonAnnualDTx1000 = nonAnnualDTx1000,
+                         fireBufferedListDT = fbl,
+                         historicalFires = hfs,
+                         formula = P(sim)$formula, #loci, sizes,
+                         covMinMax = sim$covMinMax,
+                         maxFireSpread = 0.28, # 0.257 makes gigantic fires
+                         minFireSize = 2,
+                         # tests = "SNLL_FS",
+                         tests = "SNLL",
+                         Nreps = P(sim)$objfunFireReps,
+                         plot.it = TRUE,
+                         #bufferedRealHistoricalFiresList,
+                         verbose = TRUE) #fireSense_SpreadFitRaster
+        }
+      }
+    },
+    retrieveDEOptim = {
+      sim$DE <- Cache(prepInputs, url = P(sim)$urlDEOptimObject,
+                  destinationPath = Paths$outputPath, 
+                  userTags = c("What:shortcutDEOptim"),
+                  fun = "qs::qread")
+      
+    },
+    makefireSense_SpreadFitted = {
+      DE2 <- if (is(sim$DE, "list")) {
+        DE2 <- tail(sim$DE, 1)[[1]]
+      } else {
+        sim$DE
+      }
+      valAverage <- DE2 %>% `[[` ("member") %>% `[[` ("bestmemit") %>%
+        apply(MARGIN = 2, FUN = mean)
+      valSD <- DE2 %>% `[[` ("member") %>% `[[` ("bestmemit") %>%
+        apply(MARGIN = 2, FUN = sd)
+      valBest <- DE2 %>% `[[` ("optim") %>% `[[` ("bestmem")
+      bestFit <- DE2$optim$bestval
+      terms <- terms(P(sim)$formula)
+      # Identifying the number of parameters of the logistic function and names
+      nParsLogistic <- length(P(sim)$lower)-length(attributes(terms)[["term.labels"]])
+      if (nParsLogistic == 5){
+        nms <- c("inflectionPoint1", "inflectionPoint2", 
+                 "maxAsymptote", "hillSlope1", "hillSlope2")
+      } else if (nParsLogistic == 4) {
+        nms <- c("inflectionPoint1", "inflectionPoint2", 
+                 "maxAsymptote", "hillSlope1")
+      } else if (nParsLogistic == 3) {
+        nms <- c("inflectionPoint1",
+                 "maxAsymptote", "hillSlope1")
+      } else if (nParsLogistic == 2) {
+        nms <- c("inflectionPoint1", "maxAsymptote")
+      }
+      # Giuseppe Cardillo (2020). Three parameters logistic regression - 
+      # There and back again (https://www.github.com/dnafinder/logistic3), 
+      # GitHub. Retrieved June 11, 2020.
+      
+      sim$fireSense_SpreadFitted <- list(
+        formula = P(sim)$formula,
+        bestCoef = setNames(valBest, 
+                            nm = c(nms,
+                                   if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+                                   attr(terms, "term.labels")
+                            )
+        ),
+        meanCoef = setNames(valAverage, 
+                            nm = c(nms,
+                                   if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+                                   attr(terms, "term.labels")
+                            )
+        ),
+        sdCoef = setNames(valSD, 
+                          nm = c(nms,
+                                 if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+                                 attr(terms, "term.labels")
+                          )
+        ),
+        bestFit = bestFit
+      )
+      
+      class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
+    },
+    plot = {
+      if (P(sim)$.plot) {
+        if (P(sim)$.plot) {
+          dev.off()
+          
           hfs <- rbindlist(historicalFires)
           sam <- sample(NROW(hfs), 20)
           hfs <- hfs[sam]
@@ -600,12 +597,12 @@ spreadFitRun <- function(sim)
           
           
           out <- purrr::pmap(list(size = hfs$size, date = hfs$date, 
-                      ids = hfs$ids, cells = hfs$cells, 
-                      fbl = fbl),
-                      function(size, date, ids, cells, fbl) {
-            ss <- spread(r, spreadProb = 1, loci = cells, returnIndices = TRUE)
-            out <- data.table(pixelID = ss$indices, ids = ss$id, prob = cells[ss$indices])
-          })
+                                  ids = hfs$ids, cells = hfs$cells, 
+                                  fbl = fbl),
+                             function(size, date, ids, cells, fbl) {
+                               ss <- spread(r, spreadProb = 1, loci = cells, returnIndices = TRUE)
+                               out <- data.table(pixelID = ss$indices, ids = ss$id, prob = cells[ss$indices])
+                             })
           out <- annualFireBufferedDT[out, on = "pixelID"]
           out[, burnedClass := buffer]
         }
@@ -653,7 +650,8 @@ spreadFitRun <- function(sim)
         predLiklihood <- raster(r)
         predLiklihood[out$pixelID] <- predictedLiklihood
         predLiklihood <- crop(predLiklihood, ex)
-        spIgnits <- SpatialPoints(coords = xyFromCell(r, loci[36]))
+        browser()
+        spIgnits <- SpatialPoints(coords = raster::xyFromCell(r, loci[36]))
         spIgnits <- buffer(spIgnits, width = 5000)
         spIgnits <- crop(spIgnits, ex)
         clearPlot(); Plot(actualFire, predictedFireProb, predLiklihood, spreadProbMap)
@@ -663,43 +661,9 @@ spreadFitRun <- function(sim)
         Plot(predLiklihood, cols = "RdYlGn", new = TRUE, legendRange = range(round(predLiklihood[], 0), na.rm = TRUE))
         
       }
-      
-    }
-    
-    val <- DE2 %>% `[[` ("optim") %>% `[[` ("bestmem")
-    bestFit <- DE2$optim$bestval
-    
-    terms <- terms(formula)
-    sim$fireSense_SpreadFitted <- list(
-      formula = P(sim)$formula,
-      coef = setNames(
-        val,
-        nm = c(
-          # "d", 
-          "a", "b", "g",
-          if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-          attr(terms, "term.labels")
-        )
-      ),
-      bestFit = bestFit
-    )
-    
-    class(sim$fireSense_SpreadFitted) <- "fireSense_SpreadFit"
-  }
-  
-  invisible(sim)
-}
-
-spreadFitSave <- function(sim)
-{
-  browser()
-  moduleName <- current(sim)$moduleName
-  timeUnit <- timeunit(sim)
-  currentTime <- time(sim, timeUnit)
-  
-  saveRDS(
-    sim$fireSense_SpreadFitted,
-    file = file.path(paths(sim)$out, paste0("fireSense_SpreadFitted_", timeUnit, currentTime, ".rds"))
+    },
+    warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
+                  "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
   
   invisible(sim)
@@ -778,10 +742,6 @@ spreadFitSave <- function(sim)
   if (!suppliedElsewhere("firePolys", sim)){
     sim$firePolys <- Cache(getFirePolygons, years = P(sim)$fireYears,
                            studyArea = aggregate(sim$studyArea),
-                           # rasterToMatch = sim$flammableRTM,
-                           # cacheId = "905a9bf194245088",
-                           useCloud = P(sim)$useCloud_DE,
-                           cloudFolderID = P(sim)$cloudFolderID_DE,
                            pathInputs = Paths$inputPath, userTags = paste0("years:", range(P(sim)$fireYears)))
     # THere are duplicate NFIREID
     sim$firePolys <- Cache(lapply, sim$firePolys, function(x) {
@@ -790,7 +750,7 @@ spreadFitSave <- function(sim)
     })
   }
   if (isTRUE(P(sim)$useCentroids)) {
-    if (!suppliedElsewhere("polyCentroids", sim)){
+    if (!suppliedElsewhere("firePoints", sim)){
       message("... preparing polyCentroids")
       yr <- min(P(sim)$fireYears)
       sim$firePoints <- Cache(mclapply, X = sim$firePolys, 
@@ -799,60 +759,31 @@ spreadFitSave <- function(sim)
                                    print(yr)
                                    ras <- X
                                    ras$ID <- 1:NROW(ras)
-                                   # cent <- sf::st_centroid(sf::st_as_sf(ras), of_largest_polygon = TRUE)
                                    centCoords <- rgeos::gCentroid(ras, byid = TRUE)
                                    cent <- SpatialPointsDataFrame(centCoords, 
                                                                   as.data.frame(ras))
-                                   # cent <- as(cent, "Spatial")
-                                   # cent <- rgeos::gCentroid(ras, byid = TRUE)
                                    yr <<- yr + 1
                                    return(cent)
                                  },
-                              omitArgs = c("mc.cores"))
+                              userTags = c("what:polyCentroids", "forWhat:fireSense_SpreadFit"),
+                              omitArgs = c("userTags", "mc.cores", "useCloud", "cloudFolderID"))
       names(sim$firePoints) <- names(sim$firePolys)
     }
   } else {
     
     if (!suppliedElsewhere("firePoints", sim)){
-      
-      # 1. To get the origin of the fire:
-      # source(file.path(getwd(), "functions/getFirePoints_NFDB.R"))
-      fireLocationsPoints <- Cache(getFirePoints_NFDB,
+      sim$firePoints <- Cache(getFirePoints_NFDB,
                                    url = "http://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_pnt/current_version/NFDB_point.zip",
                                    studyArea = sim$studyArea,
                                    rasterToMatch = sim$rasterToMatch,
                                    NFDB_pointPath = file.path(Paths$inputPath, "NFDB_point"),
                                    years = P(sim)$fireYears,
-                                   
                                    userTags = c("what:firePoints", "forWhat:fireSense_SpreadFit"))
-      # fireLocationsPoints <- fireLocationsPoints[fireLocationsPoints$YEAR <= max(fireYears) &
-      #                                              fireLocationsPoints$YEAR >= min(fireYears),]
-      # browser()
-      # fireLocationsPoints <- fireLocationsPoints[, c("YEAR", "SIZE_HA")]
-      # fireLocationsPoints$fireSize <- asInteger(fireLocationsPoints$SIZE_HA / prod(res(rasterToMatch)) * 1e4)
-      # names(fireLocationsPoints) <- c("date", "size_ha", "size")
-      #
-      # # bigger than 1 pixel
-      # fireLocationsPoints <- fireLocationsPoints[fireLocationsPoints$size > 1,]
-      firePoints <- fireLocationsPoints
-      #
-      # #    rasterTemp <- setValues(pixelGroupMap2001, values = 1:ncell(pixelGroupMap2001))
-      crs(firePoints) <- crs(sim$rasterToMatch)
-      # sim$firePoints <- firePoints
-      sim$firePoints <- firePoints
+      crs(sim$firePoints) <- crs(sim$rasterToMatch)
       names(sim$firePoints) <- names(sim$firePolys)
     }
   }
   
   return(invisible(sim))
-}
-
-shrinkToBuffer <- function(annualDTx1000, whNotNA, fireBufferedListDT, ...) {
-  annualDTx1000 <- lapply(annualDTx1000, function(x) {
-    setDT(x)
-    set(x, NULL, "pixelID", whNotNA)
-    x
-  })
-  annualDTx1000 <- Map(merge, fireBufferedListDT, annualDTx1000, MoreArgs = list(by = "pixelID"))
 }
 
