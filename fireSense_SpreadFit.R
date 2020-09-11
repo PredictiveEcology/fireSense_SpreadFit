@@ -22,9 +22,10 @@ defineModule(sim, list(
                   "rgeos","future",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
-                  "PredictiveEcology/SpaDES.tools@allowOverlap (>=0.3.4.9002)"),
+                  "PredictiveEcology/SpaDES.tools@allowOverlap2 (>=0.3.4.9002)"),
   parameters = rbind(
-    defineParameter(name = "formula", class = "formula", default = NA,
+    defineParameter(name = "formula", class = "formula", 
+                    default = formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5),
                     desc = 'a formula describing the model to be fitted. Only
                     the RHS needs to be provided.'),
     # defineParameter(name = "data", class = "character",
