@@ -26,25 +26,15 @@ defineModule(sim, list(
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
                   "PredictiveEcology/SpaDES.tools@allowOverlap2 (>=0.3.4.9002)"),
   parameters = rbind(
-    defineParameter(name = "formula", class = "formula",
-                    default = formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5),
-                    desc = 'a formula describing the model to be fitted. Only
-                    the RHS needs to be provided.'),
-    defineParameter(name = "debugMode", class = "logical",
-                    default = FALSE,
+    defineParameter(name = "debugMode", class = "logical", default = FALSE,
                     desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
-    defineParameter(name = "cacheId_DE", class = "character",
-                    default = NULL,
-                    desc = "An optional character string representing a cacheId to recover from
-                    the Cache"),
-    defineParameter(name = "useCloud_DE", class = "logical",
-                    default = FALSE,
+    defineParameter(name = "cacheId_DE", class = "character", default = NULL,
+                    desc = "An optional character string representing a cacheId to recover from the Cache"),
+    defineParameter(name = "useCloud_DE", class = "logical", default = FALSE,
                     desc = "Passed to useCloud in the Cache(DEoptim...) call"),
-    defineParameter(name = "cloudFolderID_DE", class = "character",
-                    default = NULL,
+    defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
                     desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
-    defineParameter(name = "fireYears", class = "integer",
-                    default = 1991:2017,
+    defineParameter(name = "fireYears", class = "integer", default = 1991:2017,
                     desc = "A numeric vector indicating which years should be extracted
                     from the fire databases to use for fitting"),
     defineParameter(name = "minBufferSize", class = "numeric", default = 1000,
@@ -55,10 +45,10 @@ defineModule(sim, list(
                                  "centroids (TRUE) or at the ignition points in the",
                                  "sim$firePoints")),
     defineParameter(name = "lower", class = "numeric", default = NA,
-                    desc = "see `?DEoptim`. Lower limits for the logistic function
-                    parameters (lower bound, upper bound, slope, asymmetry)
-                    and the statistical model parameters (in the order they
-                    appear in the formula)."),
+                    desc = paste("see `?DEoptim`. Lower limits for the logistic function",
+                                 "parameters (lower bound, upper bound, slope, asymmetry)",
+                                 "and the statistical model parameters (in the order they",
+                                 "appear in the formula).")),
     defineParameter(name = "upper", class = "numeric", default = NA,
                     desc = "see `?DEoptim`. Upper limits for the logistic function
                     parameters (lower bound, upper bound, slope, asymmetry)
@@ -100,10 +90,9 @@ defineModule(sim, list(
                                   "this allows covariate estimates to be on the same scale",
                                   "and will likely speed up convergence")),
     defineParameter(name = "trace", class = "numeric", default = 0,
-                    desc = "non-negative integer. If > 0, tracing information on
-                    the progress of the optimization are printed every
-                    `trace` iteration. Default is 0, which turns off
-                    tracing."),
+                    desc = paste("non-negative integer. If > 0, tracing information on",
+                                 "the progress of the optimization are printed every",
+                                 "`trace` iteration. Default is 0, which turns off tracing.")),
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start
                     time of the simulation."),
@@ -130,8 +119,7 @@ defineModule(sim, list(
     defineParameter(name = "parallelMachinesIP", class = "character", default = NULL,
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
                                   "IP's addresses provided. It will devide the cores between all",
-                                  "machines as equaly as possible. Currently, supports only ",
-                                  "2 machines")),
+                                  "machines as equaly as possible. Currently, supports only 2 machines")),
     defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
                     desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
                                   "and will only load the latest uploaded version of the DEOptim object")),
