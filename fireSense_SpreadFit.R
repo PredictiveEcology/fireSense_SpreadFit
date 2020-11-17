@@ -137,6 +137,9 @@ defineModule(sim, list(
                  desc = paste0("List of years of SpatialPolygonsDataFrame representing fire polygons.",
                                "This defaults to https://cwfis.cfs.nrcan.gc.ca/downloads/nbac/ and uses ",
                                "the most current versions of the database (Nov or Sept 2019)")),
+    expectsInput(objectName = 'fireSense_formula', objectClass = 'formula',
+                 desc = paste0('a formula that contains the annual and non-annual covariates',
+                               'e.g. ~ 0 + MDC + vegPC1 + vegPC2')),
     expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
                  desc = "list of years of SpatialPoints representing fire polygon's centroids."),
     expectsInput(objectName = 'fireSense_annualFitCovariates', objectClass = 'data.table',
@@ -171,10 +174,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # Checking parameters
       stopifnot(P(sim)$trace >= 0)
       stopifnot(P(sim)$cores >= 0)
-      if (!is(P(sim)$formula, "formula")) {
-        params(sim)$fireSense_SpreadFit$formula <- formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5)
-        warning(moduleName, "> The supplied object for the 'formula' parameter is not of class formula. Replacing by default",
-                immediate. = TRUE)}
 
       if (anyNA(P(sim)$lower))
         stop(moduleName, "> The 'lower' parameter should be supplied.")
@@ -182,13 +181,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (anyNA(P(sim)$upper))
         stop(moduleName, "> The 'upper' parameter should be supplied.")
 
-      ####################### Assertions class 5
-      # TODO
-      # browser()
-      # Wherever we have class 5 pixels, these are 1 and the sum of the other classes == 0
-      # All class5 pixels are either 1 or 0
-      #
-      #######################
       if (P(sim)$onlyLoadDEOptim) {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
       } else {
@@ -199,56 +191,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
     },
     run = {
-      #TODO you will have to build formula
-      # params(sim)$fireSense_SpreadFit$formula <- formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5)
-      ###################################################
+
       # Create buffers ##################################
-      ###################################################
-
-      # Extract from sim$dataFireSense_SpreadFit the annualStacks and
-      # nonAnnualStacks
-      annualStacks <- sim$dataFireSense_SpreadFit[["annualStacks"]]
-      nonAnnualStacks <- sim$dataFireSense_SpreadFit[["nonAnnualStacks"]]
-
-      ###################################################
-      # Convert SpatialPointsDataFrame to data.table --> much more compact
-      ###################################################
-
-      lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
 
       ###################################################
       # re-add pixelID to objects for join with fireBufferedListDT
       ###################################################
-      st1 <- system.time(annualDTx1000 <- Cache(shrinkToBuffer, annualDTx1000,
-                                                whNotNA, fireBufferedListDT,
-                                                omitArgs = "annualDTx1000",
-                                                .hash = hash,
-                                                userTags = c("module:fireSense_Spreadfit",
-                                                             "objectName:annualDTx1000",
-                                                             "goal:shrinkToBuffer")))
-
-      ###################################################
-      # non Annual data --> use name of each list element to assign to "which year"
-      ###################################################
-
-      ##########################################################################
-      # Covariate rescaling -- don't do here, but determine the ranges of each #
-      #   variable --> these ranges will be passed into objfun and used in     #
-      #   rescaling there                                                      #
-      ##########################################################################
-
-      if (P(sim)$rescaleAll) {
-        nonAnnRescales <- rbindlist(nonAnnualDTx1000)
-        vals <- setdiff(colnames(nonAnnRescales), "pixelID")
-        covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
-
-        annRescales <- rbindlist(annualDTx1000)
-        vals <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
-        covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
-        sim$covMinMax <- cbind(covMinMax1, covMinMax2)
-      } else {
-        sim$covMinMax <- NULL
-      }
 
       # NPar <- length(P(sim)$lower)
       # NP <- NPar * 10
@@ -274,17 +222,19 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       #   purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 345))
       # ))
 
+
       # This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
         runSpreadWithoutDEoptim(sim)
         } else {
+
         ####################################################################
         # Final preparations of objects for .objfun
         ####################################################################
-
+        lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
         landscape <- sim$flammableRTM
-        annualDTx1000 <- lapply(annualDTx1000, setDF)
-        nonAnnualDTx1000 <- lapply(nonAnnualDTx1000, setDF)
+        annualDTx1000 <- lapply(sim$fireSense_annualFitCovariates, setDF)
+        nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualFitCovariates, setDF)
         fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
         historicalFires <- lapply(lociList, setDF)
 
