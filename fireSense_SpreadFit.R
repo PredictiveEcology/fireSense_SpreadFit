@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
-                  "PredictiveEcology/SpaDES.tools@allowOverlap2 (>=0.3.4.9002)"),
+                  "PredictiveEcology/SpaDES.tools@development (>=0.3.4.9002)"),
   parameters = rbind(
     defineParameter(name = "debugMode", class = "logical", default = FALSE,
                     desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
@@ -34,16 +34,6 @@ defineModule(sim, list(
                     desc = "Passed to useCloud in the Cache(DEoptim...) call"),
     defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
                     desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
-    defineParameter(name = "fireYears", class = "integer", default = 1991:2017,
-                    desc = "A numeric vector indicating which years should be extracted
-                    from the fire databases to use for fitting"),
-    defineParameter(name = "minBufferSize", class = "numeric", default = 1000,
-                    desc = paste("Minimum size of buffer and nonbuffer. This is imposed",
-                                 "after multiplier on the bufferToArea fn")),
-    defineParameter(name = "useCentroids", class = "logical", default = TRUE,
-                    desc = paste("Should fire ignitions start at the sim$firePolygons",
-                                 "centroids (TRUE) or at the ignition points in the",
-                                 "sim$firePoints")),
     defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = paste("see `?DEoptim`. Lower limits for the logistic function",
                                  "parameters (lower bound, upper bound, slope, asymmetry)",
@@ -85,10 +75,6 @@ defineModule(sim, list(
                     cores to be used for parallel computation. The
                     default value is 1, which disables parallel
                     computing."),
-    defineParameter(name = "rescaleAll", class = "logical", default = TRUE,
-                    desc = paste0("Should all covariates to globally rescaled from 0 to 1;",
-                                  "this allows covariate estimates to be on the same scale",
-                                  "and will likely speed up convergence")),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = paste("non-negative integer. If > 0, tracing information on",
                                  "the progress of the optimization are printed every",
@@ -142,9 +128,9 @@ defineModule(sim, list(
                                'e.g. ~ 0 + MDC + vegPC1 + vegPC2')),
     expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
                  desc = "list of years of SpatialPoints representing fire polygon's centroids."),
-    expectsInput(objectName = 'fireSense_annualFitCovariates', objectClass = 'data.table',
+    expectsInput(objectName = 'fireSense_annualSpreadFitCovariates', objectClass = 'data.table',
                  desc = 'table of climate PCA components, burn status, polyID, and pixelID'),
-    expectsInput(objectName = 'fireSense_nonAnnualFitCovariates', objectClass = 'data.table',
+    expectsInput(objectName = 'fireSense_nonAnnualSpreadFitCovariates', objectClass = 'data.table',
                  desc = 'table of veg PCA components, burn status, polyID, and pixelID'),
     expectsInput(objectName = "studyArea", objectClass = "SpatialPolygonDataFrame",
                  desc = "Study area for the prediction. Defaults to NWT",
@@ -232,9 +218,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         # Final preparations of objects for .objfun
         ####################################################################
         lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
+
         landscape <- sim$flammableRTM
-        annualDTx1000 <- lapply(sim$fireSense_annualFitCovariates, setDF)
-        nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualFitCovariates, setDF)
+        annualDTx1000 <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
+        nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
         fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
         historicalFires <- lapply(lociList, setDF)
 
@@ -253,7 +240,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                     cachePath = cachePath(sim),
                     lower = P(sim)$lower,
                     upper = P(sim)$upper,
-                    formula = P(sim)$formula,
+                    formula = sim$fireSense_formula,
                     covMinMax = sim$covMinMax,
                     # tests = c("mad", "SNLL_FS"),
                     tests = c("SNLL_FS"),
@@ -326,16 +313,16 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       } else {
         sim$DE
       }
-      valAverage <- DE2 %>% `[[` ("member") %>% `[[` ("bestmemit") %>%
+      valAverage <- DE2 %>% `[[`("member") %>% `[[`("bestmemit") %>%
         apply(MARGIN = 2, FUN = mean)
-      valSD <- DE2 %>% `[[` ("member") %>% `[[` ("bestmemit") %>%
+      valSD <- DE2 %>% `[[`("member") %>% `[[`("bestmemit") %>%
         apply(MARGIN = 2, FUN = sd)
-      valBest <- DE2 %>% `[[` ("optim") %>% `[[` ("bestmem")
+      valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
       bestFit <- DE2$optim$bestval
       terms <- terms(P(sim)$formula)
       # Identifying the number of parameters of the logistic function and names
-      nParsLogistic <- length(P(sim)$lower)-length(attributes(terms)[["term.labels"]])
-      if (nParsLogistic == 5){
+      nParsLogistic <- length(P(sim)$lower) - length(attributes(terms)[["term.labels"]])
+      if (nParsLogistic == 5) {
         nms <- c("inflectionPoint1", "inflectionPoint2",
                  "maxAsymptote", "hillSlope1", "hillSlope2")
       } else if (nParsLogistic == 4) {
@@ -352,7 +339,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # GitHub. Retrieved June 11, 2020.
 
       sim$fireSense_SpreadFitted <- list(
-        formula = P(sim)$formula,
+        formula = sim$fireSense_formula,
         bestCoef = setNames(valBest,
                             nm = c(nms,
                                    if (attr(terms, "intercept") != 0) "Intercept" else NULL,
@@ -485,18 +472,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 .inputObjects <- function(sim) {
 
 
-  if (length(P(sim)$parallelMachinesIP) > 1){
-    warning("Currently, only 2 machines (local and one more) can ",
-            "be use to parallelize this module. Only first one will be used",
-            immediate. = TRUE)
-    params(sim)$parallelMachinesIP <- P(sim)$parallelMachinesIP[1]
-  }
-
   # cloudFolderID <- "https://drive.google.com/open?id=1PoEkOkg_ixnAdDqqTQcun77nUvkEHDc0"
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
-  if (!suppliedElsewhere(object = "studyArea", sim = sim)){
+  if (!suppliedElsewhere(object = "studyArea", sim = sim)) {
     sim$studyArea <- Cache(prepInputs,
                            url = extractURL("studyArea"),
                            destinationPath = dataPath(sim),
@@ -504,7 +484,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                            omitArgs = c("destinationPath", "cloudFolderID"))
   }
 
-  if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)){
+  if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)) {
     sim$rasterToMatch <- Cache(prepInputs, url = extractURL("rasterToMatch"),
                                studyArea = sim$studyArea,
                                targetFile = "RTM.tif", destinationPath = dataPath(sim),
@@ -513,89 +493,14 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                             "useCloud", "overwrite", "filename2"))
   }
 
-  if (!suppliedElsewhere("flammableRTM", sim)){
-    waterRaster <- Cache(prepInputsLayers_DUCKS, destinationPath = dataPath(sim),
-                         studyArea = sim$studyArea, lccLayer = P(sim)$baseLayer,
-                         rasterToMatch = sim$rasterToMatch,
-                         userTags = c("objectName:wetLCC"))
-
-    waterVals <- raster::getValues(waterRaster) # Uplands = 3, Water = 1, Wetlands = 2, so 2 and 3 to NA
-    waterVals[!is.na(waterVals) & waterVals != 1] <- NA
-    waterRaster <- raster::setValues(waterRaster, waterVals)
-
-    rstLCC <- Cache(prepInputs,
-                    targetFile = file.path(dPath, "LCC2005_V1_4a.tif"),
-                    archive = asPath("LandCoverOfCanada2005_V1_4.zip"),
-                    url = paste0("ftp://ftp.ccrs.nrcan.gc.ca/ad/NLCCLandCover/",
-                                 "LandcoverCanada2005_250m/LandCoverOfCanada2005_V1_4.zip"),
-                    destinationPath = dPath,
-                    studyArea = sim$studyArea,
-                    rasterToMatch = sim$rasterToMatch,
-                    maskWithRTM = TRUE,
-                    method = "bilinear",
-                    datatype = "INT2U",
-                    filename2 = TRUE, overwrite = TRUE,
-                    userTags = c("prepInputsrstLCC_rtm", currentModule(sim)),
-                    omitArgs = c("destinationPath", "targetFile", "userTags"))
-
-    # Ice/snow = 39
-    # Water (LCC05) = 37:38
-    # Rocks = 33
-    # Urban = 36
-
-    nonFlammClass <- c(33, 36:39)
-    flammableRTM <- sim$rasterToMatch
-    # Remove LCC non flammable classes first
-    flammableRTM[rstLCC[] %in% nonFlammClass] <- NA
-    # Remove more detailed water from DUCKS layer
-    flammableRTM[waterRaster[] == 1] <- NA
-    sim$flammableRTM <- flammableRTM
+  if (!suppliedElsewhere("flammableRTM", sim)) {
+       rstLCC <- prepInputsLCC(destinationPath = tempdir(),
+                           rasterToMatch = sim$rasterToMatch)
+       sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
+                                                  mask = sim$rasterToMatch,
+                                                  filename2 = NULL)
   }
 
-  if (!suppliedElsewhere("firePolys", sim)){
-    sim$firePolys <- Cache(getFirePolygons, years = P(sim)$fireYears,
-                           studyArea = aggregate(sim$studyArea),
-                           pathInputs = Paths$inputPath, userTags = paste0("years:", range(P(sim)$fireYears)))
-    # THere are duplicate NFIREID
-    sim$firePolys <- Cache(lapply, sim$firePolys, function(x) {
-      x <- spTransform(x, crs(sim$studyArea))
-      x <- x[!duplicated(x$NFIREID),]
-    })
-  }
-  if (isTRUE(P(sim)$useCentroids)) {
-    if (!suppliedElsewhere("firePoints", sim)){
-      message("... preparing polyCentroids")
-      yr <- min(P(sim)$fireYears)
-      sim$firePoints <- Cache(mclapply, X = sim$firePolys,
-                              mc.cores = pemisc::optimalClusterNum(2e3, maxNumClusters = length(sim$firePolys)),
-                                 function(X){
-                                   print(yr)
-                                   ras <- X
-                                   ras$ID <- 1:NROW(ras)
-                                   centCoords <- rgeos::gCentroid(ras, byid = TRUE)
-                                   cent <- SpatialPointsDataFrame(centCoords,
-                                                                  as.data.frame(ras))
-                                   yr <<- yr + 1
-                                   return(cent)
-                                 },
-                              userTags = c("what:polyCentroids", "forWhat:fireSense_SpreadFit"),
-                              omitArgs = c("userTags", "mc.cores", "useCloud", "cloudFolderID"))
-      names(sim$firePoints) <- names(sim$firePolys)
-    }
-  } else {
-
-    if (!suppliedElsewhere("firePoints", sim)){
-      sim$firePoints <- Cache(getFirePoints_NFDB,
-                                   url = "http://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_pnt/current_version/NFDB_point.zip",
-                                   studyArea = sim$studyArea,
-                                   rasterToMatch = sim$rasterToMatch,
-                                   NFDB_pointPath = file.path(Paths$inputPath, "NFDB_point"),
-                                   years = P(sim)$fireYears,
-                                   userTags = c("what:firePoints", "forWhat:fireSense_SpreadFit"))
-      crs(sim$firePoints) <- crs(sim$rasterToMatch)
-      names(sim$firePoints) <- names(sim$firePolys)
-    }
-  }
 
   return(invisible(sim))
 }
