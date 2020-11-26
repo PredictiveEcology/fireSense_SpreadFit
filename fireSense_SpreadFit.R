@@ -109,6 +109,8 @@ defineModule(sim, list(
     defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
                     desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
                                   "and will only load the latest uploaded version of the DEOptim object")),
+    defineParameter(name = "rescaleAll", class = "logical", TRUE, NA, NA,
+                    'rescale covariates for DEOptim'),
     defineParameter(name = "urlDEOptimObject", class = "character",
                     default = paste0("https://drive.google.com/file/d/",
                                      "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
@@ -215,6 +217,19 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       ####################################################################
       # Final preparations of objects for .objfun
       ####################################################################
+      browser()
+      if (P(sim)$rescaleAll) {
+        nonAnnRescales <- rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates)
+        vals <- setdiff(colnames(nonAnnRescales), "pixelID")
+        covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
+
+        annRescales <- rbindlist(sim$fireSense_annualSpreadFitCovariates)
+        vals <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
+        covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+        sim$covMinMax <- cbind(covMinMax1, covMinMax2)
+      } else {
+        sim$covMinMax <- NULL
+      }
 
       sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
       landscape <- sim$flammableRTM
@@ -224,10 +239,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       historicalFires <- lapply(sim$lociList, setDF)
 
 
-      # This below is to test the code without running DEOptim
+    # This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
         sim$DE <- runSpreadWithoutDEoptim(sim)
       } else {
+        browser()
         # pdf("parameter plots DEoptim 300 iterations.pdf")
         sim$DE <- Cache(runDEoptim,
                     landscape = landscape,
