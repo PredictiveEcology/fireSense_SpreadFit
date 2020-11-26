@@ -117,6 +117,8 @@ defineModule(sim, list(
                                   " from the logistic2p"))
   ),
   inputObjects = rbind(
+    expectsInput(objectName = 'fireBufferedListDT', objectClass = 'list',
+                 desc = 'list of data.tables with fire id, pixelID, and buffer status'),
     expectsInput(objectName = "firePoints", objectClass = "SpatialPointsDataFrame",
           desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
     expectsInput(objectName = "firePolys", objectClass = "list", sourceURL = NA_character_,
@@ -145,7 +147,8 @@ defineModule(sim, list(
                   desc = "A fitted model object of class fireSense_SpreadFit."),
     createsOutput(objectName = "covMinMax", objectClass = "data.table",
                   desc = "Matrix of covariates min and max"),
-    createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object")
+    createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object"),
+    createsOutput(objectName = 'lociList', objectClass = 'list', desc = 'list of fire locs')
   )
 ))
 
@@ -209,22 +212,22 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # ))
 
 
+      ####################################################################
+      # Final preparations of objects for .objfun
+      ####################################################################
+
+      sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
+      landscape <- sim$flammableRTM
+      annualDTx1000 <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
+      nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
+      fireBufferedListDT <- lapply(sim$fireBufferedListDT, setDF)
+      historicalFires <- lapply(sim$lociList, setDF)
+
+
       # This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
-        runSpreadWithoutDEoptim(sim)
-        } else {
-
-        ####################################################################
-        # Final preparations of objects for .objfun
-        ####################################################################
-        lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
-
-        landscape <- sim$flammableRTM
-        annualDTx1000 <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
-        nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
-        fireBufferedListDT <- lapply(fireBufferedListDT, setDF)
-        historicalFires <- lapply(lociList, setDF)
-
+        sim$DE <- runSpreadWithoutDEoptim(sim)
+      } else {
         # pdf("parameter plots DEoptim 300 iterations.pdf")
         sim$DE <- Cache(runDEoptim,
                     landscape = landscape,
@@ -240,7 +243,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                     cachePath = cachePath(sim),
                     lower = P(sim)$lower,
                     upper = P(sim)$upper,
-                    formula = sim$fireSense_formula,
+                    FS_formula = sim$fireSense_formula,
                     covMinMax = sim$covMinMax,
                     # tests = c("mad", "SNLL_FS"),
                     tests = c("SNLL_FS"),
@@ -287,7 +290,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          nonAnnualDTx1000 = nonAnnualDTx1000,
                          fireBufferedListDT = fbl,
                          historicalFires = hfs,
-                         formula = P(sim)$formula, #loci, sizes,
+                         FS_formula = P(sim)$formula, #loci, sizes,
                          covMinMax = sim$covMinMax,
                          maxFireSpread = 0.28, # 0.257 makes gigantic fires
                          minFireSize = 2,
