@@ -260,6 +260,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                     upper = P(sim)$upper,
                     FS_formula = sim$fireSense_formula,
                     covMinMax = sim$covMinMax,
+                    objFunCoresInternal = P(sim)$objFunCoresInternal,
                     # tests = c("mad", "SNLL_FS"),
                     tests = c("SNLL_FS"),
                     maxFireSpread = P(sim)$maxFireSpread,
