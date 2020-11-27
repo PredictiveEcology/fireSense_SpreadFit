@@ -217,7 +217,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       ####################################################################
       # Final preparations of objects for .objfun
       ####################################################################
-      browser()
       if (P(sim)$rescaleAll) {
         nonAnnRescales <- rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates)
         vals <- setdiff(colnames(nonAnnRescales), "pixelID")
@@ -243,7 +242,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (isTRUE(P(sim)$debugMode)) {
         sim$DE <- runSpreadWithoutDEoptim(sim)
       } else {
-        browser()
         # pdf("parameter plots DEoptim 300 iterations.pdf")
         sim$DE <- Cache(runDEoptim,
                     landscape = landscape,
@@ -253,6 +251,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                     historicalFires = historicalFires,
                     itermax = P(sim)$iterDEoptim,
                     trace = P(sim)$trace,
+                    initialpop = P(sim)$initialpop,
                     strategy = P(sim)$strategy,
                     cores = P(sim)$cores,
                     logPath = outputPath(sim),
