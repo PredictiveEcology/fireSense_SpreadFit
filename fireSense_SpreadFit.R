@@ -123,7 +123,7 @@ defineModule(sim, list(
                  desc = 'list of data.tables with fire id, pixelID, and buffer status'),
     expectsInput(objectName = "firePoints", objectClass = "SpatialPointsDataFrame",
           desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
-    expectsInput(objectName = 'fireSense_formula', objectClass = 'formula',
+    expectsInput(objectName = 'fireSense_spreadFormula', objectClass = 'formula',
                  desc = paste0('a formula that contains the annual and non-annual covariates',
                                'e.g. ~ 0 + MDC + vegPC1 + vegPC2')),
     expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
@@ -254,7 +254,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                     cachePath = cachePath(sim),
                     lower = P(sim)$lower,
                     upper = P(sim)$upper,
-                    FS_formula = sim$fireSense_formula,
+                    FS_formula = sim$fireSense_spreadFormula,
                     covMinMax = sim$covMinMax,
                     objFunCoresInternal = P(sim)$objFunCoresInternal,
                     # tests = c("mad", "SNLL_FS"),
@@ -354,7 +354,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # GitHub. Retrieved June 11, 2020.
 
       sim$fireSense_SpreadFitted <- list(
-        formula = sim$fireSense_formula,
+        formula = sim$fireSense_spreadFormula,
         bestCoef = setNames(valBest,
                             nm = c(nms,
                                    if (attr(terms, "intercept") != 0) "Intercept" else NULL,
