@@ -11,6 +11,24 @@ runSpreadWithoutDEoptim <- function(sim) {
     set.seed(seed)
     pars <- lapply(1:96, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
     # print(pars)
+    #lapply is easier to debug but mcmapply faster
+    # st1 <- system.time(
+    #   a <- lapply(pars,
+    #               FUN = .objfun,
+    #               FS_formula = sim$fireSense_formula, #loci = loci,
+    #               landscape = sim$flammableRTM,
+    #               annualDTx1000 = lapply(sim$fireSense_annualSpreadFitCovariates, setDF),
+    #               nonAnnualDTx1000 = lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF),
+    #               fireBufferedListDT = lapply(sim$fireBufferedListDT, setDF),
+    #               historicalFires = lapply(sim$lociList, setDF),
+    #               tests = c("SNLL_FS"),
+    #               #tests = c("SNLL_FS"),
+    #               covMinMax = sim$covMinMax,
+    #               Nreps = P(sim)$objfunFireReps,
+    #               maxFireSpread = P(sim)$maxFireSpread,
+    #               verbose = TRUE
+    #   )
+    # )
     st1 <- system.time(
       a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfun,
                     mc.preschedule = FALSE,
