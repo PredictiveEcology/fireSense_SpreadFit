@@ -121,7 +121,7 @@ defineModule(sim, list(
   inputObjects = rbind(
     expectsInput(objectName = 'fireBufferedListDT', objectClass = 'list',
                  desc = 'list of data.tables with fire id, pixelID, and buffer status'),
-    expectsInput(objectName = "firePoints", objectClass = "SpatialPointsDataFrame",
+    expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
           desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
     expectsInput(objectName = 'fireSense_spreadFormula', objectClass = 'formula',
                  desc = paste0('a formula that contains the annual and non-annual covariates',
@@ -226,7 +226,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$covMinMax <- NULL
       }
 
-      sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$firePoints)
+      sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
       landscape <- sim$flammableRTM
       annualDTx1000 <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
       nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
