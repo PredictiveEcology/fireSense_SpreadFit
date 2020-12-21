@@ -26,64 +26,11 @@ defineModule(sim, list(
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.4.9002)"),
   parameters = rbind(
-    defineParameter(name = "debugMode", class = "logical", default = FALSE,
-                    desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
-    defineParameter(name = "cacheId_DE", class = "character", default = NULL,
-                    desc = "An optional character string representing a cacheId to recover from the Cache"),
-    defineParameter(name = "useCloud_DE", class = "logical", default = FALSE,
-                    desc = "Passed to useCloud in the Cache(DEoptim...) call"),
-    defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
-                    desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
-    defineParameter(name = "lower", class = "numeric", default = NA,
-                    desc = paste("see `?DEoptim`. Lower limits for the logistic function",
-                                 "parameters (lower bound, upper bound, slope, asymmetry)",
-                                 "and the statistical model parameters (in the order they",
-                                 "appear in the formula).")),
-    defineParameter(name = "upper", class = "numeric", default = NA,
-                    desc = "see `?DEoptim`. Upper limits for the logistic function
-                    parameters (lower bound, upper bound, slope, asymmetry)
-                    and the statistical model parameters (in the order they
-                    appear in the formula)."),
-    defineParameter(name = "initialpop", class = "numeric", default = NULL,
-                    desc = paste("A numeric matrix of dimensions NCOL = length(lower)",
-                                 "and NROW = NP. This will be passed into DEoptim",
-                                 "through control$initialpop = P(sim)$initialpop if it is",
-                                 "not NULL")),
-    defineParameter(name = "objfunFireReps", class = "integer", default = 100,
-                    desc = "integer defining the number of replicates the objective function
-                    will attempt each fire. Since the default approach is
-                    using EnvStats::demp, it should be at least 100 to get a
-                    smooth distribution for a likelihood"),
-    defineParameter(name = "objFunCoresInternal", class = "integer", default = 1L,
-                    desc = "integer defining the number of cores to pass to mcmapply(mc.cores = ...)
-                    This will fork this many to do the years loop internally. This would
-                    be in addition to P(sim)$cores and is effecively a multiplier. The computer
-                    needs to have P(sim)$cores * objFunCoresInternal threads or it will stall"),
-    defineParameter(name = "iterDEoptim", class = "integer", default = 500,
-                    desc = "integer defining the maximum number of iterations
-                    allowed (DEoptim optimizer). Default is 500."),
-    defineParameter(name = "NP", class = "integer", default = NULL,
-                    desc = "Number of Populations. See DEoptim.control"),
-    defineParameter(name = "iterStep", class = "integer", default = 25,
-                    desc = "Passed to runDEoptim"),
-    defineParameter(name = "strategy", class = "integer", default = 6,
-                    desc = "Passed to DEoptim.control"),
-    defineParameter(name = "visualizeDEoptim", class = "logical", default = TRUE,
-                    desc = "Passed to runDEoptim"),
-    defineParameter(name = "cores", class = "integer", default = 1,
-                    desc = "non-negative integer. Defines the number of logical
-                    cores to be used for parallel computation. The
-                    default value is 1, which disables parallel
-                    computing."),
-    defineParameter(name = "trace", class = "numeric", default = 0,
-                    desc = paste("non-negative integer. If > 0, tracing information on",
-                                 "the progress of the optimization are printed every",
-                                 "`trace` iteration. Default is 0, which turns off tracing.")),
+    defineParameter(name = ".plot", class = "logical", default = FALSE,
+                    desc = "Should outputs be plotted?"),
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start
                     time of the simulation."),
-    defineParameter(name = ".plot", class = "logical", default = FALSE,
-                    desc = "Should outputs be plotted?"),
     defineParameter(name = ".runInterval", class = "numeric", default = NA,
                     desc = paste0("optional. Interval between two runs of this module,",
                                   "expressed in units of simulation time. By default, NA, which ",
@@ -96,57 +43,111 @@ defineModule(sim, list(
                     desc = paste0("Should this entire module be run",
                                   " with caching activated? This is generally intended for data-type ",
                                   "modules, where stochasticity and time are not relevant")),
-    defineParameter(name = "verbose", class = "logical", default = FALSE,
-                    desc = paste0("optional. Should it calculate and print median of spread ",
-                                  "Probability during calculations?")),
+    defineParameter(name = "cacheId_DE", class = "character", default = NULL,
+                    desc = "An optional character string representing a cacheId to recover from the Cache"),
+    defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
+                    desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
+    defineParameter(name = "cores", class = "integer", default = 1,
+                    desc = paste("non-negative integer.",
+                                 "Defines the number of logical cores to be used for parallel computation.",
+                                 "The default value is 1, which disables parallel computing.")),
+    defineParameter(name = "debugMode", class = "logical", default = FALSE,
+                    desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
+    defineParameter(name = "initialpop", class = "numeric", default = NULL,
+                    desc = paste("A numeric matrix of dimensions NCOL = length(lower)",
+                                 "and NROW = NP. This will be passed into DEoptim",
+                                 "through control$initialpop = P(sim)$initialpop if it is",
+                                 "not NULL")),
+    defineParameter(name = "iterDEoptim", class = "integer", default = 500,
+                    desc = "integer defining the maximum number of iterations
+                    allowed (DEoptim optimizer). Default is 500."),
+    defineParameter(name = "iterStep", class = "integer", default = 25,
+                    desc = "Passed to runDEoptim"),
+    defineParameter(name = "lower", class = "numeric", default = NA,
+                    desc = paste("see `?DEoptim`. Lower limits for the logistic function",
+                                 "parameters (lower bound, upper bound, slope, asymmetry)",
+                                 "and the statistical model parameters (in the order they",
+                                 "appear in the formula).")),
     defineParameter(name = "maxFireSpread", class = "numeric", default = 0.28,
                     desc = paste0("optional. Maximum fire spread average to be passed to the ",
                                   ".objFun for optimimzation. This puts an upper limit on spreadProb")),
+    defineParameter(name = "NP", class = "integer", default = NULL,
+                    desc = "Number of Populations. See DEoptim.control"),
+    defineParameter(name = "objFunCoresInternal", class = "integer", default = 1L,
+                    desc = "integer defining the number of cores to pass to mcmapply(mc.cores = ...)
+                    This will fork this many to do the years loop internally. This would
+                    be in addition to P(sim)$cores and is effecively a multiplier. The computer
+                    needs to have P(sim)$cores * objFunCoresInternal threads or it will stall"),
+    defineParameter(name = "objfunFireReps", class = "integer", default = 100,
+                    desc = "integer defining the number of replicates the objective function
+                    will attempt each fire. Since the default approach is
+                    using EnvStats::demp, it should be at least 100 to get a
+                    smooth distribution for a likelihood"),
+    defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
+                    desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
+                                  "and will only load the latest uploaded version of the DEOptim object")),
     defineParameter(name = "parallelMachinesIP", class = "character", default = NULL,
                     desc = paste0("optional. If not NULL, will try to create a cluster using the ",
                                   "IP's addresses provided. It will devide the cores between all",
                                   "machines as equaly as possible. Currently, supports only 2 machines")),
-    defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
-                    desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
-                                  "and will only load the latest uploaded version of the DEOptim object")),
     defineParameter(name = "rescaleAll", class = "logical", TRUE, NA, NA,
                     'rescale covariates for DEOptim'),
+    defineParameter(name = "strategy", class = "integer", default = 6,
+                    desc = "Passed to DEoptim.control"),
+    defineParameter(name = "trace", class = "numeric", default = 0,
+                    desc = paste("non-negative integer. If > 0, tracing information on",
+                                 "the progress of the optimization are printed every",
+                                 "`trace` iteration. Default is 0, which turns off tracing.")),
+    defineParameter(name = "upper", class = "numeric", default = NA,
+                    desc = "see `?DEoptim`. Upper limits for the logistic function
+                    parameters (lower bound, upper bound, slope, asymmetry)
+                    and the statistical model parameters (in the order they
+                    appear in the formula)."),
     defineParameter(name = "urlDEOptimObject", class = "character",
                     default = paste0("https://drive.google.com/file/d/",
                                      "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
                     desc = paste0("optional. If onlyLoadDEOptim == TRUE, you can pass the url to the  ",
                                   "DEOptim object. The default is the object from the run on 11JUN20",
-                                  " from the logistic2p"))
+                                  " from the logistic2p")),
+    defineParameter(name = "useCloud_DE", class = "logical", default = FALSE,
+                    desc = "Passed to useCloud in the Cache(DEoptim...) call"),
+    defineParameter(name = "verbose", class = "logical", default = FALSE,
+                    desc = paste0("optional. Should it calculate and print median of spread ",
+                                  "Probability during calculations?")),
+    defineParameter(name = "visualizeDEoptim", class = "logical", default = TRUE,
+                    desc = "Passed to runDEoptim")
   ),
   inputObjects = rbind(
-    expectsInput(objectName = 'fireBufferedListDT', objectClass = 'list',
-                 desc = 'list of data.tables with fire id, pixelID, and buffer status'),
-    expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
-          desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
-    expectsInput(objectName = 'fireSense_spreadFormula', objectClass = 'formula',
-                 desc = paste0('a formula that contains the annual and non-annual covariates',
-                               'e.g. ~ 0 + MDC + vegPC1 + vegPC2')),
-    expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
-                 desc = "list of years of SpatialPoints representing fire polygon's centroids."),
-    expectsInput(objectName = 'fireSense_annualSpreadFitCovariates', objectClass = 'data.table',
-                 desc = 'table of climate PCA components, burn status, polyID, and pixelID'),
-    expectsInput(objectName = 'fireSense_nonAnnualSpreadFitCovariates', objectClass = 'data.table',
-                 desc = 'table of veg PCA components, burn status, polyID, and pixelID'),
-    expectsInput(objectName = "studyArea", objectClass = "SpatialPolygonDataFrame",
-                 desc = "Study area for the prediction. Defaults to NWT",
-                 sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU"),
-    expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
-                 desc = 'template raster for study area'),
+    expectsInput(objectName = "fireBufferedListDT", objectClass = "list",
+                 desc = "list of data.tables with fire id, pixelID, and buffer status"),
     expectsInput(objectName = "flammableRTM", objectClass = "RasterLayer",
                  desc = paste0("RasterToMatch where non-flammable pixels (LCC05 %in% c(33,36:39)) ",
-                               "Defaults to NWT"), sourceURL = NA)),
+                               "Defaults to NWT"), sourceURL = NA),
+    expectsInput(objectName = "fireSense_annualSpreadFitCovariates", objectClass = "data.table",
+                 desc = "table of climate PCA components, burn status, polyID, and pixelID"),
+    expectsInput(objectName = "fireSense_nonAnnualSpreadFitCovariates", objectClass = "data.table",
+                 desc = "table of veg PCA components, burn status, polyID, and pixelID"),
+    expectsInput(objectName = "fireSense_spreadFormula", objectClass = "formula",
+                 desc = paste0("a formula that contains the annual and non-annual covariates",
+                               "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
+    expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
+                 desc = "list of years of SpatialPoints representing fire polygon's centroids."),
+    expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
+                 desc = "template raster for study area"),
+    expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
+                 desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
+    expectsInput(objectName = "studyArea", objectClass = "SpatialPolygonDataFrame",
+                 desc = "Study area for the prediction. Defaults to NWT",
+                 sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
+  ),
   outputObjects = rbind(
+    createsOutput(objectName = "covMinMax", objectClass = "data.table",
+                  desc = "data.table of covariates min and max"),
     createsOutput(objectName = "fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
                   desc = "A fitted model object of class fireSense_SpreadFit."),
-    createsOutput(objectName = "covMinMax", objectClass = "data.table",
-                  desc = "Matrix of covariates min and max"),
     createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object"),
-    createsOutput(objectName = 'lociList', objectClass = 'list', desc = 'list of fire locs')
+    createsOutput(objectName = "lociList", objectClass = "list", desc = "list of fire locs")
+
   )
 ))
 
@@ -178,7 +179,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
     },
     run = {
-
       # Create buffers ##################################
 
       ###################################################
@@ -211,7 +211,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
 
       ####################################################################
-      # Final preparations of objects for .objfun
+      # Final preparations of objects for objective function
       ####################################################################
       if (P(sim)$rescaleAll) {
         nonAnnRescales <- rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates)
@@ -233,39 +233,38 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       fireBufferedListDT <- lapply(sim$fireBufferedListDT, setDF)
       historicalFires <- lapply(sim$lociList, setDF)
 
-
-    # This below is to test the code without running DEOptim
+      ## This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
         sim$DE <- runSpreadWithoutDEoptim(sim)
       } else {
-        # pdf("parameter plots DEoptim 300 iterations.pdf")
+        # pdf("parameter_plots_DEoptim_300_iterations.pdf")
         sim$DE <- Cache(runDEoptim,
-                    landscape = landscape,
-                    annualDTx1000 = annualDTx1000,
-                    nonAnnualDTx1000 = nonAnnualDTx1000,
-                    fireBufferedListDT = fireBufferedListDT,
-                    historicalFires = historicalFires,
-                    itermax = P(sim)$iterDEoptim,
-                    trace = P(sim)$trace,
-                    initialpop = P(sim)$initialpop,
-                    strategy = P(sim)$strategy,
-                    cores = P(sim)$cores,
-                    logPath = outputPath(sim),
-                    cachePath = cachePath(sim),
-                    lower = P(sim)$lower,
-                    upper = P(sim)$upper,
-                    FS_formula = sim$fireSense_spreadFormula,
-                    covMinMax = sim$covMinMax,
-                    objFunCoresInternal = P(sim)$objFunCoresInternal,
-                    # tests = c("mad", "SNLL_FS"),
-                    tests = c("SNLL_FS"),
-                    maxFireSpread = P(sim)$maxFireSpread,
-                    Nreps = P(sim)$objfunFireReps,
-                    .verbose = P(sim)$verbose,
-                    visualizeDEoptim = P(sim)$visualizeDEoptim,
-                    cacheId = P(sim)$cacheId_DE,
-                    useCloud = P(sim)$useCloud_DE,
-                    cloudFolderID = P(sim)$cloudFolderID_DE # Cloud cache was being a problem
+                        landscape = landscape,
+                        annualDTx1000 = annualDTx1000,
+                        nonAnnualDTx1000 = nonAnnualDTx1000,
+                        fireBufferedListDT = fireBufferedListDT,
+                        historicalFires = historicalFires,
+                        itermax = P(sim)$iterDEoptim,
+                        trace = P(sim)$trace,
+                        initialpop = P(sim)$initialpop,
+                        strategy = P(sim)$strategy,
+                        cores = P(sim)$cores,
+                        logPath = outputPath(sim),
+                        cachePath = cachePath(sim),
+                        lower = P(sim)$lower,
+                        upper = P(sim)$upper,
+                        FS_formula = sim$fireSense_spreadFormula,
+                        covMinMax = sim$covMinMax,
+                        objFunCoresInternal = P(sim)$objFunCoresInternal,
+                        # tests = c("mad", "SNLL_FS"),
+                        tests = c("SNLL_FS"),
+                        maxFireSpread = P(sim)$maxFireSpread,
+                        Nreps = P(sim)$objfunFireReps,
+                        .verbose = P(sim)$verbose,
+                        visualizeDEoptim = P(sim)$visualizeDEoptim,
+                        cacheId = P(sim)$cacheId_DE,
+                        useCloud = P(sim)$useCloud_DE,
+                        cloudFolderID = P(sim)$cloudFolderID_DE # Cloud cache was being a problem
         )
 
         if (isTRUE(P(sim)$visualizeDEoptim)) {
@@ -277,7 +276,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           if (!isRstudioServer()) {
             dev.off()
           }
-
         }
 
         if (isTRUE(P(sim)$visualizeDEoptim)) {
@@ -317,10 +315,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     retrieveDEOptim = {
       sim$DE <- Cache(prepInputs, url = P(sim)$urlDEOptimObject,
-                  destinationPath = Paths$outputPath,
-                  userTags = c("What:shortcutDEOptim"),
-                  fun = "qs::qread")
-
+                      destinationPath = Paths$outputPath,
+                      userTags = c("What:shortcutDEOptim"),
+                      fun = "qs::qread")
     },
     makefireSense_SpreadFitted = {
       DE2 <- if (is(sim$DE, "list")) {
@@ -410,7 +407,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
               quick = TRUE)
           })
 
-
           out <- purrr::pmap(list(size = hfs$size, date = hfs$date,
                                   ids = hfs$ids, cells = hfs$cells,
                                   fbl = fbl),
@@ -448,11 +444,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         actualFire[out$pixelID] <- out$burnedClass
         actualFire <- crop(actualFire, ex)
         levels(actualFire) <- data.frame(ID = 0:2, class = c("unburned", "burned", "ignited"))
-        predictedLiklihood <- dbinom(prob = out$prob,
-                                     size = 1,
-                                     x = out$burned,
-                                     log = TRUE
-        )
+        predictedLiklihood <- dbinom(prob = out$prob, size = 1, x = out$burned, log = TRUE)
         spreadProbMap <- raster(r)
         spreadProbMap[out$pixelID] <- cells[out$pixelID]
         spreadProbMap <- crop(spreadProbMap, ex)
@@ -465,7 +457,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         predLiklihood <- raster(r)
         predLiklihood[out$pixelID] <- predictedLiklihood
         predLiklihood <- crop(predLiklihood, ex)
-        browser()
+        browser() ## TODO: remove
         spIgnits <- SpatialPoints(coords = raster::xyFromCell(r, loci[36]))
         spIgnits <- buffer(spIgnits, width = 5000)
         spIgnits <- crop(spIgnits, ex)
@@ -474,7 +466,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         Plot(spIgnits, addTo = "actualFire", gp = gpar(fill = rep("black", 10)))
         Plot(spIgnits, addTo = "predictedFireProb", gp = gpar(fill = rep("black", 10)))
         Plot(predLiklihood, cols = "RdYlGn", new = TRUE, legendRange = range(round(predLiklihood[], 0), na.rm = TRUE))
-
       }
     },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
@@ -485,9 +476,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 }
 
 .inputObjects <- function(sim) {
-
-
-  # cloudFolderID <- "https://drive.google.com/open?id=1PoEkOkg_ixnAdDqqTQcun77nUvkEHDc0"
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
@@ -516,7 +504,5 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                   filename2 = NULL)
   }
 
-
   return(invisible(sim))
 }
-
