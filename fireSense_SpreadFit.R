@@ -127,7 +127,7 @@ defineModule(sim, list(
                  desc = "table of climate PCA components, burn status, polyID, and pixelID"),
     expectsInput(objectName = "fireSense_nonAnnualSpreadFitCovariates", objectClass = "data.table",
                  desc = "table of veg PCA components, burn status, polyID, and pixelID"),
-    expectsInput(objectName = "fireSense_spreadFormula", objectClass = "formula",
+    expectsInput(objectName = "fireSense_spreadFormula", objectClass = "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
     expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
@@ -300,7 +300,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          nonAnnualDTx1000 = nonAnnualDTx1000,
                          fireBufferedListDT = fbl,
                          historicalFires = hfs,
-                         FS_formula = P(sim)$formula, #loci, sizes,
+                         FS_formula = sim$fireSense_spreadFormula, #loci, sizes,
                          covMinMax = sim$covMinMax,
                          maxFireSpread = 0.28, # 0.257 makes gigantic fires
                          minFireSize = 2,
