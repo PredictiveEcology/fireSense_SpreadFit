@@ -331,7 +331,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         apply(MARGIN = 2, FUN = sd)
       valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
       bestFit <- DE2$optim$bestval
-      terms <- terms(P(sim)$formula)
+      terms <- terms(as.formula(sim$fireSense_spreadFormula))
       # Identifying the number of parameters of the logistic function and names
       nParsLogistic <- length(P(sim)$lower) - length(attributes(terms)[["term.labels"]])
       if (nParsLogistic == 5) {
