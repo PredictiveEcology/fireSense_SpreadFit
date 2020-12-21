@@ -30,7 +30,7 @@ runSpreadWithoutDEoptim <- function(sim) {
     #   )
     # )
     st1 <- system.time(
-      a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfun,
+      a <- mcmapply(mc.cores = min(8, length(pars)), par = pars, FUN = .objfunSpreadFit,
                     mc.preschedule = FALSE,
                     MoreArgs = list(
                       FS_formula = sim$fireSense_formula, #loci = loci,
