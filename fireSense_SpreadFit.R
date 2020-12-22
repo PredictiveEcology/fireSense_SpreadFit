@@ -10,7 +10,9 @@ defineModule(sim, list(
   authors = c(
     person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut")),
     person("Eliot", "McIntire", email = "eliot.mcintire@canada.ca", role = c("aut", "cre")),
-    person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut"))
+    person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut")),
+    person("Ian", "Eddy", email = "ian.eddy@canada.ca", role = c("aut")),
+    person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
   version = list(fireSense_SpreadFit = "0.0.1", SpaDES.core = "0.1.0"),
@@ -23,26 +25,28 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.0.9008)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.4.9002)"),
   parameters = rbind(
-    defineParameter(name = ".plot", class = "logical", default = FALSE,
+    defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
+    defineParameter(name = ".plotSize", class = "list", default = list(height = 1600, width = 2000),
+                    desc = paste("List specifying height and width of plotting device (in pixels)",
+                                 "used to plot DEoptim histograms when visualizeDEoptim is TRUE.")),
     defineParameter(name = ".runInitialTime", class = "numeric", default = start(sim),
-                    desc = "when to start this module? By default, the start
-                    time of the simulation."),
+                    desc = "when to start this module? By default, the start time of the simulation."),
     defineParameter(name = ".runInterval", class = "numeric", default = NA,
-                    desc = paste0("optional. Interval between two runs of this module,",
-                                  "expressed in units of simulation time. By default, NA, which ",
-                                  "means that this module only runs once per simulation.")),
+                    desc = paste("optional. Interval between two runs of this module,",
+                                 "expressed in units of simulation time. By default, NA, which",
+                                 "means that this module only runs once per simulation.")),
     defineParameter(name = ".saveInitialTime", class = "numeric", default = NA,
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA,
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", FALSE, NA, NA,
-                    desc = paste0("Should this entire module be run",
-                                  " with caching activated? This is generally intended for data-type ",
-                                  "modules, where stochasticity and time are not relevant")),
+    defineParameter(name = ".useCache", "logical", FALSE, NA, NA,
+                    desc = paste("Should this entire module be run",
+                                 "with caching activated? This is generally intended for data-type",
+                                 "modules, where stochasticity and time are not relevant.")),
     defineParameter(name = "cacheId_DE", class = "character", default = NULL,
                     desc = "An optional character string representing a cacheId to recover from the Cache"),
     defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
@@ -59,8 +63,8 @@ defineModule(sim, list(
                                  "through control$initialpop = P(sim)$initialpop if it is",
                                  "not NULL")),
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
-                    desc = "integer defining the maximum number of iterations
-                    allowed (DEoptim optimizer). Default is 500."),
+                    desc = paste("integer defining the maximum number of iterations",
+                                 "allowed (DEoptim optimizer). Default is 500.")),
     defineParameter(name = "iterStep", class = "integer", default = 25,
                     desc = "Passed to runDEoptim"),
     defineParameter(name = "lower", class = "numeric", default = NA,
@@ -143,11 +147,10 @@ defineModule(sim, list(
   outputObjects = rbind(
     createsOutput(objectName = "covMinMax", objectClass = "data.table",
                   desc = "data.table of covariates min and max"),
+    createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object"),
     createsOutput(objectName = "fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
                   desc = "A fitted model object of class fireSense_SpreadFit."),
-    createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object"),
     createsOutput(objectName = "lociList", objectClass = "list", desc = "list of fire locs")
-
   )
 ))
 
@@ -237,7 +240,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (isTRUE(P(sim)$debugMode)) {
         sim$DE <- runSpreadWithoutDEoptim(sim)
       } else {
-        # pdf("parameter_plots_DEoptim_300_iterations.pdf")
         sim$DE <- Cache(runDEoptim,
                         landscape = landscape,
                         annualDTx1000 = annualDTx1000,
@@ -262,6 +264,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         Nreps = P(sim)$objfunFireReps,
                         .verbose = P(sim)$verbose,
                         visualizeDEoptim = P(sim)$visualizeDEoptim,
+                        .plotSize = P(sim)$.plotSize,
                         cacheId = P(sim)$cacheId_DE,
                         useCloud = P(sim)$useCloud_DE,
                         cloudFolderID = P(sim)$cloudFolderID_DE # Cloud cache was being a problem
@@ -270,7 +273,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         if (isTRUE(P(sim)$visualizeDEoptim)) {
           if (!isRstudioServer()) {
             png(filename = paste0("DE_pars", as.character(Sys.time()), "_", Sys.getpid(), ".png"),
-                width = 800, height = 1000)
+                width = P(sim)$.plotSize$width, height = P(sim)$.plotSize$height)
           }
           visualizeDE(DE, cachePath(sim))
           if (!isRstudioServer()) {
@@ -300,7 +303,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          nonAnnualDTx1000 = nonAnnualDTx1000,
                          fireBufferedListDT = fbl,
                          historicalFires = hfs,
-                         FS_formula = P(sim)$formula, #loci, sizes,
+                         FS_formula = sim$fireSense_spreadFormula,
                          covMinMax = sim$covMinMax,
                          maxFireSpread = 0.28, # 0.257 makes gigantic fires
                          minFireSize = 2,
@@ -310,6 +313,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          plot.it = TRUE,
                          #bufferedRealHistoricalFiresList,
                          verbose = TRUE) #fireSense_SpreadFitRaster
+          dev.off()
         }
       }
     },
@@ -377,46 +381,43 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     plot = {
       if (P(sim)$.plot) {
-        if (P(sim)$.plot) {
-          dev.off()
+        hfs <- rbindlist(historicalFires)
+        sam <- sample(NROW(hfs), 20)
+        hfs <- hfs[sam]
+        fbl <- rbindlist(fireBufferedListDT, idcol = "date")
+        # hfs[, date := as.integer(date)]
+        fbl[, date := as.integer(date)]
+        fbl <- fbl[hfs, on = c("date", "ids")]
+        fbl <- split(fbl, by = "ids")
+        fbl <- fbl[order(names(fbl))]
+        hfs[, ids := as.character(ids)]
+        setorder(hfs, ids)
+        r <- sim$flammableRTM
+        # setDT(annualFireBufferedDT)
+        starts <- unique(hfs$cells)
+        names(starts) <- hfs$ids
 
-          hfs <- rbindlist(historicalFires)
-          sam <- sample(NROW(hfs), 20)
-          hfs <- hfs[sam]
-          fbl <- rbindlist(fireBufferedListDT, idcol = "date")
-          # hfs[, date := as.integer(date)]
-          fbl[, date := as.integer(date)]
-          fbl <- fbl[hfs, on = c("date", "ids")]
-          fbl <- split(fbl, by = "ids")
-          fbl <- fbl[order(names(fbl))]
-          hfs[, ids := as.character(ids)]
-          setorder(hfs, ids)
-          r <- sim$flammableRTM
-          # setDT(annualFireBufferedDT)
-          starts <- unique(hfs$cells)
-          names(starts) <- hfs$ids
+        spreadState <- lapply(seq_len(Nreps), function(i) {
+          SpaDES.tools::spread(
+            landscape = r,
+            maxSize = maxSizes,
+            loci = loci,
+            spreadProb = cells,
+            returnIndices = TRUE,
+            allowOverlap = FALSE,
+            quick = TRUE)
+        })
 
-          spreadState <- lapply(seq_len(Nreps), function(i) {
-            SpaDES.tools::spread(
-              landscape = r,
-              maxSize = maxSizes,
-              loci = loci,
-              spreadProb = cells,
-              returnIndices = TRUE,
-              allowOverlap = FALSE,
-              quick = TRUE)
-          })
+        out <- purrr::pmap(list(size = hfs$size, date = hfs$date,
+                                ids = hfs$ids, cells = hfs$cells,
+                                fbl = fbl),
+                           function(size, date, ids, cells, fbl) {
+                             ss <- spread(r, spreadProb = 1, loci = cells, returnIndices = TRUE)
+                             out <- data.table(pixelID = ss$indices, ids = ss$id, prob = cells[ss$indices])
+                           })
+        out <- annualFireBufferedDT[out, on = "pixelID"]
+        out[, burnedClass := buffer]
 
-          out <- purrr::pmap(list(size = hfs$size, date = hfs$date,
-                                  ids = hfs$ids, cells = hfs$cells,
-                                  fbl = fbl),
-                             function(size, date, ids, cells, fbl) {
-                               ss <- spread(r, spreadProb = 1, loci = cells, returnIndices = TRUE)
-                               out <- data.table(pixelID = ss$indices, ids = ss$id, prob = cells[ss$indices])
-                             })
-          out <- annualFireBufferedDT[out, on = "pixelID"]
-          out[, burnedClass := buffer]
-        }
         r <- raster(sim$flammableRTM)
         r[out$pixelID] <- out$prob
         #clearPlot();Plot(r)
@@ -457,7 +458,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         predLiklihood <- raster(r)
         predLiklihood[out$pixelID] <- predictedLiklihood
         predLiklihood <- crop(predLiklihood, ex)
-        browser() ## TODO: remove
         spIgnits <- SpatialPoints(coords = raster::xyFromCell(r, loci[36]))
         spIgnits <- buffer(spIgnits, width = 5000)
         spIgnits <- crop(spIgnits, ex)
