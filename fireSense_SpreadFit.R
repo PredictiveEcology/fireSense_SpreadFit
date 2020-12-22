@@ -131,7 +131,7 @@ defineModule(sim, list(
                  desc = "table of climate PCA components, burn status, polyID, and pixelID"),
     expectsInput(objectName = "fireSense_nonAnnualSpreadFitCovariates", objectClass = "data.table",
                  desc = "table of veg PCA components, burn status, polyID, and pixelID"),
-    expectsInput(objectName = "fireSense_spreadFormula", objectClass = "formula",
+    expectsInput(objectName = "fireSense_spreadFormula", objectClass = "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
     expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
@@ -335,7 +335,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         apply(MARGIN = 2, FUN = sd)
       valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
       bestFit <- DE2$optim$bestval
-      terms <- terms(P(sim)$formula)
+      terms <- terms(as.formula(sim$fireSense_spreadFormula))
       # Identifying the number of parameters of the logistic function and names
       nParsLogistic <- length(P(sim)$lower) - length(attributes(terms)[["term.labels"]])
       if (nParsLogistic == 5) {
