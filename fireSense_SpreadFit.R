@@ -178,6 +178,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
       }
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
+
       if (P(sim)$.plot)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
     },
@@ -272,10 +273,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
         if (isTRUE(P(sim)$visualizeDEoptim)) {
           if (!isRstudioServer()) {
-            png(filename = paste0("DE_pars", as.character(Sys.time()), "_", Sys.getpid(), ".png"),
+            png(filename = file.path(outputPath(sim),
+                                     paste0("DE_pars", as.character(Sys.time()), "_",
+                                            Sys.getpid(), ".png")),
                 width = P(sim)$.plotSize$width, height = P(sim)$.plotSize$height)
           }
-          visualizeDE(DE, cachePath(sim))
+          visualizeDE(sim$DE, cachePath(sim))
           if (!isRstudioServer()) {
             dev.off()
           }
@@ -287,8 +290,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                      by = "date"]$keepInd
           hfs <- hfs[sam]
           fbl <- rbindlist(fireBufferedListDT, idcol = "date")
-          # hfs[, date := as.integer(date)]
-          fbl[, date := as.integer(date)]
+          hfs[, date := as.integer(gsub("year", "", date))]
+          fbl[, date := as.integer(gsub("year", "", date))]
           fbl <- fbl[hfs[, c("size", "date", "ids")], on = c("date", "ids")]
           fbl <- split(fbl, by = "date")
           # fbl <- fbl[order(names(fbl))]
@@ -296,24 +299,35 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           hfs <- split(hfs, by = "date")
           hfs <- hfs[order(names(hfs))]
           # annualDTx1000 <- annualDTx1000[names(hfs)]
-          pdf(paste0("FireHistsYr_Test.pdf"), width = 10, height = 7)
-          out <- .objfun(par = DE2$optim$bestmem,
-                         landscape = sim$flammableRTM,
-                         annualDTx1000 = annualDTx1000,
-                         nonAnnualDTx1000 = nonAnnualDTx1000,
-                         fireBufferedListDT = fbl,
-                         historicalFires = hfs,
-                         FS_formula = sim$fireSense_spreadFormula,
-                         covMinMax = sim$covMinMax,
-                         maxFireSpread = 0.28, # 0.257 makes gigantic fires
-                         minFireSize = 2,
-                         # tests = "SNLL_FS",
-                         tests = "SNLL",
-                         Nreps = P(sim)$objfunFireReps,
-                         plot.it = TRUE,
-                         #bufferedRealHistoricalFiresList,
-                         verbose = TRUE) #fireSense_SpreadFitRaster
+
+          DE2 <- if (is(sim$DE, "list")) {
+            DE2 <- tail(sim$DE, 1)[[1]]
+          } else {
+            sim$DE
+          }
+
+          if (FALSE) { ## TODO: fix error here
+            ### Error in nonAnnualDTx1000[[indexNonAnnual[date == yr]$ind]] :
+            ###   attempt to select less than one element in get1index
+          pdf(file.path(outputPath(sim), "FireHistsYr_Test.pdf"), width = 10, height = 7)
+          out <- .objfunSpreadFit(par = DE2$optim$bestmem,
+                                  landscape = sim$flammableRTM,
+                                  annualDTx1000 = annualDTx1000,
+                                  nonAnnualDTx1000 = nonAnnualDTx1000,
+                                  fireBufferedListDT = fbl,
+                                  historicalFires = hfs,
+                                  FS_formula = sim$fireSense_spreadFormula,
+                                  covMinMax = sim$covMinMax,
+                                  maxFireSpread = 0.28, # 0.257 makes gigantic fires
+                                  minFireSize = 2,
+                                  # tests = "SNLL_FS",
+                                  tests = "SNLL",
+                                  Nreps = P(sim)$objfunFireReps,
+                                  plot.it = TRUE,
+                                  #bufferedRealHistoricalFiresList,
+                                  verbose = TRUE) #fireSense_SpreadFitRaster
           dev.off()
+          }
         }
       }
     },
