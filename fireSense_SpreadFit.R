@@ -65,8 +65,10 @@ defineModule(sim, list(
     defineParameter(name = "iterDEoptim", class = "integer", default = 500,
                     desc = paste("integer defining the maximum number of iterations",
                                  "allowed (DEoptim optimizer). Default is 500.")),
-    defineParameter(name = "iterStep", class = "integer", default = 25,
+    defineParameter(name = "iterStep", class = "integer", default = 25L,
                     desc = "Passed to runDEoptim"),
+    defineParameter(name = "iterThresh", class = "integer", default = 96L,
+                    desc = "Number of iterations for automated threshold calibration."),
     defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = paste("see `?DEoptim`. Lower limits for the logistic function",
                                  "parameters (lower bound, upper bound, slope, asymmetry)",
@@ -241,8 +243,14 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
       ## This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
-        sim$DE <- runSpreadWithoutDEoptim(sim)
+        thresh <- runSpreadWithoutDEoptim(sim)
       } else {
+        thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
+          runSpreadWithoutDEoptim(sim)
+        } else {
+          P(sim)$SNLL_FS_thresh
+        }
+
         sim$DE <- Cache(runDEoptim,
                         landscape = landscape,
                         annualDTx1000 = annualDTx1000,
@@ -264,7 +272,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         tests = c("SNLL_FS"), # c("mad", "SNLL_FS")
                         maxFireSpread = P(sim)$maxFireSpread,
                         Nreps = P(sim)$objfunFireReps,
-                        thresh = P(sim)$SNLL_FS_thresh,
+                        thresh = thresh,
                         .verbose = P(sim)$verbose,
                         visualizeDEoptim = P(sim)$visualizeDEoptim,
                         .plotSize = P(sim)$.plotSize,
