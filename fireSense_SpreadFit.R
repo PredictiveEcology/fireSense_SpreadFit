@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9002)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -78,15 +78,15 @@ defineModule(sim, list(
     defineParameter(name = "NP", class = "integer", default = NULL,
                     desc = "Number of Populations. See DEoptim.control"),
     defineParameter(name = "objFunCoresInternal", class = "integer", default = 1L,
-                    desc = "integer defining the number of cores to pass to mcmapply(mc.cores = ...)
-                    This will fork this many to do the years loop internally. This would
-                    be in addition to P(sim)$cores and is effecively a multiplier. The computer
-                    needs to have P(sim)$cores * objFunCoresInternal threads or it will stall"),
+                    desc = paste("integer defining the number of cores to pass to mcmapply(mc.cores = ...)",
+                                 "This will fork this many to do the years loop internally.",
+                                 "This would be in addition to P(sim)$cores and is effecively a multiplier.",
+                                 "The computer needs to have P(sim)$cores * objFunCoresInternal threads or it will stall")),
     defineParameter(name = "objfunFireReps", class = "integer", default = 100,
-                    desc = "integer defining the number of replicates the objective function
-                    will attempt each fire. Since the default approach is
-                    using EnvStats::demp, it should be at least 100 to get a
-                    smooth distribution for a likelihood"),
+                    desc = paste("integer defining the number of replicates the objective function",
+                                 "will attempt each fire. Since the default approach is",
+                                 "using EnvStats::demp, it should be at least 100 to get a",
+                                 "smooth distribution for a likelihood")),
     defineParameter(name = "onlyLoadDEOptim", class = "logical", default = FALSE,
                     desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
                                   "and will only load the latest uploaded version of the DEOptim object")),
@@ -98,6 +98,8 @@ defineModule(sim, list(
                     'rescale covariates for DEOptim'),
     defineParameter(name = "strategy", class = "integer", default = 6,
                     desc = "Passed to DEoptim.control"),
+    defineParameter(name = "SNLL_FS_thresh", class = "integer", default = 550L,
+                    desc = "Threshold multiplier used in objective function SNLL fire size test."),
     defineParameter(name = "trace", class = "numeric", default = 0,
                     desc = paste("non-negative integer. If > 0, tracing information on",
                                  "the progress of the optimization are printed every",
@@ -259,10 +261,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         FS_formula = sim$fireSense_spreadFormula,
                         covMinMax = sim$covMinMax,
                         objFunCoresInternal = P(sim)$objFunCoresInternal,
-                        # tests = c("mad", "SNLL_FS"),
-                        tests = c("SNLL_FS"),
+                        tests = c("SNLL_FS"), # c("mad", "SNLL_FS")
                         maxFireSpread = P(sim)$maxFireSpread,
                         Nreps = P(sim)$objfunFireReps,
+                        thresh = P(sim)$SNLL_FS_thresh,
                         .verbose = P(sim)$verbose,
                         visualizeDEoptim = P(sim)$visualizeDEoptim,
                         .plotSize = P(sim)$.plotSize,
@@ -320,11 +322,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                   covMinMax = sim$covMinMax,
                                   maxFireSpread = 0.28, # 0.257 makes gigantic fires
                                   minFireSize = 2,
-                                  # tests = "SNLL_FS",
-                                  tests = "SNLL",
+                                  tests = "SNLL", # "SNLL_FS",
                                   Nreps = P(sim)$objfunFireReps,
                                   plot.it = TRUE,
                                   #bufferedRealHistoricalFiresList,
+                                  thresh = P(sim)$SNLL_FS_thresh,
                                   verbose = TRUE) #fireSense_SpreadFitRaster
           dev.off()
           }
