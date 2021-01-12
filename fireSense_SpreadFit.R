@@ -250,6 +250,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         } else {
           P(sim)$SNLL_FS_thresh
         }
+        mod$thresh <- thresh
 
         sim$DE <- Cache(runDEoptim,
                         landscape = landscape,
