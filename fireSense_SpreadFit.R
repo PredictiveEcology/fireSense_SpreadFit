@@ -259,6 +259,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         fireBufferedListDT = fireBufferedListDT,
                         historicalFires = historicalFires,
                         itermax = P(sim)$iterDEoptim,
+                        iterStep = P(sim)$iterStep,
                         trace = P(sim)$trace,
                         initialpop = P(sim)$initialpop,
                         strategy = P(sim)$strategy,
