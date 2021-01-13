@@ -1,10 +1,10 @@
 runSpreadWithoutDEoptim <- function(sim) {
-  message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim...")
-
   seed <- sample(1e6, 1)
   set.seed(seed)
 
   n <- P(sim)$iterThresh ## the more you do, the lower the resulting threshold
+  message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
+
   pars <- lapply(1:n, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
   thresholds <- sample(2000, size = n)
   nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(7500)))
