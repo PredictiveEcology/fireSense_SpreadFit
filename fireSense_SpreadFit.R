@@ -97,7 +97,7 @@ defineModule(sim, list(
                                   "IP's addresses provided. It will devide the cores between all",
                                   "machines as equaly as possible. Currently, supports only 2 machines")),
     defineParameter(name = "rescaleAll", class = "logical", TRUE, NA, NA,
-                    'rescale covariates for DEOptim'),
+                    "rescale covariates for DEOptim"),
     defineParameter(name = "strategy", class = "integer", default = 6,
                     desc = "Passed to DEoptim.control"),
     defineParameter(name = "SNLL_FS_thresh", class = "integer", default = 550L,
