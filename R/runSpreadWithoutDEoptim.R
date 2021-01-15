@@ -7,7 +7,7 @@ runSpreadWithoutDEoptim <- function(sim) {
 
   pars <- lapply(1:n, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
   thresholds <- sample(2000, size = n)
-  nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(12000)))
+  nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(16000)))
   message("Using ", nCores, " cores.")
 
   st1 <- system.time(
