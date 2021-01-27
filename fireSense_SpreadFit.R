@@ -22,7 +22,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos","future", "logging",
+                  "rgeos","future", "logging", "stats",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9002)",
