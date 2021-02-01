@@ -1,13 +1,16 @@
-runSpreadWithoutDEoptim <- function(sim) {
+runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
+                                    annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+                                    historicalFires, covMinMax, objfunFireReps, maxFireSpread) {
   seed <- sample(1e6, 1)
   set.seed(seed)
 
-  n <- P(sim)$iterThresh ## the more you do, the lower the resulting threshold
+  n <- iterThresh ## the more you do, the lower the resulting threshold
   message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
-  pars <- lapply(1:n, function(x) runif(length(P(sim)$lower), P(sim)$lower, P(sim)$upper))
+  pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
   thresholds <- sample(2000, size = n)
-  nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(16000)))
+  nCores <- pemisc::optimalClusterNum(10000)
+  # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
   message("Using ", nCores, " cores.")
 
   st1 <- system.time(
@@ -15,16 +18,16 @@ runSpreadWithoutDEoptim <- function(sim) {
                   par = pars, FUN = .objfunSpreadFit,
                   mc.preschedule = FALSE, thresh = thresholds,
                   MoreArgs = list(
-                    FS_formula = sim$fireSense_spreadFormula, #loci = loci,
-                    landscape = sim$flammableRTM,
-                    annualDTx1000 = lapply(sim$fireSense_annualSpreadFitCovariates, setDF),
-                    nonAnnualDTx1000 = lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF),
-                    fireBufferedListDT = lapply(sim$fireBufferedListDT, setDF),
-                    historicalFires = lapply(sim$lociList, setDF),
+                    FS_formula = fireSense_spreadFormula, #loci = loci,
+                    landscape = flammableRTM,
+                    annualDTx1000 = annualDTx1000,
+                    nonAnnualDTx1000 = nonAnnualDTx1000,
+                    fireBufferedListDT = fireBufferedListDT,
+                    historicalFires = historicalFires,
                     tests = c("SNLL_FS"),
-                    covMinMax = sim$covMinMax,
-                    Nreps = P(sim)$objfunFireReps,
-                    maxFireSpread = P(sim)$maxFireSpread,
+                    covMinMax = covMinMax,
+                    Nreps = objfunFireReps,
+                    maxFireSpread = maxFireSpread,
                     verbose = TRUE)
     )
   )
