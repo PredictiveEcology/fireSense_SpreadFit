@@ -22,11 +22,11 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos","future", "logging", "stats",
+                  "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9002)",
-                  "PredictiveEcology/SpaDES.tools@development (>=0.3.4.9002)"),
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9006)",
+                  "PredictiveEcology/SpaDES.tools@development (>=0.3.7)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
@@ -217,41 +217,79 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       #   purrr::pmap(betaVals, function(l, u, m) rbetaBetween(NP, l = l, u = u, m = m, shape1 = 345))
       # ))
 
-
       ####################################################################
       # Final preparations of objects for objective function
       ####################################################################
       if (P(sim)$rescaleAll) {
         nonAnnRescales <- rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates)
-        vals <- setdiff(colnames(nonAnnRescales), "pixelID")
-        covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals]
+        vals1 <- setdiff(colnames(nonAnnRescales), "pixelID")
+        covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals1]
 
         annRescales <- rbindlist(sim$fireSense_annualSpreadFitCovariates)
-        vals <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
-        covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals]
+        vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
+        covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
         sim$covMinMax <- cbind(covMinMax1, covMinMax2)
+        if (FALSE) { # This will plot histograms -- should evaluate
+          extreme <- 4;
+          for (v in vals1) {
+            #v <- vals1[i]
+            co <- nonAnnRescales[[v]]
+            extreme <- 4
+            mn <- mean(co)
+            estd <- extreme * sd(co)
+            extremeVals <- co[co > mn + estd | co < mn - estd]
+            print(paste(v, ": ", length(extremeVals)))
+          }
+
+          par(mfrow = c(3,3))
+          lapply(vals2, function(v) hist(annRescales[[v]], main = v))
+          lapply(vals1, function(v) hist(nonAnnRescales[[v]], main = v))
+        }
       } else {
         sim$covMinMax <- NULL
       }
 
       sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
       landscape <- sim$flammableRTM
-      annualDTx1000 <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
-      nonAnnualDTx1000 <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
+
+
+      annualDT <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
+
+      annualDTx1000 <- toX1000(annualDT)
+      nonAnnualDT <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, setDF)
+      nonAnnualDTx1000 <- toX1000(nonAnnualDT)
+
       fireBufferedListDT <- lapply(sim$fireBufferedListDT, setDF)
       historicalFires <- lapply(sim$lociList, setDF)
 
       ## This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
-        thresh <- runSpreadWithoutDEoptim(sim)
+        thresh <- runSpreadWithoutDEoptim(
+          P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
+          sim$fireSense_spreadFormula, sim$flammableRTM,
+          annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+          historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
+          P(sim)$maxFireSpread)
       } else {
         thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
-          runSpreadWithoutDEoptim(sim)
+          Cache(runSpreadWithoutDEoptim,
+                P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
+                sim$fireSense_spreadFormula, sim$flammableRTM,
+                annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+                historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
+                P(sim)$maxFireSpread)
+          # runSpreadWithoutDEoptim(sim)
         } else {
           P(sim)$SNLL_FS_thresh
         }
         mod$thresh <- thresh
 
+        termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula)), "term.labels")
+        logitNumParams <- length(lower) - length(termsInForm)
+        message("Using a ", logitNumParams, " parameter logistic equation")
+        message("  There will be ", length(lower), " terms: ")
+        message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
+        message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", thresh)
         sim$DE <- Cache(runDEoptim,
                         landscape = landscape,
                         annualDTx1000 = annualDTx1000,
@@ -321,24 +359,24 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           if (FALSE) { ## TODO: fix error here
             ### Error in nonAnnualDTx1000[[indexNonAnnual[date == yr]$ind]] :
             ###   attempt to select less than one element in get1index
-          pdf(file.path(outputPath(sim), "FireHistsYr_Test.pdf"), width = 10, height = 7)
-          out <- .objfunSpreadFit(par = DE2$optim$bestmem,
-                                  landscape = sim$flammableRTM,
-                                  annualDTx1000 = annualDTx1000,
-                                  nonAnnualDTx1000 = nonAnnualDTx1000,
-                                  fireBufferedListDT = fbl,
-                                  historicalFires = hfs,
-                                  FS_formula = sim$fireSense_spreadFormula,
-                                  covMinMax = sim$covMinMax,
-                                  maxFireSpread = 0.28, # 0.257 makes gigantic fires
-                                  minFireSize = 2,
-                                  tests = "SNLL", # "SNLL_FS",
-                                  Nreps = P(sim)$objfunFireReps,
-                                  plot.it = TRUE,
-                                  #bufferedRealHistoricalFiresList,
-                                  thresh = P(sim)$SNLL_FS_thresh,
-                                  verbose = TRUE) #fireSense_SpreadFitRaster
-          dev.off()
+            pdf(file.path(outputPath(sim), "FireHistsYr_Test.pdf"), width = 10, height = 7)
+            out <- .objfunSpreadFit(par = DE2$optim$bestmem,
+                                    landscape = sim$flammableRTM,
+                                    annualDTx1000 = annualDTx1000,
+                                    nonAnnualDTx1000 = nonAnnualDTx1000,
+                                    fireBufferedListDT = fbl,
+                                    historicalFires = hfs,
+                                    FS_formula = sim$fireSense_spreadFormula,
+                                    covMinMax = sim$covMinMax,
+                                    maxFireSpread = 0.28, # 0.257 makes gigantic fires
+                                    minFireSize = 2,
+                                    tests = "SNLL", # "SNLL_FS",
+                                    Nreps = P(sim)$objfunFireReps,
+                                    plot.it = TRUE,
+                                    #bufferedRealHistoricalFiresList,
+                                    thresh = P(sim)$SNLL_FS_thresh,
+                                    verbose = TRUE) #fireSense_SpreadFitRaster
+            dev.off()
           }
         }
       }
@@ -523,12 +561,22 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   }
 
   if (!suppliedElsewhere("flammableRTM", sim)) {
-       rstLCC <- prepInputsLCC(destinationPath = tempdir(),
-                           rasterToMatch = sim$rasterToMatch)
-       sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
-                                                  mask = sim$rasterToMatch,
-                                                  filename2 = NULL)
+    rstLCC <- prepInputsLCC(destinationPath = tempdir(),
+                            rasterToMatch = sim$rasterToMatch)
+    sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
+                                               mask = sim$rasterToMatch,
+                                               filename2 = NULL)
   }
 
   return(invisible(sim))
+}
+
+toX1000 <- function(lst, omitCols = "pixelID") {
+  annualDTx1000 <- lapply(lst, function(dt) {
+    setDT(dt)
+    cns <- setdiff(colnames(dt), omitCols)
+    for (colnam in cns)
+      set(dt, NULL, colnam, fireSenseUtils:::asInteger(dt[[colnam]] * 1000))
+    setDF(dt)
+  })
 }
