@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9006)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9012)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.7)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -138,8 +138,8 @@ defineModule(sim, list(
     expectsInput(objectName = "fireSense_spreadFormula", objectClass = "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
-    expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
-                 desc = "list of years of SpatialPoints representing fire polygon's centroids."),
+    #expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
+    #             desc = "list of years of SpatialPoints representing fire polygon's centroids."),
     expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
                  desc = "template raster for study area"),
     expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
@@ -265,7 +265,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       ## This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
         thresh <- runSpreadWithoutDEoptim(
-          P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
+          1, P(sim)$lower, P(sim)$upper,
           sim$fireSense_spreadFormula, sim$flammableRTM,
           annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
           historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
@@ -335,6 +335,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         }
 
         if (isTRUE(P(sim)$visualizeDEoptim)) {
+          fireBufferedListDT <- lapply(sim$fireBufferedListDT, setDF)
           hfs <- rbindlist(historicalFires)
           sam <- hfs[, list(keepInd = .I[SpaDES.tools:::resample(1:.N, min(.N, 49))]),
                      by = "date"]$keepInd
@@ -360,22 +361,22 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
             ### Error in nonAnnualDTx1000[[indexNonAnnual[date == yr]$ind]] :
             ###   attempt to select less than one element in get1index
             pdf(file.path(outputPath(sim), "FireHistsYr_Test.pdf"), width = 10, height = 7)
-            out <- .objfunSpreadFit(par = DE2$optim$bestmem,
-                                    landscape = sim$flammableRTM,
-                                    annualDTx1000 = annualDTx1000,
-                                    nonAnnualDTx1000 = nonAnnualDTx1000,
-                                    fireBufferedListDT = fbl,
-                                    historicalFires = hfs,
-                                    FS_formula = sim$fireSense_spreadFormula,
-                                    covMinMax = sim$covMinMax,
-                                    maxFireSpread = 0.28, # 0.257 makes gigantic fires
-                                    minFireSize = 2,
-                                    tests = "SNLL", # "SNLL_FS",
-                                    Nreps = P(sim)$objfunFireReps,
-                                    plot.it = TRUE,
-                                    #bufferedRealHistoricalFiresList,
-                                    thresh = P(sim)$SNLL_FS_thresh,
-                                    verbose = TRUE) #fireSense_SpreadFitRaster
+            out <- fireSenseUtils::.objfunSpreadFit(par = DE2$optim$bestmem,
+                                                    landscape = sim$flammableRTM,
+                                                    annualDTx1000 = annualDTx1000,
+                                                    nonAnnualDTx1000 = nonAnnualDTx1000,
+                                                    fireBufferedListDT = fbl,
+                                                    historicalFires = hfs,
+                                                    FS_formula = sim$fireSense_spreadFormula,
+                                                    covMinMax = sim$covMinMax,
+                                                    maxFireSpread = 0.28, # 0.257 makes gigantic fires
+                                                    minFireSize = 2,
+                                                    tests = "SNLL", # "SNLL_FS",
+                                                    Nreps = P(sim)$objfunFireReps,
+                                                    plot.it = TRUE,
+                                                    #bufferedRealHistoricalFiresList,
+                                                    thresh = P(sim)$SNLL_FS_thresh,
+                                                    verbose = TRUE) #fireSense_SpreadFitRaster
             dev.off()
           }
         }
@@ -412,7 +413,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         nms <- c("inflectionPoint1",
                  "maxAsymptote", "hillSlope1")
       } else if (nParsLogistic == 2) {
-        nms <- c("inflectionPoint1", "maxAsymptote")
+        nms <- c("maxAsymptote", "inflectionPoint1")
       }
       # Giuseppe Cardillo (2020). Three parameters logistic regression -
       # There and back again (https://www.github.com/dnafinder/logistic3),
@@ -445,6 +446,20 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     plot = {
       if (P(sim)$.plot) {
+        if (FALSE) {
+          DEout <- sim$fireSense_SpreadFitted
+          par(mfrow = c(2,9));
+          out <- lapply(seq(NCOL(sim$DE[[1]]$member$pop)), function(nc) {
+            hist(sim$DE[[1]]$member$pop[, nc], main = names(DEout$bestCoef)[nc], xlab = "")
+          })
+          out <- Map(x = DEout$bestCoef, sds = DEout$sdCoef, nam = names(DEout$bestCoef),
+                     function(x, sds, nam) hist(rnorm(1e5, x, sds), main = nam, xlab = ""))
+
+        }
+
+
+
+        historicalFires <- lapply(sim$lociList, setDF)
         hfs <- rbindlist(historicalFires)
         sam <- sample(NROW(hfs), 20)
         hfs <- hfs[sam]
