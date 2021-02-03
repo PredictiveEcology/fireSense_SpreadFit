@@ -9,32 +9,58 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
   thresholds <- sample(2000, size = n)
-  nCores <- pemisc::optimalClusterNum(10000)
-  # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
-  message("Using ", nCores, " cores.")
 
-  st1 <- system.time(
-    a <- mcmapply(mc.cores = min(nCores, length(pars)),
-                  par = pars, FUN = .objfunSpreadFit,
-                  mc.preschedule = FALSE, thresh = thresholds,
-                  MoreArgs = list(
-                    FS_formula = fireSense_spreadFormula, #loci = loci,
-                    landscape = flammableRTM,
-                    annualDTx1000 = annualDTx1000,
-                    nonAnnualDTx1000 = nonAnnualDTx1000,
-                    fireBufferedListDT = fireBufferedListDT,
-                    historicalFires = historicalFires,
-                    tests = c("SNLL_FS"),
-                    covMinMax = covMinMax,
-                    Nreps = objfunFireReps,
-                    maxFireSpread = maxFireSpread,
-                    verbose = TRUE)
+  if (iterThresh == 1) {
+    message("performing just a simple .objFunSpreadFit run, because iterThresh = 1")
+    browser()
+    .objfunSpreadFit(par = pars[[1]],
+                     thresh = 505, # thresholds[1],
+                     FS_formula = fireSense_spreadFormula, #loci = loci,
+                     landscape = flammableRTM,
+                     annualDTx1000 = annualDTx1000,
+                     nonAnnualDTx1000 = nonAnnualDTx1000,
+                     fireBufferedListDT = fireBufferedListDT,
+                     mutuallyExclusive = list("youngAge" = c("vegPC")),
+                     doAssertions = TRUE,
+                     historicalFires = historicalFires,
+                     tests = c("SNLL_FS"),
+                     covMinMax = covMinMax,
+                     Nreps = objfunFireReps,
+                     maxFireSpread = maxFireSpread,
+                     verbose = TRUE
     )
-  )
-  valsdt <- data.table(thresholds = thresholds, objFun = a)
-  valsdt <- valsdt[objFun < 1e5]
-  threshToUse <- min(valsdt$thresholds)
-  message("  using SNLL_FS_thresh value: ", threshToUse)
+  } else {
 
-  threshToUse
+    nCores <- pemisc::optimalClusterNum(10000)
+    # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
+    message("Using ", nCores, " cores.")
+
+    st1 <- system.time(
+      a <- mcmapply(mc.cores = min(nCores, length(pars)),
+                    par = pars, FUN = .objfunSpreadFit,
+                    mc.preschedule = FALSE, thresh = thresholds,
+                    MoreArgs = list(
+                      FS_formula = fireSense_spreadFormula, #loci = loci,
+                      landscape = flammableRTM,
+                      annualDTx1000 = annualDTx1000,
+                      nonAnnualDTx1000 = nonAnnualDTx1000,
+                      fireBufferedListDT = fireBufferedListDT,
+                      mutuallyExclusive = list("youngAge" = c("vegPC")),
+                      doAssertions = TRUE,
+                      historicalFires = historicalFires,
+                      tests = c("SNLL_FS"),
+                      covMinMax = covMinMax,
+                      Nreps = objfunFireReps,
+                      maxFireSpread = maxFireSpread,
+                      verbose = TRUE)
+      )
+    )
+
+    valsdt <- data.table(thresholds = thresholds, objFun = a)
+    valsdt <- valsdt[objFun < 1e5]
+    threshToUse <- min(valsdt$thresholds)
+    message("  using SNLL_FS_thresh value: ", threshToUse)
+    return(threshToUse)
+  }
+
 }
