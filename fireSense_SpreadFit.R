@@ -229,6 +229,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
         covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
         sim$covMinMax <- cbind(covMinMax1, covMinMax2)
+
+        if (any(is.na(sim$covMinMax))) {
+          stop("covMinMax contains NA values. Check upstream for introduction of NAs.")
+        }
+
         if (FALSE) { # This will plot histograms -- should evaluate
           extreme <- 4;
           for (v in vals1) {
@@ -251,7 +256,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
       sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
       landscape <- sim$flammableRTM
-
 
       annualDT <- lapply(sim$fireSense_annualSpreadFitCovariates, setDF)
 
