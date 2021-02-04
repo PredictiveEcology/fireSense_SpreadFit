@@ -12,7 +12,6 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   if (iterThresh == 1) {
     message("performing just a simple .objFunSpreadFit run, because iterThresh = 1")
-    browser()
     .objfunSpreadFit(par = pars[[1]],
                      thresh = 505, # thresholds[1],
                      FS_formula = fireSense_spreadFormula, #loci = loci,
@@ -30,8 +29,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                      verbose = TRUE
     )
   } else {
-
-    nCores <- pemisc::optimalClusterNum(10000)
+    nCores <- pemisc::optimalClusterNum(16000)
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     message("Using ", nCores, " cores.")
 
