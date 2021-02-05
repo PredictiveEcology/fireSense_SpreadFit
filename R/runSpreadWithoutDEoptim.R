@@ -28,6 +28,11 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                      maxFireSpread = maxFireSpread,
                      verbose = TRUE
     )
+    hf <- historicalFires$year2018
+    hasAnn <- annualDTx1000$year2018
+    hasNonAnn <- nonAnnualDTx1000$year2011_year2012_year2013_year2014_year2015_year2016_year2017_year2018_year2019
+    hf$cells %in% hasAnn$pixelID
+
   } else {
     nCores <- pemisc::optimalClusterNum(16000)
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
