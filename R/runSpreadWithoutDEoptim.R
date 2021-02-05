@@ -1,33 +1,52 @@
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
-                                    historicalFires, covMinMax, objfunFireReps, maxFireSpread) {
+                                    historicalFires, covMinMax, objfunFireReps, maxFireSpread,
+                                    pars = NULL) {
   seed <- sample(1e6, 1)
   set.seed(seed)
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
   message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
-  pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
-  thresholds <- sample(2000, size = n)
+  if (is.null(pars)) {
+    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+  }
+  if (!is(pars, "list")) pars <- list(pars)
+  hfs <- rbindlist(historicalFires)[size > 1]
+  hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
+  setorderv(hfsSizes, "AAB", order = -1L)
+  # next is rough estimate of an SNLL value that should be "decent"
+  decentEstimateThreshold <- 7 * NROW(hfs[date %in% hfsSizes$date[1:2]])
+
+  thresholds <- sample(3 * decentEstimateThreshold, size = n)
 
   if (iterThresh == 1) {
     message("performing just a simple .objFunSpreadFit run, because iterThresh = 1")
-    .objfunSpreadFit(par = pars[[1]],
-                     thresh = 505, # thresholds[1],
-                     FS_formula = fireSense_spreadFormula, #loci = loci,
-                     landscape = flammableRTM,
-                     annualDTx1000 = annualDTx1000,
-                     nonAnnualDTx1000 = nonAnnualDTx1000,
-                     fireBufferedListDT = fireBufferedListDT,
-                     mutuallyExclusive = list("youngAge" = c("vegPC")),
-                     doAssertions = TRUE,
-                     historicalFires = historicalFires,
-                     tests = c("SNLL_FS"),
-                     covMinMax = covMinMax,
-                     Nreps = objfunFireReps,
-                     maxFireSpread = maxFireSpread,
-                     verbose = TRUE
-    )
+
+    # Eliot -- this overrides the argument passed in because it is more useful to see
+    #   many values go by
+    n <- 192
+    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+    a <- list()
+    for (i in seq(pars)) {
+      print(i)
+      a[[i]] <- .objfunSpreadFit(par = pars[[i]],
+                       thresh = decentEstimateThreshold,
+                       FS_formula = fireSense_spreadFormula, #loci = loci,
+                       landscape = flammableRTM,
+                       annualDTx1000 = annualDTx1000,
+                       nonAnnualDTx1000 = nonAnnualDTx1000,
+                       fireBufferedListDT = fireBufferedListDT,
+                       mutuallyExclusive = list("youngAge" = c("vegPC")),
+                       doAssertions = TRUE,
+                       historicalFires = historicalFires,
+                       tests = c("SNLL_FS"),
+                       covMinMax = covMinMax,
+                       Nreps = objfunFireReps,
+                       maxFireSpread = maxFireSpread,
+                       verbose = TRUE, plot.it = TRUE
+      )
+    }
     hf <- historicalFires$year2018
     hasAnn <- annualDTx1000$year2018
     hasNonAnn <- nonAnnualDTx1000$year2011_year2012_year2013_year2014_year2015_year2016_year2017_year2018_year2019
