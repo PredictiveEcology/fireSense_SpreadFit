@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9016)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9019)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.7)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -138,6 +138,10 @@ defineModule(sim, list(
     expectsInput(objectName = "fireSense_spreadFormula", objectClass = "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
+    expectsInput(objectName = "parsKnown", objectClass = "numeric",
+                 desc = paste0("Optional vector of known parameters, e.g., from a previous ",
+                               "DEoptim run. If this is supplied, then debugMode will be automatically ",
+                               "converted to TRUE")),
     #expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
     #             desc = "list of years of SpatialPoints representing fire polygon's centroids."),
     expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
@@ -266,6 +270,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       fireBufferedListDT <- lapply(sim$fireBufferedListDT, setDF)
       historicalFires <- lapply(sim$lociList, setDF)
 
+      if (!is.null(sim$parsKnown)) {
+        params(sim)[[currentModule(sim)]][["debugMode"]] <- TRUE
+      }
       ## This below is to test the code without running DEOptim
       if (isTRUE(P(sim)$debugMode)) {
         thresh <- runSpreadWithoutDEoptim(
@@ -273,7 +280,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           sim$fireSense_spreadFormula, sim$flammableRTM,
           annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
           historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
-          P(sim)$maxFireSpread)
+          P(sim)$maxFireSpread, pars = sim$parsKnown)
       } else {
         thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
           Cache(runSpreadWithoutDEoptim,
