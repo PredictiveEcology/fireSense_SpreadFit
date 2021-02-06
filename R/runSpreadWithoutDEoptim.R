@@ -10,6 +10,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   if (is.null(pars)) {
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+    userPars <- FALSE
+  } else {
+    userPars <- TRUE
   }
   if (!is(pars, "list")) pars <- list(pars)
   hfs <- rbindlist(historicalFires)[size > 1]
@@ -25,11 +28,13 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
     # Eliot -- this overrides the argument passed in because it is more useful to see
     #   many values go by
-    n <- 192
-    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+    if (!userPars) {
+      n <- 192
+      pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+    }
     a <- list()
     for (i in seq(pars)) {
-      print(i)
+      print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
       a[[i]] <- .objfunSpreadFit(par = pars[[i]],
                        thresh = decentEstimateThreshold,
                        FS_formula = fireSense_spreadFormula, #loci = loci,
@@ -40,7 +45,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                        mutuallyExclusive = list("youngAge" = c("vegPC")),
                        doAssertions = TRUE,
                        historicalFires = historicalFires,
-                       tests = c("SNLL_FS"),
+                       tests = c("SNLL_FS", "adtest"),
                        covMinMax = covMinMax,
                        Nreps = objfunFireReps,
                        maxFireSpread = maxFireSpread,
