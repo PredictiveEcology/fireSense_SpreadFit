@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9019)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9020)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.7)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -185,9 +185,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       } else {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
       }
-      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
+      if (!P(sim)$debugMode)
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
 
-      if (P(sim)$.plot)
+      if (P(sim)$.plot && !P(sim)$debugMode)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
     },
     run = {
