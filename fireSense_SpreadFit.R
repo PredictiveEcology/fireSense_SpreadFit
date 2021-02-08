@@ -422,10 +422,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         nms <- c("inflectionPoint1", "inflectionPoint2",
                  "maxAsymptote", "hillSlope1")
       } else if (nParsLogistic == 3) {
-        nms <- c("inflectionPoint1",
-                 "maxAsymptote", "hillSlope1")
+        nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
       } else if (nParsLogistic == 2) {
-        nms <- c("maxAsymptote", "inflectionPoint1")
+        nms <- c("maxAsymptote", "hillSlope1")
       }
       # Giuseppe Cardillo (2020). Three parameters logistic regression -
       # There and back again (https://www.github.com/dnafinder/logistic3),
@@ -460,7 +459,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (P(sim)$.plot) {
         if (FALSE) {
           DEout <- sim$fireSense_SpreadFitted
-          par(mfrow = c(2,9));
+          par(mfrow = c(2,10));
           out <- lapply(seq(NCOL(sim$DE[[1]]$member$pop)), function(nc) {
             hist(sim$DE[[1]]$member$pop[, nc], main = names(DEout$bestCoef)[nc], xlab = "")
           })
