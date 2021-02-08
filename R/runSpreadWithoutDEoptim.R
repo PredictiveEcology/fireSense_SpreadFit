@@ -1,5 +1,6 @@
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+                                    doObjFunAssertions = getOption("fireSenseUtils.assertions", TRUE),
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
                                     pars = NULL) {
   seed <- sample(1e6, 1)
@@ -36,20 +37,20 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     for (i in seq(pars)) {
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
       a[[i]] <- .objfunSpreadFit(par = pars[[i]],
-                       thresh = decentEstimateThreshold,
-                       FS_formula = fireSense_spreadFormula, #loci = loci,
-                       landscape = flammableRTM,
-                       annualDTx1000 = annualDTx1000,
-                       nonAnnualDTx1000 = nonAnnualDTx1000,
-                       fireBufferedListDT = fireBufferedListDT,
-                       mutuallyExclusive = list("youngAge" = c("vegPC")),
-                       doAssertions = TRUE,
-                       historicalFires = historicalFires,
-                       tests = c("SNLL_FS", "adtest"),
-                       covMinMax = covMinMax,
-                       Nreps = objfunFireReps,
-                       maxFireSpread = maxFireSpread,
-                       verbose = TRUE, plot.it = TRUE
+                                 thresh = decentEstimateThreshold,
+                                 FS_formula = fireSense_spreadFormula, #loci = loci,
+                                 landscape = flammableRTM,
+                                 annualDTx1000 = annualDTx1000,
+                                 nonAnnualDTx1000 = nonAnnualDTx1000,
+                                 fireBufferedListDT = fireBufferedListDT,
+                                 mutuallyExclusive = list("youngAge" = c("vegPC")),
+                                 doAssertions = doObjFunAssertions,
+                                 historicalFires = historicalFires,
+                                 tests = c("SNLL_FS", "adtest"),
+                                 covMinMax = covMinMax,
+                                 Nreps = objfunFireReps,
+                                 maxFireSpread = maxFireSpread,
+                                 verbose = TRUE, plot.it = TRUE
       )
     }
     hf <- historicalFires$year2018
@@ -73,7 +74,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       nonAnnualDTx1000 = nonAnnualDTx1000,
                       fireBufferedListDT = fireBufferedListDT,
                       mutuallyExclusive = list("youngAge" = c("vegPC")),
-                      doAssertions = TRUE,
+                      doAssertions = doObjFunAssertions,
                       historicalFires = historicalFires,
                       tests = c("SNLL_FS"),
                       covMinMax = covMinMax,

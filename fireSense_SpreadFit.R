@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9025)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9026)",
                   "PredictiveEcology/SpaDES.tools@development (>=0.3.7)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -57,6 +57,8 @@ defineModule(sim, list(
                                  "The default value is 1, which disables parallel computing.")),
     defineParameter(name = "debugMode", class = "logical", default = FALSE,
                     desc = "Set this to TRUE to run the .objfun manually without DEoptim"),
+    defineParameter(name = "doObjFunAssertions", class = "logical", default = TRUE,
+                    desc = "This is passed to objFunSpreadProb; TRUE will do some diagnostics but is slower; FALSE for operational runs"),
     defineParameter(name = "initialpop", class = "numeric", default = NULL,
                     desc = paste("A numeric matrix of dimensions NCOL = length(lower)",
                                  "and NROW = NP. This will be passed into DEoptim",
@@ -280,6 +282,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           1, P(sim)$lower, P(sim)$upper,
           sim$fireSense_spreadFormula, sim$flammableRTM,
           annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+          doObjFunAssertions = P(sim)$doObjFunAssertions,
           historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
           P(sim)$maxFireSpread, pars = sim$parsKnown)
       } else {
@@ -287,6 +290,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           Cache(runSpreadWithoutDEoptim,
                 P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
                 sim$fireSense_spreadFormula, sim$flammableRTM,
+                doObjFunAssertions = P(sim)$doObjFunAssertions,
                 annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
                 historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
                 P(sim)$maxFireSpread)
@@ -314,6 +318,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         initialpop = P(sim)$initialpop,
                         strategy = P(sim)$strategy,
                         cores = P(sim)$cores,
+                        doObjFunAssertions = P(sim)$doObjFunAssertions,
                         logPath = outputPath(sim),
                         cachePath = cachePath(sim),
                         lower = P(sim)$lower,
