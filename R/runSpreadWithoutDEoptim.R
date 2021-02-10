@@ -2,7 +2,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
                                     doObjFunAssertions = getOption("fireSenseUtils.assertions", TRUE),
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
-                                    pars = NULL) {
+                                    weighted = TRUE,
+                                    pars = NULL, plot.it = TRUE, mode = "fit") {
   seed <- sample(1e6, 1)
   set.seed(seed)
 
@@ -10,6 +11,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
   if (is.null(pars)) {
+    seed <- sample(1e6, 1)
+    set.seed(seed)
+    print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
     userPars <- FALSE
   } else {
@@ -20,49 +24,36 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
   setorderv(hfsSizes, "AAB", order = -1L)
   # next is rough estimate of an SNLL value that should be "decent"
-  decentEstimateThreshold <- 7 * NROW(hfs[date %in% hfsSizes$date[1:2]])
-
+  largestYear <- hfsSizes$date[1]
+  largestFireInLargestYear <- max(hfs[grep(largestYear, hfs$date)]$size)
+  decentEstimateThreshold <- NROW(hfs[date %in% hfsSizes$date[1:2]]) *
+    (log(largestFireInLargestYear) ^ weighted)
   thresholds <- sample(3 * decentEstimateThreshold, size = n)
 
-  if (iterThresh == 1) {
-    message("performing just a simple .objFunSpreadFit run, because iterThresh = 1")
-
-    # Eliot -- this overrides the argument passed in because it is more useful to see
-    #   many values go by
-    if (!userPars) {
-      n <- 192
-      # set.seed(123)
-      pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
-    }
+  if (mode %in% "debug") {
     a <- list()
-    sts <- list()
     for (i in seq(pars)) {
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
-      sts[[i]] <- system.time(a[[i]] <- .objfunSpreadFit(par = pars[[i]],
-                                                         thresh = decentEstimateThreshold,
-                                                         FS_formula = fireSense_spreadFormula, #loci = loci,
-                                                         landscape = flammableRTM,
-                                                         annualDTx1000 = annualDTx1000,
-                                                         nonAnnualDTx1000 = nonAnnualDTx1000,
-                                                         fireBufferedListDT = fireBufferedListDT,
-                                                         mutuallyExclusive = list("youngAge" = c("vegPC")),
-                                                         doAssertions = doObjFunAssertions,
-                                                         historicalFires = historicalFires,
-                                                         tests = c("SNLL_FS", "adtest"),
-                                                         covMinMax = covMinMax,
-                                                         Nreps = objfunFireReps,
-                                                         maxFireSpread = maxFireSpread,
-                                                         verbose = TRUE,
-                                                         # plot.it = FALSE
-                                                         plot.it = TRUE
-      ))
+      a[[i]] <- .objfunSpreadFit(par = pars[[i]],
+                                 thresh = decentEstimateThreshold,
+                                 FS_formula = fireSense_spreadFormula, #loci = loci,
+                                 landscape = flammableRTM,
+                                 annualDTx1000 = annualDTx1000,
+                                 nonAnnualDTx1000 = nonAnnualDTx1000,
+                                 fireBufferedListDT = fireBufferedListDT,
+                                 mutuallyExclusive = list("youngAge" = c("vegPC")),
+                                 doAssertions = doObjFunAssertions,
+                                 historicalFires = historicalFires,
+                                 tests = c("SNLL_FS", "adtest"),
+                                 covMinMax = covMinMax,
+                                 Nreps = objfunFireReps,
+                                 maxFireSpread = maxFireSpread,
+                                 verbose = TRUE,
+                                 weighted = weighted,
+                                 plot.it = plot.it
+                                 #plot.it = TRUE
+      )
     }
-    # browser()
-    hf <- historicalFires$year2018
-    hasAnn <- annualDTx1000$year2018
-    hasNonAnn <- nonAnnualDTx1000$year2011_year2012_year2013_year2014_year2015_year2016_year2017_year2018_year2019
-    hf$cells %in% hasAnn$pixelID
-
   } else {
     nCores <- pemisc::optimalClusterNum(16000)
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
@@ -81,11 +72,12 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       mutuallyExclusive = list("youngAge" = c("vegPC")),
                       doAssertions = doObjFunAssertions,
                       historicalFires = historicalFires,
-                      tests = c("SNLL_FS"),
+                      tests = c("SNLL_FS", "adtest"),
                       covMinMax = covMinMax,
                       Nreps = objfunFireReps,
                       maxFireSpread = maxFireSpread,
-                      verbose = TRUE)
+                      weighted = weighted,
+                      verbose = TRUE, plot.it = FALSE)
       )
     )
 
