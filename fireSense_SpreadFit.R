@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "0.0.1", SpaDES.core = "0.1.0"),
+  version = list(fireSense_SpreadFit = "0.0.1.9001", SpaDES.core = "0.1.0"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
@@ -223,10 +223,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
       sim$DE <- Cache(runDEoptim,
                       landscape = sim$flammableRTM,
-                      annualDTx1000 = annualDTx1000,
-                      nonAnnualDTx1000 = nonAnnualDTx1000,
-                      fireBufferedListDT = fireBufferedListDT,
-                      historicalFires = historicalFires,
+                      annualDTx1000 = mod$dat$annualDTx1000,
+                      nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
+                      fireBufferedListDT = mod$dat$fireBufferedListDT,
+                      historicalFires = mod$dat$historicalFires,
                       itermax = P(sim)$iterDEoptim,
                       iterStep = P(sim)$iterStep,
                       trace = P(sim)$trace,
