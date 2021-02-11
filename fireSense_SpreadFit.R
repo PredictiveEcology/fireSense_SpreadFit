@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "rgeos","future", "logging",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9035)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9036)",
                   "PredictiveEcology/SpaDES.tools@fasterSpread (>=0.3.7.9007)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
