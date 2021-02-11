@@ -185,7 +185,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
 
       if (!P(sim)$mode %in% "debug") {
-        if (!P(sim)$mode %in% "run") {
+        if (!P(sim)$mode %in% "fit") {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
         } else {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
@@ -254,6 +254,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       )
     },
     retrieveDEOptim = {
+      if (!is.null(Par$urlDEOptimObject))
+        message("Loading ", Par$urlDEOptimObject)
       out <- Cache(loadPrevDEOptimRun, url = Par$urlDEOptimObject,
                    destinationPath = Paths$outputPath,
                    wholeSim = TRUE,
