@@ -26,7 +26,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9035)",
-                  "PredictiveEcology/SpaDES.tools@fasterSpread (>=0.3.7.9006)"),
+                  "PredictiveEcology/SpaDES.tools@fasterSpread (>=0.3.7.9007)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
