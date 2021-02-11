@@ -193,8 +193,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
         }
 
-        if (P(sim)$mode %in% "visualize")
+        if (P(sim)$mode %in% "visualize") {
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
+        }
       }
     },
     debug = {
@@ -260,6 +262,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$originalSim <- out
         sim$DE <- sim$originalSim$DE
         sim$fireSense_SpreadFitted <- sim$originalSim$fireSense_SpreadFitted
+        sim$parsKnown <- sim$fireSense_SpreadFitted$meanCoef
         rm(list = "originalSim", envir = envir(sim))
       } else {
         sim$fireSense_SpreadFitted <- out
