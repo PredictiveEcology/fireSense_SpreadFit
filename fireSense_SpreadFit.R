@@ -26,7 +26,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9036)",
-                  "PredictiveEcology/SpaDES.tools@fasterSpread (>=0.3.7.9007)"),
+                  "PredictiveEcology/SpaDES.tools@development (>=0.3.7.9007)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
@@ -60,6 +60,9 @@ defineModule(sim, list(
                     "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
                     "visualization after DEoptim. For 'visualize', DE object must be findable, either in sim,",
                     "on disk or a cloud URL. These last 2 can be specified with urlDEOptimObject param")),
+    defineParameter(name = "DEoptimTests", class = "character", default = "SNLL_FS",
+                    desc = paste("Currently either SNLL_FS or adTest or a length 2 character vector of both. ",
+                                 "These are passed to .objFunSpreadFit")),
     defineParameter(name = "doObjFunAssertions", class = "logical", default = TRUE,
                     desc = "This is passed to objFunSpreadProb; TRUE will do some diagnostics but is slower; FALSE for operational runs"),
     defineParameter(name = "initialpop", class = "numeric", default = NULL,
@@ -208,6 +211,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         doObjFunAssertions = P(sim)$doObjFunAssertions,
         mod$dat$historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
         P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plot,
+        tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
         mode = "debug")
     },
     estimateThreshold = {
@@ -241,7 +245,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       FS_formula = sim$fireSense_spreadFormula,
                       covMinMax = sim$covMinMax,
                       objFunCoresInternal = P(sim)$objFunCoresInternal,
-                      tests = c("SNLL_FS"), # c("mad", "SNLL_FS")
+                      tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
                       maxFireSpread = P(sim)$maxFireSpread,
                       Nreps = P(sim)$objfunFireReps,
                       thresh = mod$thresh,
@@ -442,6 +446,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
           doObjFunAssertions = P(sim)$doObjFunAssertions,
           mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
           mod$dat$historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
+          tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
           P(sim)$maxFireSpread)
   } else {
     P(sim)$SNLL_FS_thresh

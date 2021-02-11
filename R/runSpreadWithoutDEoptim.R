@@ -2,7 +2,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
                                     doObjFunAssertions = getOption("fireSenseUtils.assertions", TRUE),
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
-                                    weighted = TRUE,
+                                    weighted = TRUE, tests = c("snll_fs", "adtest"),
                                     pars = NULL, plot.it = TRUE, mode = "fit") {
   seed <- sample(1e6, 1)
   set.seed(seed)
@@ -46,7 +46,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  mutuallyExclusive = list("youngAge" = c("vegPC")),
                                  doAssertions = doObjFunAssertions,
                                  historicalFires = historicalFires,
-                                 tests = c("SNLL_FS", "adtest"),
+                                 tests = tests,
                                  covMinMax = covMinMax,
                                  Nreps = objfunFireReps,
                                  maxFireSpread = maxFireSpread,
@@ -74,7 +74,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       mutuallyExclusive = list("youngAge" = c("vegPC")),
                       doAssertions = doObjFunAssertions,
                       historicalFires = historicalFires,
-                      tests = c("SNLL_FS", "adtest"),
+                      tests = tests,
                       covMinMax = covMinMax,
                       Nreps = objfunFireReps,
                       maxFireSpread = maxFireSpread,
