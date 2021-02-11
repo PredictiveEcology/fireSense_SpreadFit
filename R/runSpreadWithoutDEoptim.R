@@ -37,7 +37,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     for (i in seq(pars)) {
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
       a[[i]] <- .objfunSpreadFit(par = pars[[i]],
-                                 thresh = decentEstimateThreshold,
+                                 thresh = thresholds,
                                  FS_formula = fireSense_spreadFormula, #loci = loci,
                                  landscape = flammableRTM,
                                  annualDTx1000 = annualDTx1000,
