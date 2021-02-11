@@ -10,16 +10,6 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   n <- iterThresh ## the more you do, the lower the resulting threshold
   message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
-  if (is.null(pars)) {
-    seed <- sample(1e6, 1)
-    set.seed(seed)
-    print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
-    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
-    userPars <- FALSE
-  } else {
-    userPars <- TRUE
-  }
-  if (!is(pars, "list")) pars <- list(pars)
   hfs <- rbindlist(historicalFires)[size > 1]
   hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
   setorderv(hfsSizes, "AAB", order = -1L)
@@ -28,7 +18,19 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   largestFireInLargestYear <- max(hfs[grep(largestYear, hfs$date)]$size)
   decentEstimateThreshold <- NROW(hfs[date %in% hfsSizes$date[1:2]]) *
     (log(largestFireInLargestYear) ^ weighted)
-  thresholds <- sample(3 * decentEstimateThreshold, size = n)
+
+  if (is.null(pars)) {
+    seed <- sample(1e6, 1)
+    set.seed(seed)
+    print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
+    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
+    userPars <- FALSE
+    thresholds <- sample(3 * decentEstimateThreshold, size = n)
+  } else {
+    userPars <- TRUE
+    thresholds <- 1e8
+  }
+  if (!is(pars, "list")) pars <- list(pars)
 
   if (mode %in% "debug") {
     a <- list()
