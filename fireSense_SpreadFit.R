@@ -285,7 +285,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
       colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
       sim$fsSpreadFit_hists <- ggplot(tidyr::gather(DEpop_df), aes(value)) +
-        geom_histogram() +
+        geom_histogram(bins = 20) +
         facet_wrap(~key, scales = "free_x")
 
       ggsave(file.path(outputPath(sim), "figures", "spreadFit_coeffs.png"), sim$fsSpreadFit_hists)
