@@ -8,7 +8,6 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   set.seed(seed)
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
-  message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
   hfs <- rbindlist(historicalFires)[size > 1]
   hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
@@ -57,7 +56,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     }
   } else {
-    nCores <- pemisc::optimalClusterNum(16000)
+    message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
+
+    nCores <- pemisc::optimalClusterNum(21000)
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     message("Using ", nCores, " cores.")
 

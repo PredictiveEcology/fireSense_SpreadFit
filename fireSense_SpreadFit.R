@@ -21,8 +21,8 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "kSamples", "magrittr", "parallel", "raster",
-                  "rgeos","future", "logging",
+  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "future", "ggplot2", "kSamples", "logging",
+                  "magrittr", "parallel", "raster", "rgeos", "tidyr",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9036)",
@@ -55,11 +55,6 @@ defineModule(sim, list(
                     desc = paste("non-negative integer.",
                                  "Defines the number of logical cores to be used for parallel computation.",
                                  "The default value is 1, which disables parallel computing.")),
-    defineParameter(name = "mode", class = "character", default = "fit",
-                    desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' will trigger running of",
-                    "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
-                    "visualization after DEoptim. For 'visualize', DE object must be findable, either in sim,",
-                    "on disk or a cloud URL. These last 2 can be specified with urlDEOptimObject param")),
     defineParameter(name = "DEoptimTests", class = "character", default = "SNLL_FS",
                     desc = paste("Currently either SNLL_FS or adTest or a length 2 character vector of both. ",
                                  "These are passed to .objFunSpreadFit")),
@@ -85,6 +80,11 @@ defineModule(sim, list(
     defineParameter(name = "maxFireSpread", class = "numeric", default = 0.28,
                     desc = paste0("optional. Maximum fire spread average to be passed to the ",
                                   ".objFun for optimimzation. This puts an upper limit on spreadProb")),
+    defineParameter(name = "mode", class = "character", default = "fit",
+                    desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' will trigger running of",
+                                 "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
+                                 "visualization after DEoptim. For 'visualize', DE object must be findable, either in sim,",
+                                 "on disk or a cloud URL. These last 2 can be specified with urlDEOptimObject param.")),
     defineParameter(name = "NP", class = "integer", default = NULL,
                     desc = "Number of Populations. See DEoptim.control"),
     defineParameter(name = "objFunCoresInternal", class = "integer", default = 1L,
@@ -161,42 +161,45 @@ defineModule(sim, list(
                  sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
   ),
   outputObjects = rbind(
-    createsOutput(objectName = "covMinMax", objectClass = "data.table",
+    createsOutput("covMinMax", objectClass = "data.table",
                   desc = "data.table of covariates min and max"),
-    createsOutput(objectName = "DE", objectClass = "data.table", desc = "DEOptim object"),
-    createsOutput(objectName = "fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
+    createsOutput("DE", objectClass = "data.table", desc = "DEOptim object"),
+    createsOutput("fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
                   desc = "A fitted model object of class fireSense_SpreadFit."),
+    createsOutput("fsSpreadFit_hists", objectClass = "ggplot",
+                  desc = "histograms of each parameter used in DEoptim fitting."),
     createsOutput(objectName = "lociList", objectClass = "list", desc = "list of fire locs")
   )
 ))
 
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
-
   moduleName <- current(sim)$moduleName
   switch(
     eventType,
     init = {
       moduleName <- currentModule(sim)
       if (!is.null(Par$debugMode)) if (Par$debugMode)
-        params(sim)[[moduleName]][["mode"]] <- "debug"
+        params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
+
       # If user supplies known DEOptim outputs as simple coefficients using parsKnown...
       if (!is.null(sim$parsKnown)) {
-        params(sim)[[moduleName]][["mode"]] <- "debug"
+        params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
       }
-      sim <- Init(sim)
-      if (P(sim)$mode %in% "debug")
-        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
 
-      if (!P(sim)$mode %in% "debug") {
-        if (!P(sim)$mode %in% "fit") {
-          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
-        } else {
+      sim <- Init(sim)
+
+      if ("debug" %in% P(sim)$mode) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
+      } else {
+        if ("fit" %in% P(sim)$mode) {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
+        } else {
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
         }
 
-        if (P(sim)$mode %in% "visualize") {
+        if ("visualize" %in% P(sim)$mode) {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
         }
@@ -275,17 +278,19 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       }
     },
     makefireSense_SpreadFitted = {
-      sim$fireSense_SpreadFitted <-
-        asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula, lower = P(sim)$lower)
+      sim$fireSense_SpreadFitted <- asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula,
+                                                             lower = P(sim)$lower)
     },
     plot = {
-      DEout <- sim$fireSense_SpreadFitted
-      par(mfrow = c(2,10));
-      out <- lapply(seq(NCOL(sim$DE[[1]]$member$pop)), function(nc) {
-        hist(sim$DE[[1]]$member$pop[, nc], main = names(DEout$bestCoef)[nc], xlab = "")
-      })
-      out <- Map(x = DEout$bestCoef, sds = DEout$sdCoef, nam = names(DEout$bestCoef),
-                 function(x, sds, nam) hist(rnorm(1e5, x, sds), main = nam, xlab = ""))
+      DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
+      colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
+      sim$fsSpreadFit_hists <- ggplot(tidyr::gather(DEpop_df), aes(value)) +
+        geom_histogram() +
+        facet_wrap(~key, scales = "free_x")
+
+      ggsave(file.path(outputPath(sim), "figures", "spreadFit_coeffs.png"), sim$fsSpreadFit_hists)
+
+      sim$fsSpreadFit_hists ## show plot in session
     },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                     "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
