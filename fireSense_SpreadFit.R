@@ -350,9 +350,9 @@ Init <- function(sim) {
       stop("covMinMax contains NA values. Check upstream for introduction of NAs.")
     }
   }
-  if (Par$.plot && P(sim)$mode %in% "debug") {
+  if (Par$.plot && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
-                     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
+                         nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
 
   sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
