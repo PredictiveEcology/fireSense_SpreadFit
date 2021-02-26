@@ -90,5 +90,4 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     message("  using SNLL_FS_thresh value: ", threshToUse)
     return(threshToUse)
   }
-
 }
