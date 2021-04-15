@@ -161,7 +161,7 @@ defineModule(sim, list(
                  sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
   ),
   outputObjects = rbind(
-    createsOutput("covMinMax", objectClass = "data.table",
+    createsOutput("covMinMax_spread", objectClass = "data.table",
                   desc = "data.table of covariates min and max"),
     createsOutput("DE", objectClass = "data.table", desc = "DEOptim object"),
     createsOutput("fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
@@ -212,7 +212,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$fireSense_spreadFormula, sim$flammableRTM,
         mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
         doObjFunAssertions = P(sim)$doObjFunAssertions,
-        mod$dat$historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
+        mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
         P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plot,
         tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
         mode = "debug")
@@ -246,7 +246,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       lower = P(sim)$lower,
                       upper = P(sim)$upper,
                       FS_formula = sim$fireSense_spreadFormula,
-                      covMinMax = sim$covMinMax,
+                      covMinMax = sim$covMinMax_spread,
                       objFunCoresInternal = P(sim)$objFunCoresInternal,
                       tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
                       maxFireSpread = P(sim)$maxFireSpread,
@@ -345,10 +345,10 @@ Init <- function(sim) {
     stop(moduleName, "> The 'upper' parameter should be supplied.")
 
   if (P(sim)$rescaleAll) {
-    sim$covMinMax <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
-                                     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
-    if (any(is.na(sim$covMinMax))) {
-      stop("covMinMax contains NA values. Check upstream for introduction of NAs.")
+    sim$covMinMax_spread <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
+                                            nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
+    if (any(is.na(sim$covMinMax_spread))) {
+      stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
     }
   }
   if (Par$.plot && "debug" %in% P(sim)$mode) {
@@ -451,7 +451,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
           sim$fireSense_spreadFormula, sim$flammableRTM,
           doObjFunAssertions = P(sim)$doObjFunAssertions,
           mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
-          mod$dat$historicalFires, sim$covMinMax, P(sim)$objfunFireReps,
+          mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
           tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
           P(sim)$maxFireSpread)
   } else {
