@@ -322,7 +322,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   }
 
   if (!suppliedElsewhere("flammableRTM", sim)) {
-    rstLCC <- prepInputsLCC(destinationPath = tempdir(),
+    rstLCC <- prepInputsLCC(year = 2010,
+                            destinationPath = tempdir(),
                             rasterToMatch = sim$rasterToMatch)
     sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
                                                mask = sim$rasterToMatch,
