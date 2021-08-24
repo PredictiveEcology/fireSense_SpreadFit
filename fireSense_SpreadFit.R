@@ -228,6 +228,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       message("  There will be ", length(lower), " terms: ")
       message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
+
+      opts <- options(parallelly.makeNodePSOCK.setup_strategy = "sequential") ## default 'parallel' not working
       sim$DE <- Cache(runDEoptim,
                       landscape = sim$flammableRTM,
                       annualDTx1000 = mod$dat$annualDTx1000,
@@ -257,8 +259,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       .plotSize = P(sim)$.plotSize,
                       cacheId = P(sim)$cacheId_DE,
                       useCloud = P(sim)$useCloud_DE,
-                      cloudFolderID = P(sim)$cloudFolderID_DE # Cloud cache was being a problem
+                      cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
       )
+      options(opts)
     },
     retrieveDEOptim = {
       if (!is.null(Par$urlDEOptimObject))
