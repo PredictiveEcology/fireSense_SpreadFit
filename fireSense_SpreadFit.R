@@ -292,6 +292,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         facet_wrap(~key, scales = "free_x") +
         ggtitle(paste("distributions of SpreadFit coefficients for", basename(outputPath(sim))))
 
+      checkPath(file.path(outputPath(sim), "figures"), create = TRUE)
       ggsave(file.path(outputPath(sim), "figures", "spreadFit_coeffs.png"), sim$fsSpreadFit_hists)
 
       sim$fsSpreadFit_hists ## show plot in session
