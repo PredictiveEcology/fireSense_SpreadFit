@@ -150,6 +150,8 @@ defineModule(sim, list(
                  desc = paste0("Optional vector of known parameters, e.g., from a previous ",
                                "DEoptim run. If this is supplied, then 'mode' will be automatically ",
                                "converted to 'debug'")),
+    expectInput(objectName = "PCAveg", objectClass = "prcomp",
+                desc = "if covariates were created using PCA, the PCA object will be added to fireSense_spreadFitted"),
     #expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
     #             desc = "list of years of SpatialPoints representing fire polygon's centroids."),
     expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
@@ -282,7 +284,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     makefireSense_SpreadFitted = {
       sim$fireSense_SpreadFitted <- asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula,
-                                                             lower = P(sim)$lower)
+                                                             lower = P(sim)$lower,
+                                                             PCAveg = sim$PCAveg)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -466,7 +469,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   return(sim)
 }
 
-asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
+asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
   DE2 <- if (is(DE, "list")) {
     DE2 <- tail(DE, 1)[[1]]
   } else {
@@ -516,8 +519,13 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
                              attr(terms, "term.labels")
                       )
     ),
-    bestFit = bestFit
+    bestFit = bestFit,
+    PCAveg = PCAveg
   )
+
+  if (is.null(PCAveg)) {
+    fireSense_SpreadFitted <- fireSenseSpreadFitted[!names(fireSense_SpreadFitted) == "PCAveg"]
+  }
 
   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   fireSense_SpreadFitted
