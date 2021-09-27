@@ -524,7 +524,7 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
   )
 
   if (is.null(PCAveg)) {
-    fireSense_SpreadFitted <- fireSenseSpreadFitted[!names(fireSense_SpreadFitted) == "PCAveg"]
+    fireSense_SpreadFitted <- fireSense_SpreadFitted[!names(fireSense_SpreadFitted) == "PCAveg"]
   }
 
   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
