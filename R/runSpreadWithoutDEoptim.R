@@ -72,7 +72,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       annualDTx1000 = annualDTx1000,
                       nonAnnualDTx1000 = nonAnnualDTx1000,
                       fireBufferedListDT = fireBufferedListDT,
-                      mutuallyExclusive = list("youngAge" = c("vegPC")),
+                      mutuallyExclusive = mutuallyExclusive,
                       doAssertions = doObjFunAssertions,
                       historicalFires = historicalFires,
                       tests = tests,
