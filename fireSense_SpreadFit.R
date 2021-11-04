@@ -21,7 +21,7 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "future", "ggplot2", "kSamples", "logging",
+  reqdPkgs = list("data.table", "DEoptim", "diptest", "fastdigest", "future", "ggplot2", "kSamples", "logging",
                   "magrittr", "parallel", "raster", "rgeos", "tidyr",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
@@ -49,6 +49,10 @@ defineModule(sim, list(
                                  "modules, where stochasticity and time are not relevant.")),
     defineParameter(name = "cacheId_DE", class = "character", default = NULL,
                     desc = "An optional character string representing a cacheId to recover from the Cache"),
+    defineParameter(name = "checkModality", class = "logical", default = FALSE,
+                    desc = paste("check distribution in DEoptim coefficients - ideally they will be unimodal.",
+                                 "Experimental solution to an incorrect signal in youngAge or MDC.",
+                                 "Should accept a named list with appropriate sign, but for now it is hardcoded")),
     defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
                     desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
     defineParameter(name = "cores", class = "integer", default = 1,
@@ -232,6 +236,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
 
       opts <- options(parallelly.makeNodePSOCK.setup_strategy = "sequential") ## default 'parallel' not working
+
       sim$DE <- Cache(runDEoptim,
                       landscape = sim$flammableRTM,
                       annualDTx1000 = mod$dat$annualDTx1000,
@@ -285,7 +290,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     makefireSense_SpreadFitted = {
       sim$fireSense_SpreadFitted <- asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula,
                                                              lower = P(sim)$lower,
-                                                             PCAveg = sim$PCAveg)
+                                                             PCAveg = sim$PCAveg,
+                                                             checkModality = P(sim)$checkModality)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -454,14 +460,20 @@ covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireL
 estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
-    Cache(runSpreadWithoutDEoptim,
-          P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
-          sim$fireSense_spreadFormula, sim$flammableRTM,
-          doObjFunAssertions = P(sim)$doObjFunAssertions,
-          mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
-          mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
-          tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-          P(sim)$maxFireSpread)
+    a <- Cache(runSpreadWithoutDEoptim,
+               P(sim)$iterThresh, lower = P(sim)$lower, upper = P(sim)$upper,
+               fireSense_spreadFormula = sim$fireSense_spreadFormula,
+               flammableRTM = sim$flammableRTM,
+               mutuallyExclusive = P(sim)$mutuallyExclusive,
+               doObjFunAssertions = P(sim)$doObjFunAssertions,
+               annualDTx1000 = mod$dat$annualDTx1000,
+               nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
+               fireBufferedListDT = mod$dat$fireBufferedListDT,
+               historicalFires = mod$dat$historicalFires,
+               covMinMax = sim$covMinMax_spread,
+               objfunFireReps = P(sim)$objfunFireReps,
+               tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+               maxFireSpread = P(sim)$maxFireSpread)
   } else {
     P(sim)$SNLL_FS_thresh
   }
@@ -469,35 +481,62 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   return(sim)
 }
 
-asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
+asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL, checkModality = FALSE) {
   DE2 <- if (is(DE, "list")) {
     DE2 <- tail(DE, 1)[[1]]
   } else {
     DE
   }
-  valAverage <- DE2 %>% `[[`("member") %>% `[[`("bestmemit") %>%
-    apply(MARGIN = 2, FUN = mean)
-  valSD <- DE2 %>% `[[`("member") %>% `[[`("bestmemit") %>%
-    apply(MARGIN = 2, FUN = sd)
-  valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
-  bestFit <- DE2$optim$bestval
-  terms <- terms(as.formula(DEformulaChar))
+
   # Identifying the number of parameters of the logistic function and names
-  nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
-  if (nParsLogistic == 5) {
-    nms <- c("inflectionPoint1", "inflectionPoint2",
-             "maxAsymptote", "hillSlope1", "hillSlope2")
-  } else if (nParsLogistic == 4) {
-    nms <- c("inflectionPoint1", "inflectionPoint2",
-             "maxAsymptote", "hillSlope1")
-  } else if (nParsLogistic == 3) {
-    nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
-  } else if (nParsLogistic == 2) {
-    nms <- c("maxAsymptote", "hillSlope1")
-  }
+  terms <- terms(as.formula(DEformulaChar))
+  formType <- length(lower) - length(attributes(terms)[["term.labels"]])
   # Giuseppe Cardillo (2020). Three parameters logistic regression -
   # There and back again (https://www.github.com/dnafinder/logistic3),
   # GitHub. Retrieved June 11, 2020.
+
+  if (formType == 5) {
+    nms <- c("inflectionPoint1", "inflectionPoint2",
+             "maxAsymptote", "hillSlope1", "hillSlope2")
+  } else if (formType == 4) {
+    nms <- c("inflectionPoint1", "inflectionPoint2",
+             "maxAsymptote", "hillSlope1")
+  } else if (formType == 3) {
+    nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
+  } else if (formType == 2) {
+    nms <- c("maxAsymptote", "hillSlope1")
+  }
+
+  nms2 <- terms(as.formula(DEformulaChar))
+  nms2 <- attributes(nms2)[["term.labels"]]
+
+  #TODO: this checkModality param should accept a named list of what to check for, not this hard-coding
+  nonunimodalYA <- FALSE
+  #it is easier to subset as data.table
+  bestmemit <- as.data.table(DE2 %>% `[[`("member") %>% `[[`("bestmemit")) %>%
+    setnames(., c(nms, nms2))
+
+  valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
+  bestFit <- DE2$optim$bestval
+
+  #Ideally we check normality too - but in practice everything is non-normal and multimodal
+  #more important is whether the modes are on opposite signs..
+  if (checkModality){
+    YAcheck <- dip.test(bestmemit$youngAge, simulate.p.value = TRUE, B = 50)
+    YAcheck <- ifelse(YAcheck[['p.value']] < 0.05, TRUE, FALSE) #does not cover sign...
+    if (YAcheck){
+      badCount <- nrow(bestmemit[youngAge > 0])
+      message("removing ", badCount, " populations where youngAge < 0")
+      bestFit <- min(DE2$member$bestvalit[bestmemit$youngAge < 0])
+      newBest <- DE2$member$bestvalit == bestFit
+      valBest <- unique(DE2$member$bestmemit[newBest])
+      bestmemit <- bestmemit[youngAge < 0]
+    }
+  }
+
+  #if not normal, we should take median...
+  valAverage <- bestmemit[, lapply(.SD, mean)] %>% as.numeric(.[1,])
+  valSD <- bestmemit[, lapply(.SD, sd)] %>% as.numeric(.[1,])
 
   fireSense_SpreadFitted <- list(
     formula = DEformulaChar,
