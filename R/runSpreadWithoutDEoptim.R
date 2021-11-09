@@ -62,7 +62,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     message("Using ", nCores, " cores.")
 
-    st1 <- system.time(
+    st1 <- system.time({
       a <- mcmapply(mc.cores = min(nCores, length(pars)),
                     par = pars, FUN = .objfunSpreadFit,
                     mc.preschedule = FALSE, thresh = thresholds,
@@ -82,7 +82,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       weighted = weighted,
                       verbose = TRUE, plot.it = FALSE)
       )
-    )
+    })
 
     valsdt <- data.table(thresholds = thresholds, objFun = a)
     valsdt <- valsdt[objFun < 1e5]
