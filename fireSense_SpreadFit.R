@@ -458,14 +458,22 @@ covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireL
 estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
+
     Cache(runSpreadWithoutDEoptim,
-          P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
-          sim$fireSense_spreadFormula, sim$flammableRTM,
+          iterThres = P(sim)$iterThresh,
+          lower = P(sim)$lower, upper = P(sim)$upper,
+          fireSense_spreadFormula = sim$fireSense_spreadFormula,
+          flammableRTM = sim$flammableRTM,
+          mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
           doObjFunAssertions = P(sim)$doObjFunAssertions,
-          mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
-          mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
+          annualDTx1000 = mod$dat$annualDTx1000,
+          nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
+          fireBufferedListDT = mod$dat$fireBufferedListDT,
+          historicalFires = mod$dat$historicalFires,
+          covMinMax = sim$covMinMax_spread,
+          objfunFireReps = P(sim)$objfunFireReps,
           tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-          P(sim)$maxFireSpread)
+          maxFireSpread = P(sim)$maxFireSpread)
   } else {
     P(sim)$SNLL_FS_thresh
   }

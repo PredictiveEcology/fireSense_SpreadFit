@@ -1,5 +1,6 @@
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
-                                    annualDTx1000, nonAnnualDTx1000, fireBufferedListDT, mutuallyExclusive,
+                                    annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
+                                    mutuallyExclusive = list("youngAge" = "vegPC"),
                                     doObjFunAssertions = getOption("fireSenseUtils.assertions", TRUE),
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
                                     weighted = TRUE, tests = c("snll_fs", "adtest"),
