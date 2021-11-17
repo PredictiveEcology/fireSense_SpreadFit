@@ -125,6 +125,8 @@ defineModule(sim, list(
                     desc = paste0("optional. If onlyLoadDEOptim == TRUE, you can pass the url to the  ",
                                   "DEOptim object. The default is the object from the run on 11JUN20",
                                   " from the logistic2p")),
+    defineParameter(name = "useCache_DE", class = "logical", default = TRUE,
+                    desc = "should DEoptim use cache? to do multiple independent runs, use FALSE"),
     defineParameter(name = "useCloud_DE", class = "logical", default = FALSE,
                     desc = "Passed to useCloud in the Cache(DEoptim...) call"),
     defineParameter(name = "verbose", class = "logical", default = FALSE,
@@ -260,6 +262,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       visualizeDEoptim = P(sim)$visualizeDEoptim,
                       .plotSize = P(sim)$.plotSize,
                       cacheId = P(sim)$cacheId_DE,
+                      useCache = P(sim)$useCache_DE,
                       useCloud = P(sim)$useCloud_DE,
                       cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
       )
