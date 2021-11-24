@@ -397,12 +397,12 @@ loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
     }
   } else {
     sim2 <- try(Cache(prepInputs, url = url,
-                    destinationPath = destinationPath,
-                    fun = "qs::qread"))
+                      destinationPath = destinationPath,
+                      fun = "qs::qread"))
     if (is(sim2, "try-error"))
       sim2 <- try(Cache(prepInputs, url = url,
-                      destinationPath = destinationPath,
-                      fun = "base::readRDS"))
+                        destinationPath = destinationPath,
+                        fun = "base::readRDS"))
   }
   sim2
 }
@@ -424,7 +424,6 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   annualColsToPlot <- setdiff(annualCols, "pixelID")
   nonAnnualCols <- colnames(nonAnnualList[[1]])
   nonAnnualColsToPlot <- setdiff(nonAnnualCols, "pixelID")
-
 
   nplots <- length(annualColsToPlot) * length(annualList) +
     length(nonAnnualColsToPlot) * length(nonAnnualList)
