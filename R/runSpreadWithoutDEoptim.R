@@ -52,7 +52,6 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  verbose = TRUE,
                                  weighted = weighted,
                                  plot.it = plot.it
-                                 #plot.it = TRUE
       )
     }
   } else {
