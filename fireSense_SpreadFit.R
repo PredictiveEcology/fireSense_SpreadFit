@@ -25,8 +25,8 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "rgeos", "tidyr",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9037)",
-                  "PredictiveEcology/SpaDES.tools@development (>=0.3.7.9007)"),
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9007)",
+                  "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
