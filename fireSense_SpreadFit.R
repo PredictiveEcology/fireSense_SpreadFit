@@ -9,9 +9,9 @@ defineModule(sim, list(
   keywords = c("fire", "spread", "POM", "percolation"),
   authors = c(
     person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut")),
-    person("Eliot", "McIntire", email = "eliot.mcintire@canada.ca", role = c("aut", "cre")),
+    person("Eliot", "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut", "cre")),
     person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut")),
-    person("Ian", "Eddy", email = "ian.eddy@canada.ca", role = c("aut")),
+    person("Ian", "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut")),
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "rgeos", "tidyr",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9007)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9008)",
                   "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
