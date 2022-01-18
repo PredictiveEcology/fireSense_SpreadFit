@@ -1,11 +1,11 @@
 defineModule(sim, list(
   name = "fireSense_SpreadFit",
-  description = "Fit statistical models that can be used to parameterize the
-  fire spread component of simulation models (e.g. fireSense).
-  This module implement a Pattern Oriented Modelling (POM)
-  approach to derive spread probabilities from final fire sizes.
-  Spread probabilities can vary between pixels, and thus reflect
-  local heterogeneity in environmental conditions.",
+  description = paste("Fit statistical models that can be used to parameterize the",
+                      "fire spread component of simulation models (e.g. fireSense).",
+                      "This module implement a Pattern Oriented Modelling (POM)",
+                      "approach to derive spread probabilities from final fire sizes.",
+                      "Spread probabilities can vary between pixels, and thus reflect",
+                      "local heterogeneity in environmental conditions."),
   keywords = c("fire", "spread", "POM", "percolation"),
   authors = c(
     person("Jean", "Marchal", email = "jean.d.marchal@gmail.com", role = c("aut")),
