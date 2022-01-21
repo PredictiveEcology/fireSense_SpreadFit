@@ -117,10 +117,10 @@ defineModule(sim, list(
                                  "the progress of the optimization are printed every",
                                  "`trace` iteration. Default is 0, which turns off tracing.")),
     defineParameter(name = "upper", class = "numeric", default = NA,
-                    desc = "see `?DEoptim`. Upper limits for the logistic function
-                    parameters (lower bound, upper bound, slope, asymmetry)
-                    and the statistical model parameters (in the order they
-                    appear in the formula)."),
+                    desc = paste("see `?DEoptim`. Upper limits for the logistic function",
+                                 "parameters (lower bound, upper bound, slope, asymmetry)",
+                                 "and the statistical model parameters (in the order they",
+                                 "appear in the formula).")),
     defineParameter(name = "urlDEOptimObject", class = "character",
                     default = paste0("https://drive.google.com/file/d/",
                                      "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
@@ -254,7 +254,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       cachePath = cachePath(sim),
                       lower = P(sim)$lower,
                       upper = P(sim)$upper,
-                      mutuallyExclusive = P(sim)$mutuallyExclusiveCols, #TODO: test
+                      mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
                       FS_formula = sim$fireSense_spreadFormula,
                       covMinMax = sim$covMinMax_spread,
                       objFunCoresInternal = P(sim)$objFunCoresInternal,
