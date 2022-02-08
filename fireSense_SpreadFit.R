@@ -489,10 +489,8 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
   } else {
     DE
   }
-  valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>%
-    apply(MARGIN = 2, FUN = median)
-  valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>%
-    apply(MARGIN = 2, FUN = sd)
+  valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
+  valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
   valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
   bestFit <- DE2$optim$bestval
   terms <- terms(as.formula(DEformulaChar))
