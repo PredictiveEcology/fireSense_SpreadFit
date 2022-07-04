@@ -351,6 +351,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                filename2 = NULL)
   }
 
+  if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
+    stop("fireSense_spreadFormula must be supplied.")
+  }
+
   return(invisible(sim))
 }
 
