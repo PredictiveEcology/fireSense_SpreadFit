@@ -25,7 +25,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
     userPars <- FALSE
-    thresholds <- sample(3 * decentEstimateThreshold, size = n)
+
+    thresholds <- sample(3 * max(n, decentEstimateThreshold), size = n)
   } else {
     userPars <- TRUE
     thresholds <- 1e8
