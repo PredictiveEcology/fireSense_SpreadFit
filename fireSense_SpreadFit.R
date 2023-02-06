@@ -91,7 +91,7 @@ defineModule(sim, list(
                                  "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
                                  "visualization after DEoptim. For 'visualize', DE object must be findable, either in sim,",
                                  "on disk or a cloud URL. These last 2 can be specified with urlDEOptimObject param.")),
-    defineParameter(name = "mutuallyExclusiveCols", "list", list("youngAge" = "vegPC"), NA, NA,
+    defineParameter(name = "mutuallyExclusiveCols", "list", list("youngAge" = c("class", "nonForest")), NA, NA,
                     desc = "a named list of mutually exclusive covariates - see fireSenseUtils::makeMutuallyExclusive"),
     defineParameter(name = "NP", class = "integer", default = NULL,
                     desc = "Number of Populations. See DEoptim.control"),
