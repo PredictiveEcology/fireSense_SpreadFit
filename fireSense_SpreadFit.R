@@ -146,26 +146,22 @@ defineModule(sim, list(
                  desc = paste0("RasterToMatch where non-flammable pixels (LCC05 %in% c(33,36:39)) ",
                                "Defaults to NWT"), sourceURL = NA),
     expectsInput(objectName = "fireSense_annualSpreadFitCovariates", objectClass = "data.table",
-                 desc = "table of climate PCA components, burn status, polyID, and pixelID"),
+                 desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput(objectName = "fireSense_nonAnnualSpreadFitCovariates", objectClass = "data.table",
-                 desc = "table of veg PCA components, burn status, polyID, and pixelID"),
+                 desc = "table of veg covariates, burn status, polyID, and pixelID"),
     expectsInput(objectName = "fireSense_spreadFormula", objectClass = "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
-                               "e.g. ~ 0 + MDC + vegPC1 + vegPC2")),
+                               "e.g. `~ 0 + MDC + class2 + class3 + youngAge`.")),
     expectsInput(objectName = "parsKnown", objectClass = "numeric",
-                 desc = paste0("Optional vector of known parameters, e.g., from a previous ",
-                               "DEoptim run. If this is supplied, then 'mode' will be automatically ",
+                 desc = paste0("Optional vector of known parameters, e.g., from a previous DEoptim run.",
+                               "If this is supplied, then 'mode' will be automatically ",
                                "converted to 'debug'")),
-    expectsInput(objectName = "PCAveg", objectClass = "prcomp",
-                 desc = "if covariates were created using PCA, the PCA object will be added to fireSense_spreadFitted"),
-    #expectsInput(objectName = "polyCentroids", objectClass = "list", sourceURL = NA_character_,
-    #             desc = "list of years of SpatialPoints representing fire polygon's centroids."),
     expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
                  desc = "template raster for study area"),
     expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
-                 desc = "ist of spatialPolygonDataFrame objects representing annual fire centroids"),
+                 desc = "list of spatialPolygonDataFrame objects representing annual fire centroids"),
     expectsInput(objectName = "studyArea", objectClass = "SpatialPolygonDataFrame",
-                 desc = "Study area for the prediction. Defaults to NWT",
+                 desc = "Study area for the prediction. Defaults to NWT.",
                  sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
   ),
   outputObjects = rbind(
@@ -356,9 +352,14 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
 Init <- function(sim) {
   moduleName <- current(sim)$moduleName
-  # Checking parameters
-  stopifnot(P(sim)$trace >= 0)
-  stopifnot(P(sim)$cores >= 0)
+
+  ## sanity check parameters + inputs
+  stopifnot(
+    "parameter 'trace' must be postive" = P(sim)$trace >= 0,
+    "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0,
+    "each non-annual spreadFit covariate cannot be all zeros" =
+      all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
+  )
 
   if (anyNA(P(sim)$lower))
     stop(moduleName, "> The 'lower' parameter should be supplied.")
@@ -373,6 +374,7 @@ Init <- function(sim) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
     }
   }
+
   if (Par$.plot && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
