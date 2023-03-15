@@ -313,42 +313,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   invisible(sim)
 }
 
-.inputObjects <- function(sim) {
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
-  message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
-  if (!suppliedElsewhere(object = "studyArea", sim = sim)) {
-    sim$studyArea <- Cache(prepInputs,
-                           url = extractURL("studyArea"),
-                           destinationPath = dataPath(sim),
-                           cloudFolderID = sim$cloudFolderID,
-                           omitArgs = c("destinationPath", "cloudFolderID"))
-  }
-
-  if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)) {
-    sim$rasterToMatch <- Cache(prepInputs, url = extractURL("rasterToMatch"),
-                               studyArea = sim$studyArea,
-                               targetFile = "RTM.tif", destinationPath = dataPath(sim),
-                               overwrite = TRUE, filename2 = NULL,
-                               omitArgs = c("destinationPath", "cloudFolderID",
-                                            "useCloud", "overwrite", "filename2"))
-  }
-
-  if (!suppliedElsewhere("flammableRTM", sim)) {
-    rstLCC <- prepInputsLCC(year = 2010,
-                            destinationPath = tempdir(),
-                            rasterToMatch = sim$rasterToMatch)
-    sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
-                                               mask = sim$rasterToMatch,
-                                               filename2 = NULL)
-  }
-
-  if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
-    stop("fireSense_spreadFormula must be supplied.")
-  }
-
-  return(invisible(sim))
-}
 
 Init <- function(sim) {
   moduleName <- current(sim)$moduleName
@@ -550,4 +515,41 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
 
   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   fireSense_SpreadFitted
+}
+
+.inputObjects <- function(sim) {
+  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  message(currentModule(sim), ": using dataPath '", dPath, "'.")
+
+  if (!suppliedElsewhere(object = "studyArea", sim = sim)) {
+    sim$studyArea <- Cache(prepInputs,
+                           url = extractURL("studyArea"),
+                           destinationPath = dataPath(sim),
+                           cloudFolderID = sim$cloudFolderID,
+                           omitArgs = c("destinationPath", "cloudFolderID"))
+  }
+
+  if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)) {
+    sim$rasterToMatch <- Cache(prepInputs, url = extractURL("rasterToMatch"),
+                               studyArea = sim$studyArea,
+                               targetFile = "RTM.tif", destinationPath = dataPath(sim),
+                               overwrite = TRUE, filename2 = NULL,
+                               omitArgs = c("destinationPath", "cloudFolderID",
+                                            "useCloud", "overwrite", "filename2"))
+  }
+
+  if (!suppliedElsewhere("flammableRTM", sim)) {
+    rstLCC <- prepInputsLCC(year = 2010,
+                            destinationPath = tempdir(),
+                            rasterToMatch = sim$rasterToMatch)
+    sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
+                                               mask = sim$rasterToMatch,
+                                               filename2 = NULL)
+  }
+
+  if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
+    stop("fireSense_spreadFormula must be supplied.")
+  }
+
+  return(invisible(sim))
 }
