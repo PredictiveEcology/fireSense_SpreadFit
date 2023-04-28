@@ -16,7 +16,6 @@ defineModule(sim, list(
   ),
   childModules = character(),
   version = list(fireSense_SpreadFit = "0.0.1.9001"),
-  spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -248,7 +247,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       strategy = P(sim)$strategy,
                       cores = P(sim)$cores,
                       doObjFunAssertions = P(sim)$doObjFunAssertions,
-                      libPath = P(sim)$libPathDEoptim,
+                      libPath = normPath(P(sim)$libPathDEoptim),
                       logPath = outputPath(sim), ## TODO (#6): use tempdir()
                       cachePath = cachePath(sim),
                       lower = P(sim)$lower,
@@ -345,6 +344,7 @@ Init <- function(sim) {
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
 
+  sim$lociList
   sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
 
   mod$dat <- covsX1000AndSetDF(
