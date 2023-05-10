@@ -24,8 +24,8 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "rgeos", "tidyr",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9032)",
-                  "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)"),
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9045)",
+                  "PredictiveEcology/SpaDES.tools@development (>= 1.0.2.9001)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
@@ -80,7 +80,7 @@ defineModule(sim, list(
     defineParameter(name = "lower", class = "numeric", default = NA,
                     desc = paste("see `?DEoptim`. Lower limits for the logistic function",
                                  "parameters (lower bound, upper bound, slope, asymmetry)",
-                                 "and the statistical model parameters (in the order they",
+                                 "and the statistical model parameters (named in the order they",
                                  "appear in the formula).")),
     defineParameter(name = "maxFireSpread", class = "numeric", default = 0.28,
                     desc = paste0("optional. Maximum fire spread average to be passed to the ",
@@ -120,7 +120,7 @@ defineModule(sim, list(
     defineParameter(name = "upper", class = "numeric", default = NA,
                     desc = paste("see `?DEoptim`. Upper limits for the logistic function",
                                  "parameters (lower bound, upper bound, slope, asymmetry)",
-                                 "and the statistical model parameters (in the order they",
+                                 "and the statistical model parameters (named in the order they",
                                  "appear in the formula).")),
     defineParameter(name = "urlDEOptimObject", class = "character",
                     default = paste0("https://drive.google.com/file/d/",
@@ -234,6 +234,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
 
       opts <- options(parallelly.makeNodePSOCK.setup_strategy = "sequential") ## default 'parallel' not working
+
       sim$DE <- Cache(runDEoptim,
                       landscape = sim$flammableRTM,
                       annualDTx1000 = mod$dat$annualDTx1000,
@@ -289,8 +290,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     makefireSense_SpreadFitted = {
       sim$fireSense_SpreadFitted <- asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula,
-                                                             lower = P(sim)$lower,
-                                                             PCAveg = sim$PCAveg)
+                                                             lower = P(sim)$lower)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -331,6 +331,10 @@ Init <- function(sim) {
   if (anyNA(P(sim)$upper))
     stop(moduleName, "> The 'upper' parameter should be supplied.")
 
+  if (!all(names(P(sim)$upper) == names(P(sim)$lower))){
+    stop("please ensure 'upper' and 'lower' params are named with an identical order")
+  }
+
   if (P(sim)$rescaleAll) {
     sim$covMinMax_spread <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
                                             nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
@@ -351,7 +355,8 @@ Init <- function(sim) {
     annualList = sim$fireSense_annualSpreadFitCovariates,
     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
     fireBufferedList = sim$fireBufferedListDT,
-    fireLociList = sim$lociList)
+    fireLociList = sim$lociList,
+    paramOrder = P(sim)$upper)
 
   return(sim)
 }
@@ -418,7 +423,16 @@ histOfCovariates <- function(annualList, nonAnnualList) {
     hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = "year"]
 }
 
-covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireLociList) {
+covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireLociList, paramOrder) {
+
+  annualCols <- colnames(annualList[[1]])
+  nonAnnualCols <- colnames(nonAnnualList[[1]])
+  annualCols <- annualCols[annualCols %in% names(paramOrder)]
+  nonAnnualCols <- nonAnnualCols[nonAnnualCols %in% names(paramOrder)]
+
+  annualList <- lapply(annualList, setcolorder, neworder = c("pixelID", annualCols))
+  nonAnnualCols <- lapply(nonAnnualList, setcolorder, neworder = c("pixelID", nonAnnualCols))
+
   annualDT <- lapply(annualList, setDF)
   annualDTx1000 <- toX1000(annualDT)
   nonAnnualDT <- lapply(nonAnnualList, setDF)
@@ -457,7 +471,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   return(sim)
 }
 
-asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
+asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   DE2 <- if (is(DE, "list")) {
     DE2 <- tail(DE, 1)[[1]]
   } else {
@@ -505,13 +519,8 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower, PCAveg = NULL) {
                              attr(terms, "term.labels")
                       )
     ),
-    bestFit = bestFit,
-    PCAveg = PCAveg
+    bestFit = bestFit
   )
-
-  if (is.null(PCAveg)) {
-    fireSense_SpreadFitted <- fireSense_SpreadFitted[!names(fireSense_SpreadFitted) == "PCAveg"]
-  }
 
   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   fireSense_SpreadFitted
