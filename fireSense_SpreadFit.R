@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development",
                   "PredictiveEcology/fireSenseUtils@development", #  (>=0.0.0.9008)
-                  "PredictiveEcology/SpaDES.tools@allowOverlap"), #  (>=0.3.4.9002)),
+                  "PredictiveEcology/SpaDES.tools@e6911b100c38ade0536f744c831102dfad1c39f0"), #  (>=0.3.4.9002)), the SHA is approximate for deleted allowOverlap branch
   parameters = rbind(
     defineParameter(name = "formula", class = "formula", 
                     default = formula(~ 0 + weather + class1 + class2 + class3 + class4 + class5),
