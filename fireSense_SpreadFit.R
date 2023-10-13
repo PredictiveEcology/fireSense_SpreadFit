@@ -15,17 +15,17 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "0.0.1.9001"),
+  version = list(fireSense_SpreadFit = "1.0.0"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "future", "ggplot2", "kSamples", "logging",
-                  "magrittr", "parallel", "raster", "rgeos", "tidyr",
+                  "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
-                  "PredictiveEcology/Require@development",
-                  "PredictiveEcology/fireSenseUtils@terra-migration (>= 0.0.5.9046)",
-                  "PredictiveEcology/SpaDES.tools@development (>= 1.0.2.9001)"),
+                  "PredictiveEcology/Require@development (>= 0.3.1)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9050)",
+                  "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
@@ -477,6 +477,7 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   } else {
     DE
   }
+  ## TODO: use native R pipe
   valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
   valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
   valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
