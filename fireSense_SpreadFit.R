@@ -328,7 +328,7 @@ spreadFitPrep <- function(sim) {
   # veg coefficients should probably have bounds of 4 
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
   # MDC should have a lower limit of zero - drought shouldn't increase spread probability 
-  if (is.null(P(sim)$upper | is.na(P(sim)$upper))) {
+  if (is.null(P(sim)$upper) | is.na(P(sim)$upper)) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates, 
                                          whichBound = "upper")
