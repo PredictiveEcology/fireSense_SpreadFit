@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9053)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9055)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -232,9 +232,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     run = {
       termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula)), "term.labels")
-      logitNumParams <- length(lower) - length(termsInForm)
+      logitNumParams <- length(P(sim)$lower) - length(termsInForm)
       message("Using a ", logitNumParams, " parameter logistic equation")
-      message("  There will be ", length(lower), " terms: ")
+      message("  There will be ", length(P(sim)$lower), " terms: ")
       message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
 
