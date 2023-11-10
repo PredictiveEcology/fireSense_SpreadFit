@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9050)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9055)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -141,9 +141,8 @@ defineModule(sim, list(
   inputObjects = rbind(
     expectsInput(objectName = "fireBufferedListDT", objectClass = "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
-    expectsInput(objectName = "flammableRTM", objectClass = "RasterLayer",
-                 desc = paste0("RasterToMatch where non-flammable pixels (LCC05 %in% c(33,36:39)) ",
-                               "Defaults to NWT"), sourceURL = NA),
+    expectsInput(objectName = "flammableRTM", objectClass = "SpatRaster",
+                 desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1."),
     expectsInput(objectName = "fireSense_annualSpreadFitCovariates", objectClass = "data.table",
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput(objectName = "fireSense_nonAnnualSpreadFitCovariates", objectClass = "data.table",
@@ -155,11 +154,11 @@ defineModule(sim, list(
                  desc = paste0("Optional vector of known parameters, e.g., from a previous DEoptim run.",
                                "If this is supplied, then 'mode' will be automatically ",
                                "converted to 'debug'")),
-    expectsInput(objectName = "rasterToMatch", objectClass = "RasterLayer",
+    expectsInput(objectName = "rasterToMatch", objectClass = "SpatRaster",
                  desc = "template raster for study area"),
-    expectsInput(objectName = "spreadFirePoints", objectClass = "SpatialPointsDataFrame",
-                 desc = "list of spatialPolygonDataFrame objects representing annual fire centroids"),
-    expectsInput(objectName = "studyArea", objectClass = "SpatialPolygonDataFrame",
+    expectsInput(objectName = "spreadFirePoints", objectClass = "sf",
+                 desc = "list of spatial points objects representing annual fire centroids"),
+    expectsInput(objectName = "studyArea", objectClass = "sf",
                  desc = "Study area for the prediction. Defaults to NWT.",
                  sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
   ),
@@ -192,9 +191,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- Init(sim)
 
       if ("debug" %in% P(sim)$mode) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
       } else {
         if ("fit" %in% P(sim)$mode) {
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
@@ -207,6 +208,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
         }
       }
+    },
+    spreadFitPrepare = {
+      sim <- spreadFitPrep(sim)
     },
     debug = {
       ## This below is to test the code without running DEOptim
@@ -227,9 +231,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     run = {
       termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula)), "term.labels")
-      logitNumParams <- length(lower) - length(termsInForm)
+      logitNumParams <- length(P(sim)$lower) - length(termsInForm)
       message("Using a ", logitNumParams, " parameter logistic equation")
-      message("  There will be ", length(lower), " terms: ")
+      message("  There will be ", length(P(sim)$lower), " terms: ")
       message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
       message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
 
@@ -312,10 +316,29 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   invisible(sim)
 }
 
+Init <- function(sim){
+  #TODO: does this module need an init? 
+  return(sim)
+}
 
-
-Init <- function(sim) {
+spreadFitPrep <- function(sim) {
   moduleName <- current(sim)$moduleName
+  
+  # veg coefficients should probably have bounds of 4 
+  # however youngAge should have an upper limit of zero to prevent self-propagating fires
+  # MDC should have a lower limit of zero - drought shouldn't increase spread probability 
+  if (is.null(P(sim)$upper) | is.na(P(sim)$upper)) {
+    P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
+                                         sim$fireSense_annualSpreadFitCovariates, 
+                                         whichBound = "upper")
+  }
+  
+  if (is.null(P(sim)$lower) | is.na(P(sim)$lower)) {
+    #ToDo - figure out the 2-4 piece logistic defaults :S
+    P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
+                                          sim$fireSense_annualSpreadFitCovariates, 
+                                          whichBound = "lower")
+  }
 
   ## sanity check parameters + inputs
   stopifnot(
@@ -324,17 +347,12 @@ Init <- function(sim) {
     "each non-annual spreadFit covariate cannot be all zeros" =
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
-
-  if (anyNA(P(sim)$lower))
-    stop(moduleName, "> The 'lower' parameter should be supplied.")
-
-  if (anyNA(P(sim)$upper))
-    stop(moduleName, "> The 'upper' parameter should be supplied.")
-
+  
+  
   if (!all(names(P(sim)$upper) == names(P(sim)$lower))){
     stop("please ensure 'upper' and 'lower' params are named with an identical order")
   }
-
+  
   if (P(sim)$rescaleAll) {
     sim$covMinMax_spread <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
                                             nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
@@ -342,22 +360,21 @@ Init <- function(sim) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
     }
   }
-
+  
   if (Par$.plot && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
-
-  sim$lociList
+  
   sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
-
+  
   mod$dat <- covsX1000AndSetDF(
     annualList = sim$fireSense_annualSpreadFitCovariates,
     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
     fireBufferedList = sim$fireBufferedListDT,
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
-
+  
   return(sim)
 }
 
@@ -525,6 +542,35 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
 
   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
   fireSense_SpreadFitted
+}
+
+#ideally this takes arguments that aren't entire simlist.. 
+estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound){
+  
+  stopifnot(whichBound %in% c("upper", "lower"))
+  
+  formulaTerms <- attr(terms(as.formula(fireSense_spreadFormula)), "term.labels")
+  termLength <- length(formulaTerms)
+  if(whichBound == "upper") {
+    newParams <- rep(4, times = termLength)
+  } else {
+    newParams <- rep(-4, termLength)
+  }
+  newParams <- as.vector(newParams)
+  whAnnual <- formulaTerms %in% colnames(anyAnnualCovariates[[1]])
+  whYA <- formulaTerms[whAnnual] %in% "youngAge"
+  newParams[whAnnual] <- ifelse(whichBound == "upper", 4, 0)
+  newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -4)
+  
+  names(newParams) <- formulaTerms
+  
+  if (whichBound == "upper") {
+    newParams <- c("maxAsymptote" = 0.276, "hillSlope1" = 2, "inflectionPoint1" = 4, newParams)
+  } else {
+    newParams <- c("maxAsymptote" = 0.25, "hillSlope1" = 0.2, "inflectionPoint1" = 0.1, newParams)
+  }
+  
+  return(newParams)
 }
 
 .inputObjects <- function(sim) {
