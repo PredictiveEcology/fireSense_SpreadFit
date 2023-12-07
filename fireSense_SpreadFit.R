@@ -230,7 +230,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-      termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula)), "term.labels")
+      termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
       logitNumParams <- length(P(sim)$lower) - length(termsInForm)
       message("Using a ", logitNumParams, " parameter logistic equation")
       message("  There will be ", length(P(sim)$lower), " terms: ")
@@ -317,26 +317,26 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 }
 
 Init <- function(sim){
-  #TODO: does this module need an init? 
+  #TODO: does this module need an init?
   return(sim)
 }
 
 spreadFitPrep <- function(sim) {
   moduleName <- current(sim)$moduleName
-  
-  # veg coefficients should probably have bounds of 4 
+
+  # veg coefficients should probably have bounds of 4
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
-  # MDC should have a lower limit of zero - drought shouldn't increase spread probability 
+  # MDC should have a lower limit of zero - drought shouldn't increase spread probability
   if (is.null(P(sim)$upper) | is.na(P(sim)$upper)) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
-                                         sim$fireSense_annualSpreadFitCovariates, 
+                                         sim$fireSense_annualSpreadFitCovariates,
                                          whichBound = "upper")
   }
-  
+
   if (is.null(P(sim)$lower) | is.na(P(sim)$lower)) {
     #ToDo - figure out the 2-4 piece logistic defaults :S
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
-                                          sim$fireSense_annualSpreadFitCovariates, 
+                                          sim$fireSense_annualSpreadFitCovariates,
                                           whichBound = "lower")
   }
 
@@ -347,12 +347,12 @@ spreadFitPrep <- function(sim) {
     "each non-annual spreadFit covariate cannot be all zeros" =
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
-  
-  
+
+
   if (!all(names(P(sim)$upper) == names(P(sim)$lower))){
     stop("please ensure 'upper' and 'lower' params are named with an identical order")
   }
-  
+
   if (P(sim)$rescaleAll) {
     sim$covMinMax_spread <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
                                             nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
@@ -360,21 +360,21 @@ spreadFitPrep <- function(sim) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
     }
   }
-  
+
   if (Par$.plot && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
-  
+
   sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
-  
+
   mod$dat <- covsX1000AndSetDF(
     annualList = sim$fireSense_annualSpreadFitCovariates,
     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
     fireBufferedList = sim$fireBufferedListDT,
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
-  
+
   return(sim)
 }
 
@@ -499,7 +499,7 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
   valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
   bestFit <- DE2$optim$bestval
-  terms <- terms(as.formula(DEformulaChar))
+  terms <- terms(as.formula(DEformulaChar, env = .GlobalEnv))
   # Identifying the number of parameters of the logistic function and names
   nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
   if (nParsLogistic == 5) {
@@ -544,12 +544,12 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   fireSense_SpreadFitted
 }
 
-#ideally this takes arguments that aren't entire simlist.. 
+#ideally this takes arguments that aren't entire simlist..
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound){
-  
+
   stopifnot(whichBound %in% c("upper", "lower"))
-  
-  formulaTerms <- attr(terms(as.formula(fireSense_spreadFormula)), "term.labels")
+
+  formulaTerms <- attr(terms(as.formula(fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
   termLength <- length(formulaTerms)
   if(whichBound == "upper") {
     newParams <- rep(4, times = termLength)
@@ -561,15 +561,15 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   whYA <- formulaTerms[whAnnual] %in% "youngAge"
   newParams[whAnnual] <- ifelse(whichBound == "upper", 4, 0)
   newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -4)
-  
+
   names(newParams) <- formulaTerms
-  
+
   if (whichBound == "upper") {
     newParams <- c("maxAsymptote" = 0.276, "hillSlope1" = 2, "inflectionPoint1" = 4, newParams)
   } else {
     newParams <- c("maxAsymptote" = 0.25, "hillSlope1" = 0.2, "inflectionPoint1" = 0.1, newParams)
   }
-  
+
   return(newParams)
 }
 
