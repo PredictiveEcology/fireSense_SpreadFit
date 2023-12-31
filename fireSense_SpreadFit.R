@@ -355,7 +355,7 @@ spreadFitPrep <- function(sim) {
   ## sanity check parameters + inputs
   stopifnot(
     "parameter 'trace' must be postive" = P(sim)$trace >= 0,
-    "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0,
+    "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0 || isTRUE(is.na(P(sim)$cores)),
     "each non-annual spreadFit covariate cannot be all zeros" =
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
