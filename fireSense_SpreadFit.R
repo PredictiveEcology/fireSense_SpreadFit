@@ -20,6 +20,7 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
+  loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_IgnitionFit")),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "future", "ggplot2", "kSamples", "logging",
                   "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
@@ -52,7 +53,7 @@ defineModule(sim, list(
                     "will get the previous item in the Cache that matches the P(sim)$rep (see that param)"),
     defineParameter(name = "cloudFolderID_DE", class = "character", default = NULL,
                     desc = "Passed to cloudFolderID in the Cache(DEoptim...) call"),
-    defineParameter(name = "cores", class = "integer", default = 1L,
+    defineParameter(name = "cores", class = "integer", default = NULL,
                     desc = paste("non-negative integer.",
                                  "Defines the number of logical cores to be used for parallel computation.",
                                  "The default value is 1, which disables parallel computing.")),
@@ -353,9 +354,10 @@ spreadFitPrep <- function(sim) {
   }
 
   ## sanity check parameters + inputs
+  #cores can be NA for interactive debugging
   stopifnot(
     "parameter 'trace' must be postive" = P(sim)$trace >= 0,
-    "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0 || isTRUE(is.na(P(sim)$cores)),
+    # "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0 || isTRUE(is.na(P(sim)$cores)),
     "each non-annual spreadFit covariate cannot be all zeros" =
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
