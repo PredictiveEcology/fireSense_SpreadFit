@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9055)",
+                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9055)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -334,6 +334,12 @@ Init <- function(sim){
 }
 
 spreadFitPrep <- function(sim) {
+  
+  #TODO: temporary catch while I think about this 
+  if (is.null(sim$flammableRTM) & !is.null(sim$flammableRTM2011)) {
+    sim$flammableRTM <- sim$flammableRTM2011
+  }
+  
   moduleName <- current(sim)$moduleName
 
   # veg coefficients should probably have bounds of 4
@@ -351,17 +357,16 @@ spreadFitPrep <- function(sim) {
                                           sim$fireSense_annualSpreadFitCovariates,
                                           whichBound = "lower")
   }
-
   ## sanity check parameters + inputs
   stopifnot(
     "parameter 'trace' must be postive" = P(sim)$trace >= 0,
-    "parameter 'cores' must be a postive integer" = P(sim)$cores >= 0 || isTRUE(is.na(P(sim)$cores)),
+    "parameter 'cores' must be a postive integer" = length(P(sim)$cores) >= 0 || isTRUE(is.na(P(sim)$cores)),
     "each non-annual spreadFit covariate cannot be all zeros" =
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
 
 
-  if (!all(names(P(sim)$upper) == names(P(sim)$lower))){
+  if (!all(names(P(sim)$upper) == names(P(sim)$lower))) {
     stop("please ensure 'upper' and 'lower' params are named with an identical order")
   }
 
@@ -563,7 +568,7 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
 
   formulaTerms <- attr(terms(as.formula(fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
   termLength <- length(formulaTerms)
-  if(whichBound == "upper") {
+  if (whichBound == "upper") {
     newParams <- rep(4, times = termLength)
   } else {
     newParams <- rep(-4, termLength)
@@ -606,14 +611,6 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
                                             "useCloud", "overwrite", "filename2"))
   }
 
-  if (!suppliedElsewhere("flammableRTM", sim)) {
-    rstLCC <- prepInputsLCC(year = 2010,
-                            destinationPath = tempdir(),
-                            rasterToMatch = sim$rasterToMatch)
-    sim$flammableRTM <- LandR::defineFlammable(LandCoverClassifiedMap = rstLCC,
-                                               mask = sim$rasterToMatch,
-                                               filename2 = NULL)
-  }
 
   if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
     stop("fireSense_spreadFormula must be supplied.")
