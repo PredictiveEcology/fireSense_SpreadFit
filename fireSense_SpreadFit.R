@@ -263,7 +263,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                  cores = P(sim)$cores,
                                  doObjFunAssertions = P(sim)$doObjFunAssertions,
                                  libPath = normPath(P(sim)$libPathDEoptim),
-                                 logPath = outputPath(sim), ## TODO (#6): use tempdir()
+                                 logPath = logPath(sim), ## TODO (#6): use tempdir()
                                  cachePath = cachePath(sim),
                                  lower = P(sim)$lower,
                                  upper = P(sim)$upper,
