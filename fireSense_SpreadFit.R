@@ -328,17 +328,16 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 }
 
 Init <- function(sim){
-  #TODO: does this module need an init?
+  ## TODO: does this module need an init?
   return(sim)
 }
 
 spreadFitPrep <- function(sim) {
-  
-  #TODO: temporary catch while I think about this 
+  ## TODO: temporary catch while I think about this
   if (is.null(sim$flammableRTM) & !is.null(sim$flammableRTM2011)) {
     sim$flammableRTM <- sim$flammableRTM2011
   }
-  
+
   moduleName <- current(sim)$moduleName
 
   # veg coefficients should probably have bounds of 4
@@ -351,7 +350,7 @@ spreadFitPrep <- function(sim) {
   }
 
   if (is.null(P(sim)$lower) | is.na(P(sim)$lower)) {
-    #ToDo - figure out the 2-4 piece logistic defaults :S
+    ## TODO - figure out the 2-4 piece logistic defaults :S
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
                                           sim$fireSense_annualSpreadFitCovariates,
                                           whichBound = "lower")
@@ -364,14 +363,15 @@ spreadFitPrep <- function(sim) {
       all(sapply(rbindlist(sim$fireSense_nonAnnualSpreadFitCovariates), max) > 0)
   )
 
-
   if (!all(names(P(sim)$upper) == names(P(sim)$lower))) {
     stop("please ensure 'upper' and 'lower' params are named with an identical order")
   }
 
   if (P(sim)$rescaleAll) {
-    sim$covMinMax_spread <- deriveCovMinMax(annualList = sim$fireSense_annualSpreadFitCovariates,
-                                            nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
+    sim$covMinMax_spread <- deriveCovMinMax(
+      annualList = sim$fireSense_annualSpreadFitCovariates,
+      nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates
+    )
     if (any(is.na(sim$covMinMax_spread))) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
     }
@@ -610,7 +610,6 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
                                omitArgs = c("destinationPath", "cloudFolderID",
                                             "useCloud", "overwrite", "filename2"))
   }
-
 
   if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
     stop("fireSense_spreadFormula must be supplied.")
