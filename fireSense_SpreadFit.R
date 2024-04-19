@@ -590,13 +590,13 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
 }
 
 .inputObjects <- function(sim) {
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere(object = "studyArea", sim = sim)) {
     sim$studyArea <- Cache(prepInputs,
                            url = extractURL("studyArea"),
-                           destinationPath = dataPath(sim),
+                           destinationPath = dPath,
                            cloudFolderID = sim$cloudFolderID,
                            omitArgs = c("destinationPath", "cloudFolderID"))
   }
@@ -604,7 +604,8 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   if (!suppliedElsewhere(object = "rasterToMatch", sim = sim)) {
     sim$rasterToMatch <- Cache(prepInputs, url = extractURL("rasterToMatch"),
                                studyArea = sim$studyArea,
-                               targetFile = "RTM.tif", destinationPath = dataPath(sim),
+                               targetFile = "RTM.tif",
+                               destinationPath = dPath,
                                overwrite = TRUE, filename2 = NULL,
                                omitArgs = c("destinationPath", "cloudFolderID",
                                             "useCloud", "overwrite", "filename2"))
