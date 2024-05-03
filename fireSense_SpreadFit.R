@@ -149,7 +149,7 @@ defineModule(sim, list(
   inputObjects = rbind(
     expectsInput(objectName = "fireBufferedListDT", objectClass = "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
-    expectsInput(objectName = "flammableRTM", objectClass = "SpatRaster",
+    expectsInput(objectName = "rasterToMatch", objectClass = "SpatRaster",
                  desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1."),
     expectsInput(objectName = "fireSense_annualSpreadFitCovariates", objectClass = "data.table",
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
@@ -224,7 +224,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       ## This below is to test the code without running DEOptim
       thresh <- runSpreadWithoutDEoptim(
         iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
-        sim$fireSense_spreadFormula, sim$flammableRTM,
+        sim$fireSense_spreadFormula, sim$rasterToMatch,
         mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
         mutuallyExclusive = P(sim)$mutuallyExclusiveCols,
         doObjFunAssertions = P(sim)$doObjFunAssertions,
@@ -249,7 +249,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
       fnName <- paste0("runDEoptim_", P(sim)$rep)
       # browser()
-      sim$DE <- Cache(runDEoptim(landscape = sim$flammableRTM,
+      sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                  annualDTx1000 = mod$dat$annualDTx1000,
                                  nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
                                  fireBufferedListDT = mod$dat$fireBufferedListDT,
@@ -333,10 +333,6 @@ Init <- function(sim){
 }
 
 spreadFitPrep <- function(sim) {
-  ## TODO: temporary catch while I think about this
-  if (is.null(sim$flammableRTM) & !is.null(sim$flammableRTM2011)) {
-    sim$flammableRTM <- sim$flammableRTM2011
-  }
 
   moduleName <- current(sim)$moduleName
 
@@ -382,7 +378,7 @@ spreadFitPrep <- function(sim) {
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
 
-  sim$lociList <- makeLociList(ras = sim$flammableRTM, pts = sim$spreadFirePoints)
+  sim$lociList <- makeLociList(ras = sim$rasterToMatch, pts = sim$spreadFirePoints)
 
   mod$dat <- covsX1000AndSetDF(
     annualList = sim$fireSense_annualSpreadFitCovariates,
@@ -486,7 +482,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
           iterThres = P(sim)$iterThresh,
           lower = P(sim)$lower, upper = P(sim)$upper,
           fireSense_spreadFormula = sim$fireSense_spreadFormula,
-          flammableRTM = sim$flammableRTM,
+          flammableRTM = sim$rasterToMatch,
           mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
           doObjFunAssertions = P(sim)$doObjFunAssertions,
           annualDTx1000 = mod$dat$annualDTx1000,
