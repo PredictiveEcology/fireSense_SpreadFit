@@ -20,8 +20,8 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
-  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "future", "ggplot2", "kSamples", "logging",
-                  "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
+  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future", "ggplot2", "kSamples",
+                  "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
                   "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9055)",
@@ -333,7 +333,6 @@ Init <- function(sim){
 }
 
 spreadFitPrep <- function(sim) {
-
   moduleName <- current(sim)$moduleName
 
   # veg coefficients should probably have bounds of 4
@@ -420,10 +419,27 @@ loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
 }
 
 deriveCovMinMax <- function(annualList, nonAnnualList) {
+
   nonAnnRescales <- rbindlist(nonAnnualList)
   vals1 <- setdiff(colnames(nonAnnRescales), "pixelID")
-  covMinMax1 <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals1]
 
+  #Biomass columns should be normalized together
+  #else 140 Mg/ha pine is treated the same as e.g. 80 Mg/ha White spruce
+  # assuming those were the fuel classes and respective maximum observed biomass
+  minMax <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals1]
+  names(minMax) <- vals1
+  biomassCols <- names(minMax)[minMax[2, ] %>>% 1]
+  sharedRange <- range(minMax[, .SD, .SDcols = biomassCols])
+
+  biomassMax <- minMax[, lapply(.SD,FUN = function(x){return(sharedRange)}), .SDcols = biomassCols]
+
+  #override the min and max
+  coverCols <- setdiff(vals1, biomassCols)
+  covMinMax1 <- cbind(biomassMax, minMax[, .SD, .SDcols = coverCols])
+  #just in case covMinMax must respect original order
+  setcolorder(covMinMax1, vals1)
+
+  #annual covariates (climate/youngAge)
   annRescales <- rbindlist(annualList)
   vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
   covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
