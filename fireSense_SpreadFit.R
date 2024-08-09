@@ -24,7 +24,7 @@ defineModule(sim, list(
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9055)",
+                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9073)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -248,7 +248,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       opts <- options(parallelly.makeNodePSOCK.setup_strategy = "sequential") ## default 'parallel' not working
 
       fnName <- paste0("runDEoptim_", P(sim)$rep)
-      # browser()
       sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                  annualDTx1000 = mod$dat$annualDTx1000,
                                  nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
@@ -572,7 +571,6 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   fireSense_SpreadFitted
 }
 
-#ideally this takes arguments that aren't entire simlist..
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound){
 
   stopifnot(whichBound %in% c("upper", "lower"))
