@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9077)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9077)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -222,6 +222,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- spreadFitPrep(sim)
     },
     debug = {
+      browser()
       ## This below is to test the code without running DEOptim
       thresh <- runSpreadWithoutDEoptim(
         iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
