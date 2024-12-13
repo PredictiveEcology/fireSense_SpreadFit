@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.0"),
+  version = list(fireSense_SpreadFit = "1.0.1"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -23,8 +23,9 @@ defineModule(sim, list(
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future", "ggplot2", "kSamples",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
+                  "PredictiveEcology/clusters@main",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9073)",
+                  "PredictiveEcology/fireSenseUtils@lccFix (>= 0.0.5.9077)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
@@ -42,7 +43,7 @@ defineModule(sim, list(
                     desc = "optional. When to start saving output to a file."),
     defineParameter(name = ".saveInterval", class = "numeric", default = NA,
                     desc = "optional. Interval between save events."),
-    defineParameter(name = ".useCache", "logical", FALSE, NA, NA,
+    defineParameter(name = ".useCache", "logical", "init", NA, NA,
                     desc = paste("Should this entire module be run",
                                  "with caching activated? This is generally intended for data-type",
                                  "modules, where stochasticity and time are not relevant.")),
@@ -118,7 +119,7 @@ defineModule(sim, list(
                     desc = "rescale covariates for `DEOptim`"),
     defineParameter(name = "strategy", class = "integer", default = 6L,
                     desc = "Passed to `DEoptim.control`"),
-    defineParameter(name = "SNLL_FS_thresh", class = "integer", default = 550L,
+    defineParameter(name = "SNLL_FS_thresh", class = "integer", default = NULL,
                     desc = "Threshold multiplier used in objective function SNLL fire size test."),
     defineParameter(name = "trace", class = "numeric", default = 1L,
                     desc = paste("non-negative integer. If > 0, tracing information on",
@@ -198,13 +199,13 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
       sim <- Init(sim)
 
+      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
+      sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
+
       if ("debug" %in% P(sim)$mode) {
-        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
-        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
+         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
       } else {
         if ("fit" %in% P(sim)$mode) {
-          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
-          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
         } else {
@@ -238,14 +239,30 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-      termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
-      logitNumParams <- length(P(sim)$lower) - length(termsInForm)
-      message("Using a ", logitNumParams, " parameter logistic equation")
-      message("  There will be ", length(P(sim)$lower), " terms: ")
-      message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
-      message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
+      termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh)
+      # termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
+      # logitNumParams <- length(P(sim)$lower) - length(termsInForm)
+      # message("Using a ", logitNumParams, " parameter logistic equation")
+      # message("  There will be ", length(P(sim)$lower), " terms: ")
+      # message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
+      # message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
 
-      opts <- options(parallelly.makeNodePSOCK.setup_strategy = "sequential") ## default 'parallel' not working
+      message("Running tests on cluster to determine current speed...")
+
+      useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
+      if (identical(sort(unique(Par$cores)), sort(Par$cores))) {
+        best <- clusters::runTests(unique(Par$cores), repos = c("predictiveecology.r-universe.dev", getOption("repos")),
+                                   clustersBranch = "main") |> Cache(useCache = useCache)
+        message("The following is the current speed of the cluster")
+        messageDF(best$wholeCluster)
+        message("")
+        message("Using only: ")
+      } else {
+        best <- list(cluster = Par$cores,
+                     bestCluster = data.table(host = unique(Par$cores),
+                                              cores = as.numeric(table(Par$cores))))
+      }
+      messageDF(best$bestCluster)
 
       fnName <- paste0("runDEoptim_", P(sim)$rep)
       sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
@@ -258,7 +275,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                  trace = P(sim)$trace,
                                  initialpop = P(sim)$initialpop,
                                  strategy = P(sim)$strategy,
-                                 cores = P(sim)$cores,
+                                 cores = best$cluster,
                                  doObjFunAssertions = P(sim)$doObjFunAssertions,
                                  libPath = normPath(P(sim)$libPathDEoptim),
                                  logPath = logPath(sim), ## TODO (#6): use tempdir()
@@ -490,7 +507,7 @@ covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireL
 }
 
 estimateSNLLThresholdPostLargeFires <- function(sim) {
-  thresh <- if (is.null(P(sim)$SNLL_FS_thresh)) {
+  thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
 
     Cache(runSpreadWithoutDEoptim,
@@ -627,3 +644,5 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
 
   return(invisible(sim))
 }
+
+
