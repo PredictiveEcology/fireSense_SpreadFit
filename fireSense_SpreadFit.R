@@ -239,7 +239,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-      termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh)
+      termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
       # termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
       # logitNumParams <- length(P(sim)$lower) - length(termsInForm)
       # message("Using a ", logitNumParams, " parameter logistic equation")
@@ -510,6 +510,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
 
+    # Took 50 minutes using 10 cores for Taiga studyArea
     Cache(runSpreadWithoutDEoptim,
           iterThres = P(sim)$iterThresh,
           lower = P(sim)$lower, upper = P(sim)$upper,
