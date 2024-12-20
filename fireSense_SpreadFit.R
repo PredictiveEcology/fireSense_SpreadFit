@@ -28,7 +28,7 @@ defineModule(sim, list(
                   "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9077)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
-    defineParameter(name = ".plot", class = "logical", default = FALSE, ## TODO: use .plotInitialTime etc.
+    defineParameter(name = ".plots", class = c("character", "logical"), default = NULL, ## TODO: use .plotInitialTime etc.
                     desc = "Should outputs be plotted?"),
     defineParameter(name = ".plotSize", class = "list", default = list(height = 1600, width = 2000),
                     desc = paste("List specifying height and width of plotting device (in pixels)",
@@ -222,7 +222,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- spreadFitPrep(sim)
     },
     debug = {
-      browser()
       ## This below is to test the code without running DEOptim
       thresh <- runSpreadWithoutDEoptim(
         iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
@@ -231,7 +230,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         mutuallyExclusive = P(sim)$mutuallyExclusiveCols,
         doObjFunAssertions = P(sim)$doObjFunAssertions,
         mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
-        P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plot,
+        P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plots,
         tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
         mode = "debug")
     },
@@ -389,7 +388,7 @@ spreadFitPrep <- function(sim) {
     }
   }
 
-  if (Par$.plot && "debug" %in% P(sim)$mode) {
+  if (Par$.plots && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
