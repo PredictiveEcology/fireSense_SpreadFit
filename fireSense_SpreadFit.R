@@ -542,7 +542,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
 
     # Took 50 minutes using 10 cores for Taiga studyArea
-    Cache(runSpreadWithoutDEoptim,
+    Cache(runSpreadWithoutDEoptim(
           iterThres = P(sim)$iterThresh,
           lower = P(sim)$lower, upper = P(sim)$upper,
           fireSense_spreadFormula = sim$fireSense_spreadFormula,
@@ -557,7 +557,9 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
           objfunFireReps = P(sim)$objfunFireReps,
           tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
           mode = Par$mode,
-          maxFireSpread = P(sim)$maxFireSpread)
+          maxFireSpread = P(sim)$maxFireSpread),
+          omitArgs = c("objfunFireReps", "mode")
+    )
   } else {
     P(sim)$SNLL_FS_thresh
   }
