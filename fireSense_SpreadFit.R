@@ -144,8 +144,11 @@ defineModule(sim, list(
     defineParameter(name = "verbose", class = "logical", default = FALSE,
                     desc = paste0("optional. Should it calculate and print median of spread ",
                                   "Probability during calculations?")),
-    defineParameter(name = "visualizeDEoptim", class = "logical", default = TRUE,
-                    desc = "Passed to runDEoptim")
+    defineParameter(name = "visualizeDEoptim", class = "Path", default = figurePath(sim),
+                    desc = paste("Passed to runDEoptim. This makes histographs at each iterStep and saves them ",
+                    "to this path")),
+    defineParameter(name = "upperAndLowerVal", class = "numeric", default = 6,
+                    desc = "This will be given to the upper and -lower values if not supplied by user")
   ),
   inputObjects = rbind(
     expectsInput(objectName = "fireBufferedListDT", objectClass = "list",
@@ -232,7 +235,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
         P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plots,
         tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-        mode = "debug")
+        mode = Par$mode)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
@@ -246,7 +249,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # message("  There will be ", length(P(sim)$lower), " terms: ")
       # message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
       # message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
-
       message("Running tests on cluster to determine current speed...")
 
       useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
@@ -292,7 +294,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                  thresh = mod$thresh,
                                  .verbose = P(sim)$verbose,
                                  visualizeDEoptim = P(sim)$visualizeDEoptim,
-                                 .plotSize = P(sim)$.plotSize),
+                                 .plotSize = P(sim)$.plotSize,
+                                 .plots = P(sim)$.plots,
+                                 rep = P(sim)$rep),
                       cacheId = P(sim)$cacheId_DE,
                       .functionName = fnName,
                       .cacheExtra = fnName,
