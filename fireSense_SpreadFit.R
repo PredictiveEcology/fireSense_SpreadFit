@@ -289,7 +289,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                  libPath = normPath(P(sim)$libPathDEoptim),
                                  logPath = logPath(sim), ## TODO (#6): use tempdir()
                                  cachePath = cachePath(sim),
-                                 # visualizeDEoptim = figurePath(sim),
                                  lower = P(sim)$lower,
                                  upper = P(sim)$upper,
                                  mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
