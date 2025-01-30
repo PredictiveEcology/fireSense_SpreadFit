@@ -26,14 +26,15 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
     userPars <- FALSE
 
-    thresholds <- sample(3 * max(n, decentEstimateThreshold), size = n)
+    thresholds <- sample(4 * max(n, decentEstimateThreshold), size = n)
   } else {
     userPars <- TRUE
     thresholds <- 1e8
   }
   if (!is(pars, "list")) pars <- list(pars)
 
-  if (mode %in% "debug") {
+
+  if ("debug" %in% mode) {
     a <- list()
     for (i in seq(pars)) {
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
@@ -59,7 +60,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   } else {
     message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
-    nCores <- pemisc::optimalClusterNum(21000)
+    nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.9) #only use 90% of the resources
+    # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
     # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     message("Using ", nCores, " cores.")
 

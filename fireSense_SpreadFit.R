@@ -117,7 +117,7 @@ defineModule(sim, list(
                                  "should recover the cache result, unless this `rep` is modified")),
     defineParameter(name = "rescaleAll", class = "logical", TRUE, NA, NA,
                     desc = "rescale covariates for `DEOptim`"),
-    defineParameter(name = "strategy", class = "integer", default = 6L,
+    defineParameter(name = "strategy", class = "integer", default = 3L,
                     desc = "Passed to `DEoptim.control`"),
     defineParameter(name = "SNLL_FS_thresh", class = "integer", default = NULL,
                     desc = "Threshold multiplier used in objective function SNLL fire size test."),
@@ -252,7 +252,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       message("Running tests on cluster to determine current speed...")
 
       useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
-      if (identical(sort(unique(Par$cores)), sort(Par$cores))) {
+      # if (isRstudioServer() || any(grepl("positron", search()))) {
+      #   a <- Par$cores# <- NULL
+      #   Par$cores <- NULL
+      # }
+      if (!is.null(Par$cores) && !any(is.na(Par$cores)) && identical(sort(unique(Par$cores)), sort(Par$cores))) {
         best <- clusters::runTests(unique(Par$cores), repos = c("predictiveecology.r-universe.dev", getOption("repos")),
                                    clustersBranch = "main") |> Cache(useCache = useCache)
         message("The following is the current speed of the cluster")
@@ -264,6 +268,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                      bestCluster = data.table(host = unique(Par$cores),
                                               cores = as.numeric(table(Par$cores))))
       }
+      # if (isRstudioServer() || any(grepl("positron", search()))) {
+      #   Par$cores <- a
+      # }
       messageDF(best$bestCluster)
 
       fnName <- paste0("runDEoptim_", P(sim)$rep)
@@ -282,6 +289,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                  libPath = normPath(P(sim)$libPathDEoptim),
                                  logPath = logPath(sim), ## TODO (#6): use tempdir()
                                  cachePath = cachePath(sim),
+                                 # visualizeDEoptim = figurePath(sim),
                                  lower = P(sim)$lower,
                                  upper = P(sim)$upper,
                                  mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
