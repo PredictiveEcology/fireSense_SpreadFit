@@ -355,6 +355,26 @@ Init <- function(sim){
 spreadFitPrep <- function(sim) {
   moduleName <- current(sim)$moduleName
 
+  # Mutually Exclusive Columns -- basically no class with biomass or land cover can also be in the
+  #   youngAge class. Inside the optimization function, the covariates are set to zero if
+  #   youngAge is 1
+  mec <- "mutuallyExclusiveCols"
+  defaults <- depends(sim)@dependencies$fireSense_SpreadFit@parameters
+  defaultMutuallyExclusive <- defaults[defaults$paramName %in% mec, "default"][[1]]
+  if (identical(Par[[mec]], defaultMutuallyExclusive)) {
+    sp_lcc <- colnames(sim$fireSense_nonAnnualSpreadFitCovariates[[1]])
+    sp_lcc <- grep("pixel", sp_lcc, invert = TRUE, value = TRUE)
+    P(sim)[[mec]] <- Map(l = Par[[mec]], nam = names(Par[[mec]]), function(l, nam) {
+      if (identical(nam, "youngAge"))
+        c(l, sp_lcc)
+      else
+        l
+    })
+    message("Mutually exclusive is now:")
+    message(Par[[mec]])
+
+  }
+
   # veg coefficients should probably have bounds of 4
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
   # MDC should have a lower limit of zero - drought shouldn't increase spread probability
