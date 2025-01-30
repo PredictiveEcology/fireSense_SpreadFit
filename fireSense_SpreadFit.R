@@ -381,14 +381,14 @@ spreadFitPrep <- function(sim) {
   if (is.null(P(sim)$upper) | is.na(P(sim)$upper)) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates,
-                                         whichBound = "upper")
+                                         whichBound = "upper", upperAndLower = Par$upperAndLowerVal)
   }
 
   if (is.null(P(sim)$lower) | is.na(P(sim)$lower)) {
     ## TODO - figure out the 2-4 piece logistic defaults :S
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
                                           sim$fireSense_annualSpreadFitCovariates,
-                                          whichBound = "lower")
+                                          whichBound = "lower", upperAndLower = Par$upperAndLowerVal)
   }
   ## sanity check parameters + inputs
   stopifnot(
@@ -412,7 +412,7 @@ spreadFitPrep <- function(sim) {
     }
   }
 
-  if (Par$.plots && "debug" %in% P(sim)$mode) {
+  if (anyPlotting(Par$.plots) && "debug" %in% P(sim)$mode) {
     try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
@@ -549,6 +549,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
           covMinMax = sim$covMinMax_spread,
           objfunFireReps = P(sim)$objfunFireReps,
           tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+          mode = Par$mode,
           maxFireSpread = P(sim)$maxFireSpread)
   } else {
     P(sim)$SNLL_FS_thresh
@@ -613,22 +614,23 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   fireSense_SpreadFitted
 }
 
-estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound){
+estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
+                                 upperAndLower){
 
   stopifnot(whichBound %in% c("upper", "lower"))
 
   formulaTerms <- attr(terms(as.formula(fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
   termLength <- length(formulaTerms)
   if (whichBound == "upper") {
-    newParams <- rep(4, times = termLength)
+    newParams <- rep(upperAndLower, times = termLength)
   } else {
-    newParams <- rep(-4, termLength)
+    newParams <- rep(-(upperAndLower), termLength)
   }
   newParams <- as.vector(newParams)
   whAnnual <- formulaTerms %in% colnames(anyAnnualCovariates[[1]])
   whYA <- formulaTerms[whAnnual] %in% "youngAge"
-  newParams[whAnnual] <- ifelse(whichBound == "upper", 4, 0)
-  newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -4)
+  newParams[whAnnual] <- ifelse(whichBound == "upper", upperAndLower, 0)
+  newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -(upperAndLower))
 
   names(newParams) <- formulaTerms
 
