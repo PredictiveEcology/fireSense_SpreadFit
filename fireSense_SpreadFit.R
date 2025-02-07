@@ -182,7 +182,10 @@ defineModule(sim, list(
                   desc = "data.table of covariates min and max"),
     createsOutput("DE", objectClass = "data.table", desc = "DEOptim object"),
     createsOutput("fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
-                  desc = "A fitted model object of class fireSense_SpreadFit."),
+                  desc = "DEFUNCT -- A fitted model object of class fireSense_SpreadFit."),
+    createsOutput("studyAreaWithSpreadParams", objectClass = "sf",
+                  desc = paste("This is the studyArea, but with 10 duplicated features, each",
+                               "with its own set of parameters from the 10 best DEoptim runs")),
     createsOutput("fsSpreadFit_hists", objectClass = "ggplot",
                   desc = "histograms of each parameter used in DEoptim fitting."),
     createsOutput(objectName = "lociList", objectClass = "list", desc = "list of fire locs")
@@ -315,9 +318,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                       useCloud = P(sim)$useCloud_DE,
                       cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
       )
-      options(opts)
+
     },
     retrieveDEOptim = {
+      browser()
       if (!is.null(Par$urlDEOptimObject))
         message("Loading ", Par$urlDEOptimObject)
       out <- Cache(loadPrevDEOptimRun, url = Par$urlDEOptimObject,
@@ -335,10 +339,23 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       }
     },
     makefireSense_SpreadFitted = {
-      sim$fireSense_SpreadFitted <- asFireSense_SpreadFitted(sim$DE, sim$fireSense_spreadFormula,
-                                                             lower = P(sim)$lower)
+      objFunValsAll <- unlist(lapply(sim$DE, function(x) x$optim$bestval))
+      ordered <- order(objFunValsAll)
+      outs <- rbindlist(lapply(sim$DE, function(x) data.frame(t(x$optim$bestmem))))
+      set(outs, NULL, "objFunVal", objFunValsAll)
+      set(outs, NULL, "iters",seq_len(length(sim$DE)))
+      outs <- outs[ordered, ]
+
+      Nkeep <- 10
+      sim$studyAreaWithSpreadParams <- sim$studyArea
+      for (i in 2:Nkeep) {
+        sim$studyAreaWithSpreadParams <- rbind(sim$studyAreaWithSpreadParams, sim$studyArea)
+      }
+      sim$studyAreaWithSpreadParams[, names(outs)] <- outs[seq_len(Nkeep),]
+
     },
     plot = {
+      browser()
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
       colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
       sim$fsSpreadFit_hists <- ggplot(tidyr::gather(DEpop_df), aes(value)) +
@@ -572,11 +589,33 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 }
 
 asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
+  browser()
   DE2 <- if (is(DE, "list")) {
     DE2 <- tail(DE, 1)[[1]]
   } else {
     DE
   }
+
+  # DE1 <- tail(DE, 1)[[1]]
+    objFunValsAll <- unlist(lapply(DE, function(x) x$optim$bestval))
+    ordered <- order(objFunValsAll)
+    outs <- rbindlist(lapply(DE, function(x) data.frame(t(x$optim$bestmem))))
+    set(outs, NULL, "objFunVal", objFunValsAll)
+    set(outs, NULL, "iters",seq_len(length(DE)))
+    outs <- outs[ordered, ]
+
+    # head(outs[ordered,])
+
+    # bestvals <- which.min(objFunValsAll)
+    # DE1$optim$bestmem <- DE[[bestvals]]$optim$bestmem
+    # DE1$optim$bestval <- DE[[bestvals]]$optim$bestval
+    # DE1$optim$iter <- sum(unlist(lapply(DE, function(x) x$optim$iter)))
+    # DE1$member$bestmemit <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
+    # DE1$member$bestvalit <- rbindlist(lapply(DE, function(x) as.data.table(x$member$bestvalit)))[[1]]
+  # DE1$member <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
+
+  # options(opts)
+
   ## TODO: use native R pipe
   valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
   valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
