@@ -20,6 +20,7 @@ defineModule(sim, list(
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
+  loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_ignitionFit")),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future", "ggplot2", "kSamples",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
