@@ -86,8 +86,8 @@ defineModule(sim, list(
                                  "and the statistical model parameters (named in the order they",
                                  "appear in the formula).")),
     defineParameter(name = "maxFireSpread", class = "numeric", default = 0.28,
-                    desc = paste0("optional. Maximum fire spread average to be passed to the ",
-                                  ".objFun for optimimzation. This puts an upper limit on spreadProb")),
+                    desc = paste0("optional. Maximum fire spread average to be passed to the `.objFun`.",
+                                  "This puts an upper limit on `spreadProb` during optimization.")),
     defineParameter(name = "mode", class = "character", default = "fit",
                     desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' will trigger running of",
                                  "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
@@ -139,9 +139,9 @@ defineModule(sim, list(
                                      "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
                     desc = paste0("optional. If `onlyLoadDEOptim == TRUE`, you can pass the url to the  ",
                                   "`DEOptim` object. The default is the object from the run on 11JUN20",
-                                  " from the logistic2p")),
+                                  " from the `logistic2p`")),
     defineParameter(name = "useCache_DE", class = "logical", default = TRUE,
-                    desc = "should DEoptim use cache? to do multiple independent runs, use FALSE"),
+                    desc = "should `DEoptim` use `Cache`? to do multiple independent runs, use FALSE"),
     defineParameter(name = "useCloud_DE", class = "logical", default = FALSE,
                     desc = "Passed to `useCloud` in the `Cache(DEoptim...)` call"),
     defineParameter(name = "verbose", class = "logical", default = FALSE,
@@ -166,9 +166,8 @@ defineModule(sim, list(
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. `~ 0 + MDC + class2 + class3 + youngAge`.")),
     expectsInput(objectName = "parsKnown", objectClass = "numeric",
-                 desc = paste0("Optional vector of known parameters, e.g., from a previous DEoptim run.",
-                               "If this is supplied, then 'mode' will be automatically ",
-                               "converted to 'debug'")),
+                 desc = paste0("Optional vector of known parameters, e.g., from a previous `DEoptim` run.",
+                               "If this is supplied, then 'mode' will be automatically converted to 'debug'")),
     expectsInput(objectName = "rasterToMatch", objectClass = "SpatRaster",
                  desc = "template raster for study area"),
     expectsInput(objectName = "spreadFirePoints", objectClass = "sf",
@@ -179,15 +178,15 @@ defineModule(sim, list(
   ),
   outputObjects = rbind(
     createsOutput("covMinMax_spread", objectClass = "data.table",
-                  desc = "data.table of covariates min and max"),
-    createsOutput("DE", objectClass = "data.table", desc = "DEOptim object"),
+                  desc = "`data.table` of covariates min and max"),
+    createsOutput("DE", objectClass = "data.table", desc = "`DEOptim` object"),
     createsOutput("fireSense_SpreadFitted", objectClass = "fireSense_SpreadFit",
                   desc = "DEFUNCT -- A fitted model object of class fireSense_SpreadFit."),
     createsOutput("studyAreaWithSpreadParams", objectClass = "sf",
                   desc = paste("This is the studyArea, but with 10 duplicated features, each",
                                "with its own set of parameters from the 10 best DEoptim runs")),
     createsOutput("fsSpreadFit_hists", objectClass = "ggplot",
-                  desc = "histograms of each parameter used in DEoptim fitting."),
+                  desc = "histograms of each parameter used in `DEoptim` fitting."),
     createsOutput(objectName = "lociList", objectClass = "list", desc = "list of fire locs")
   )
 ))
@@ -419,6 +418,7 @@ spreadFitPrep <- function(sim) {
                                           whichBound = "lower", upperAndLower = Par$upperAndLowerVal)
   }
   ## sanity check parameters + inputs
+  #cores can be NA for interactive debugging
   stopifnot(
     "parameter 'trace' must be postive" = P(sim)$trace >= 0,
     "parameter 'cores' must be a postive integer" = length(P(sim)$cores) >= 0 || isTRUE(is.na(P(sim)$cores)),
