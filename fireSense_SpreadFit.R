@@ -255,7 +255,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # message("  There will be ", length(P(sim)$lower), " terms: ")
       # message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
       # message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
-      message("Running tests on cluster to determine current speed...")
 
       useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
       # if (isRstudioServer() || any(grepl("positron", search()))) {
@@ -263,12 +262,17 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       #   Par$cores <- NULL
       # }
       if (!is.null(Par$cores) && !any(is.na(Par$cores)) && identical(sort(unique(Par$cores)), sort(Par$cores))) {
-        best <- clusters::runTests(unique(Par$cores), repos = c("predictiveecology.r-universe.dev", getOption("repos")),
-                                   clustersBranch = "main") |> Cache(useCache = useCache)
-        message("The following is the current speed of the cluster")
-        messageDF(best$wholeCluster)
-        message("")
-        message("Using only: ")
+        # if (length(unique(Par$cores)) > 1) {
+        #   message("Running tests on cluster to determine current speed...")
+        #   best <- clusters::runTests(unique(Par$cores), repos = c("predictiveecology.r-universe.dev", getOption("repos")),
+        #                              clustersBranch = "main") |> Cache(useCache = useCache)
+        #   message("The following is the current speed of the cluster")
+        #   messageDF(best$wholeCluster)
+        #   message("")
+        #   message("Using only: ")
+        # } else {
+          best <- list(cluster = Par$cores)
+        # }
       } else {
         best <- list(cluster = Par$cores,
                      bestCluster = data.table(host = unique(Par$cores),
