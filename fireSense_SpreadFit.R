@@ -26,7 +26,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9077)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9087)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -273,9 +273,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           best <- list(cluster = Par$cores)
         # }
       } else {
+
         best <- list(cluster = Par$cores,
-                     bestCluster = data.table(host = unique(Par$cores),
-                                              cores = as.numeric(table(Par$cores))))
+                     bestCluster = as.data.table(table(Par$cores)))
       }
       # if (isRstudioServer() || any(grepl("positron", search()))) {
       #   Par$cores <- a
