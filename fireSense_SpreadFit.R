@@ -144,13 +144,14 @@ defineModule(sim, list(
                     desc = "should `DEoptim` use `Cache`? to do multiple independent runs, use FALSE"),
     defineParameter("useCloud_DE", "logical", default = FALSE,
                     desc = "Passed to `useCloud` in the `Cache(DEoptim...)` call"),
-    defineParameter("verbose", "logical", default = FALSE,
-                    desc = paste0("optional. Should it calculate and print median of spread ",
-                                  "Probability during calculations?")),
+    defineParameter("verbose", "numeric", default = 1,
+                    desc = paste0("optional. With increasing number, more verbosity. Level 1 is ",
+                                  "normal reproducible (e.g., Cache), level 2 includes objective function ",
+                                  "e.g., print median of spreadProb during calculations")),
     defineParameter("visualizeDEoptim", "Path", default = figurePath(sim),
                     desc = paste("Passed to runDEoptim. This makes histographs at each iterStep and saves them ",
                     "to this path")),
-    defineParameter("upperAndLowerVal", "numeric", default = 6,
+    defineParameter("upperAndLowerVal", "numeric", default = 9,
                     desc = "This will be given to the upper and -lower values if not supplied by user")
   ),
   inputObjects = rbind(
