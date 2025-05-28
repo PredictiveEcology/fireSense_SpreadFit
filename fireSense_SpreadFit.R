@@ -282,46 +282,73 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       #   Par$cores <- a
       # }
       messageDF(best$bestCluster)
-
       fnName <- paste0("runDEoptim_", P(sim)$rep)
-      sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
-                                 annualDTx1000 = mod$dat$annualDTx1000,
-                                 nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
-                                 fireBufferedListDT = mod$dat$fireBufferedListDT,
-                                 historicalFires = mod$dat$historicalFires,
-                                 itermax = P(sim)$iterDEoptim,
-                                 iterStep = P(sim)$iterStep,
-                                 trace = P(sim)$trace,
-                                 initialpop = P(sim)$initialpop,
-                                 strategy = P(sim)$strategy,
-                                 cores = best$cluster,
-                                 doObjFunAssertions = P(sim)$doObjFunAssertions,
-                                 libPath = normPath(P(sim)$libPathDEoptim),
-                                 logPath = logPath(sim), ## TODO (#6): use tempdir()
-                                 cachePath = cachePath(sim),
-                                 lower = P(sim)$lower,
-                                 upper = P(sim)$upper,
-                                 mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
-                                 FS_formula = sim$fireSense_spreadFormula,
-                                 covMinMax = sim$covMinMax_spread,
-                                 objFunCoresInternal = P(sim)$objFunCoresInternal,
-                                 tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-                                 maxFireSpread = P(sim)$maxFireSpread,
-                                 Nreps = P(sim)$objfunFireReps,
-                                 thresh = mod$thresh,
-                                 .c = P(sim)$.c,
-                                 .verbose = P(sim)$verbose,
-                                 visualizeDEoptim = P(sim)$visualizeDEoptim,
-                                 .plotSize = P(sim)$.plotSize,
-                                 .plots = P(sim)$.plots,
-                                 rep = P(sim)$rep),
-                      cacheId = P(sim)$cacheId_DE,
-                      .functionName = fnName,
-                      .cacheExtra = fnName,
-                      useCache = P(sim)$useCache_DE,
-                      useCloud = P(sim)$useCloud_DE,
-                      cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
-      )
+
+      exists <- CacheGeo(cloudFolderID = "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP", # "1I-aVs_cZQmjXwf9DWh3gt5fINlNlddIZ",
+                         targetFile = "fireSenseParams.rds", domain = sim$studyArea, action = "nothing",
+                         destinationPath = getPaths()$inputPath, bufferOK = TRUE)
+      if (!(is(exists, "sf") || is(exists, "data.frame"))) {
+        sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
+                                   annualDTx1000 = mod$dat$annualDTx1000,
+                                   nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
+                                   fireBufferedListDT = mod$dat$fireBufferedListDT,
+                                   historicalFires = mod$dat$historicalFires,
+                                   itermax = P(sim)$iterDEoptim,
+                                   iterStep = P(sim)$iterStep,
+                                   trace = P(sim)$trace,
+                                   initialpop = P(sim)$initialpop,
+                                   strategy = P(sim)$strategy,
+                                   cores = best$cluster,
+                                   doObjFunAssertions = P(sim)$doObjFunAssertions,
+                                   paths = getPaths(),
+                                   libPath = normPath(P(sim)$libPathDEoptim),
+                                   logPath = logPath(sim), ## TODO (#6): use tempdir()
+                                   lower = P(sim)$lower,
+                                   upper = P(sim)$upper,
+                                   mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
+                                   formulaToFit = sim$fireSense_spreadFormula,
+                                   covMinMax = sim$covMinMax_spread,
+                                   objFunCoresInternal = P(sim)$objFunCoresInternal,
+                                   tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+                                   maxFireSpread = P(sim)$maxFireSpread,
+                                   Nreps = P(sim)$objfunFireReps,
+                                   thresh = mod$thresh,
+                                   .c = P(sim)$.c,
+                                   .verbose = P(sim)$verbose,
+                                   visualizeDEoptim = P(sim)$visualizeDEoptim,
+                                   .plotSize = P(sim)$.plotSize,
+                                   .plots = P(sim)$.plots,
+                                   rep = P(sim)$rep),
+                        cacheId = P(sim)$cacheId_DE,
+                        .functionName = fnName,
+                        .cacheExtra = fnName,
+                        omitArgs = c(".verbose", "cores"),
+                        useCache = P(sim)$useCache_DE#,
+                        #useCloud = P(sim)$useCloud_DE,
+                        #cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
+        )
+        objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
+        ord <- order(objFunVal, decreasing = TRUE)
+        DEBest <- head(sim$DE[ord], 5)
+        terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
+        paramsBest <- lapply(DEBest, function(D) as.data.table(D$member$bestmemit))#, FUN.VALUE = numeric(length(terms)))
+        paramsBest <- rbindlist(paramsBest)
+        sim$studyAreaWithSpreadParams <- sim$studyArea |> dplyr::mutate(params = list(paramsBest))
+        le <- function(x) {x}
+        exists <- CacheGeo(targetFile = "fireSenseParams.rds", domain = sim$studyArea, destinationPath = getPaths()$inputPath,
+                           FUN = le(studyAreaFireSense), le = le, studyAreaFireSense = studyAreaFireSense,
+                           action = "update")
+      } else {
+        # exists <- CacheGeo(targetFile = "fireSenseParams.rds", domain = sim$studyArea, destinationPath = getPaths()$inputPath)
+        sim$studyAreaWithSpreadParams <- exists
+        paramsBest <- exists$params[[1]]
+      }
+
+      st <- format(Sys.time(), format = "%Y_%m_%d %H:%M")
+      filenameBase <- file.path(P(sim)$visualizeDEoptim, paste0("FireSense_spreadFit_histograms_", Par$rep))
+      gg2 <- Plots(plotParamsBest(paramsBest), filename = paste0(filenameBase, st)) |>
+        Cache(omitArgs = c("data", "fn", "filename"),
+              .cacheExtra = list(paramsBest = paramsBest, filenameBase = filenameBase))
 
     },
     retrieveDEOptim = {
@@ -342,22 +369,24 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$fireSense_SpreadFitted <- out
       }
     },
-    makefireSense_SpreadFitted = {
-      objFunValsAll <- unlist(lapply(sim$DE, function(x) x$optim$bestval))
-      ordered <- order(objFunValsAll)
-      outs <- rbindlist(lapply(sim$DE, function(x) data.frame(t(x$optim$bestmem))))
-      set(outs, NULL, "objFunVal", objFunValsAll)
-      set(outs, NULL, "iters",seq_len(length(sim$DE)))
-      outs <- outs[ordered, ]
-
-      Nkeep <- 10
-      sim$studyAreaWithSpreadParams <- sim$studyArea
-      for (i in 2:Nkeep) {
-        sim$studyAreaWithSpreadParams <- rbind(sim$studyAreaWithSpreadParams, sim$studyArea)
-      }
-      sim$studyAreaWithSpreadParams[, names(outs)] <- outs[seq_len(Nkeep),]
-
-    },
+    # makefireSense_SpreadFitted = {
+    #
+    #   browser()
+    #   objFunValsAll <- unlist(lapply(sim$DE, function(x) x$optim$bestval))
+    #   ordered <- order(objFunValsAll)
+    #   outs <- rbindlist(lapply(sim$DE, function(x) data.frame(t(x$optim$bestmem))))
+    #   set(outs, NULL, "objFunVal", objFunValsAll)
+    #   set(outs, NULL, "iters",seq_len(length(sim$DE)))
+    #   outs <- outs[ordered, ]
+    #
+    #   Nkeep <- 10
+    #   sim$studyAreaWithSpreadParams <- sim$studyArea
+    #   for (i in 2:Nkeep) {
+    #     sim$studyAreaWithSpreadParams <- rbind(sim$studyAreaWithSpreadParams, sim$studyArea)
+    #   }
+    #   sim$studyAreaWithSpreadParams[, names(outs)] <- outs[seq_len(Nkeep),]
+    #
+    # },
     plot = {
       browser()
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -727,4 +756,12 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   }
 
   return(invisible(sim))
+}
+
+
+plotParamsBest <- function(paramsBest) {
+  gg <- melt(paramsBest, measure.vars = colnames(paramsBest)) |>
+    ggplot() + geom_histogram(aes_string("value")) + facet_wrap("variable", ncol=3)
+  gg$plot_env <- new.env(parent = emptyenv())
+  gg
 }
