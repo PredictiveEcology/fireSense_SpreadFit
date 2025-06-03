@@ -167,8 +167,8 @@ defineModule(sim, list(
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput("fireSense_nonAnnualSpreadFitCovariates", "data.table",
                  desc = "table of veg covariates, burn status, polyID, and pixelID"),
-    expectsInput("fireSense_spreadLogisticTermNames", "character",
-                 desc = paste0("The term names for the logistic terms in the spread fit")),
+    # expectsInput("fireSense_spreadLogisticTermNames", "character",
+    #              desc = paste0("The term names for the logistic terms in the spread fit")),
     expectsInput("spreadFitAdditionalColNames", "character",
                  desc = paste0("The column names used to attach the spreadFit object and several ancilliary objects")),
     expectsInput("fireSense_spreadFormula", "character",
@@ -645,87 +645,87 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   return(sim)
 }
 
-asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
-  browser()
-  DE2 <- if (is(DE, "list")) {
-    DE2 <- tail(DE, 1)[[1]]
-  } else {
-    DE
-  }
-
-  # DE1 <- tail(DE, 1)[[1]]
-    objFunValsAll <- unlist(lapply(DE, function(x) x$optim$bestval))
-    ordered <- order(objFunValsAll)
-    outs <- rbindlist(lapply(DE, function(x) data.frame(t(x$optim$bestmem))))
-    set(outs, NULL, "objFunVal", objFunValsAll)
-    set(outs, NULL, "iters",seq_len(length(DE)))
-    outs <- outs[ordered, ]
-
-    # head(outs[ordered,])
-
-    # bestvals <- which.min(objFunValsAll)
-    # DE1$optim$bestmem <- DE[[bestvals]]$optim$bestmem
-    # DE1$optim$bestval <- DE[[bestvals]]$optim$bestval
-    # DE1$optim$iter <- sum(unlist(lapply(DE, function(x) x$optim$iter)))
-    # DE1$member$bestmemit <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
-    # DE1$member$bestvalit <- rbindlist(lapply(DE, function(x) as.data.table(x$member$bestvalit)))[[1]]
-  # DE1$member <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
-
-  # options(opts)
-
-  ## TODO: use native R pipe
-  valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
-  valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
-  valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
-  bestFit <- DE2$optim$bestval
-  terms <- terms(as.formula(DEformulaChar, env = .GlobalEnv))
-  # Identifying the number of parameters of the logistic function and names
-  nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
-  if (nParsLogistic == 5) {
-    nms <- sim$fireSense_spreadLogisticTermNames
-    # nms <- c("inflectionPoint1", "inflectionPoint2",
-    #          "maxAsymptote", "hillSlope1", "hillSlope2")
-  } else if (nParsLogistic == 4) {
-    nms <- sim$fireSense_spreadLogisticTermNames[1:4]
-    # nms <- c("inflectionPoint1", "inflectionPoint2",
-    #          "maxAsymptote", "hillSlope1")
-  } else if (nParsLogistic == 3) {
-    nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4, 1)]
-    # nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
-  } else if (nParsLogistic == 2) {
-    nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4)]
-    # nms <- c("maxAsymptote", "hillSlope1")
-  }
-  # Giuseppe Cardillo (2020). Three parameters logistic regression -
-  # There and back again (https://www.github.com/dnafinder/logistic3),
-  # GitHub. Retrieved June 11, 2020.
-
-  fireSense_SpreadFitted <- list(
-    formula = DEformulaChar,
-    bestCoef = setNames(valBest,
-                        nm = c(nms,
-                               if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-                               attr(terms, "term.labels")
-                        )
-    ),
-    meanCoef = setNames(valAverage,
-                        nm = c(nms,
-                               if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-                               attr(terms, "term.labels")
-                        )
-    ),
-    sdCoef = setNames(valSD,
-                      nm = c(nms,
-                             if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-                             attr(terms, "term.labels")
-                      )
-    ),
-    bestFit = bestFit
-  )
-
-  class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
-  fireSense_SpreadFitted
-}
+# asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
+#   browser()
+#   DE2 <- if (is(DE, "list")) {
+#     DE2 <- tail(DE, 1)[[1]]
+#   } else {
+#     DE
+#   }
+#
+#   # DE1 <- tail(DE, 1)[[1]]
+#     objFunValsAll <- unlist(lapply(DE, function(x) x$optim$bestval))
+#     ordered <- order(objFunValsAll)
+#     outs <- rbindlist(lapply(DE, function(x) data.frame(t(x$optim$bestmem))))
+#     set(outs, NULL, "objFunVal", objFunValsAll)
+#     set(outs, NULL, "iters",seq_len(length(DE)))
+#     outs <- outs[ordered, ]
+#
+#     # head(outs[ordered,])
+#
+#     # bestvals <- which.min(objFunValsAll)
+#     # DE1$optim$bestmem <- DE[[bestvals]]$optim$bestmem
+#     # DE1$optim$bestval <- DE[[bestvals]]$optim$bestval
+#     # DE1$optim$iter <- sum(unlist(lapply(DE, function(x) x$optim$iter)))
+#     # DE1$member$bestmemit <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
+#     # DE1$member$bestvalit <- rbindlist(lapply(DE, function(x) as.data.table(x$member$bestvalit)))[[1]]
+#   # DE1$member <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
+#
+#   # options(opts)
+#
+#   ## TODO: use native R pipe
+#   valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
+#   valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
+#   valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
+#   bestFit <- DE2$optim$bestval
+#   terms <- terms(as.formula(DEformulaChar, env = .GlobalEnv))
+#   # Identifying the number of parameters of the logistic function and names
+#   nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
+#   if (nParsLogistic == 5) {
+#     nms <- sim$fireSense_spreadLogisticTermNames
+#     # nms <- c("inflectionPoint1", "inflectionPoint2",
+#     #          "maxAsymptote", "hillSlope1", "hillSlope2")
+#   } else if (nParsLogistic == 4) {
+#     nms <- sim$fireSense_spreadLogisticTermNames[1:4]
+#     # nms <- c("inflectionPoint1", "inflectionPoint2",
+#     #          "maxAsymptote", "hillSlope1")
+#   } else if (nParsLogistic == 3) {
+#     nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4, 1)]
+#     # nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
+#   } else if (nParsLogistic == 2) {
+#     nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4)]
+#     # nms <- c("maxAsymptote", "hillSlope1")
+#   }
+#   # Giuseppe Cardillo (2020). Three parameters logistic regression -
+#   # There and back again (https://www.github.com/dnafinder/logistic3),
+#   # GitHub. Retrieved June 11, 2020.
+#
+#   fireSense_SpreadFitted <- list(
+#     formula = DEformulaChar,
+#     bestCoef = setNames(valBest,
+#                         nm = c(nms,
+#                                if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+#                                attr(terms, "term.labels")
+#                         )
+#     ),
+#     meanCoef = setNames(valAverage,
+#                         nm = c(nms,
+#                                if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+#                                attr(terms, "term.labels")
+#                         )
+#     ),
+#     sdCoef = setNames(valSD,
+#                       nm = c(nms,
+#                              if (attr(terms, "intercept") != 0) "Intercept" else NULL,
+#                              attr(terms, "term.labels")
+#                       )
+#     ),
+#     bestFit = bestFit
+#   )
+#
+#   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
+#   fireSense_SpreadFitted
+# }
 
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
                                  upperAndLower) {
@@ -782,14 +782,14 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
     stop("fireSense_spreadFormula must be supplied.")
   }
 
-  if (!suppliedElsewhere("fireSense_spreadLogisticTermNames")) {
-    sim$fireSense_spreadLogisticTermNames <- c("inflectionPoint1", "inflectionPoint2",
-                                               "maxAsymptote", "hillSlope1", "hillSlope2")
-
-  }
+  # if (!suppliedElsewhere("fireSense_spreadLogisticTermNames")) {
+  #   sim$fireSense_spreadLogisticTermNames <- c("inflectionPoint1", "inflectionPoint2",
+  #                                              "maxAsymptote", "hillSlope1", "hillSlope2")
+  #
+  # }
 
   if (!suppliedElsewhere("spreadFitAdditionalColNames")) {
-    sim$spreadFitAdditionalColNames <- c("params", "sppEquiv", "nonForestedLCCGroups", "missingLCCgroup")
+    sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNames
   }
 
   return(invisible(sim))
