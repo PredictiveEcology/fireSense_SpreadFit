@@ -120,6 +120,10 @@ defineModule(sim, list(
                     desc = "the `c` argument passed to DEoptim.control"),
     defineParameter("rescaleAll", "logical", TRUE, NA, NA,
                     desc = "rescale covariates for `DEOptim`"),
+    defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP",
+                    NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
+    defineParameter("spreadFitFilename", "character", "fireSenseParams.rds",
+                    NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
     defineParameter("strategy", "integer", default = 3L,
                     desc = "Passed to `DEoptim.control`"),
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
@@ -163,6 +167,10 @@ defineModule(sim, list(
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput("fireSense_nonAnnualSpreadFitCovariates", "data.table",
                  desc = "table of veg covariates, burn status, polyID, and pixelID"),
+    expectsInput("fireSense_spreadLogisticTermNames", "character",
+                 desc = paste0("The term names for the logistic terms in the spread fit")),
+    expectsInput("spreadFitAdditionalColNames", "character",
+                 desc = paste0("The column names used to attach the spreadFit object and several ancilliary objects")),
     expectsInput("fireSense_spreadFormula", "character",
                  desc = paste0("a formula that contains the annual and non-annual covariates",
                                "e.g. `~ 0 + MDC + class2 + class3 + youngAge`.")),
@@ -284,9 +292,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       messageDF(best$bestCluster)
       fnName <- paste0("runDEoptim_", P(sim)$rep)
 
-      exists <- CacheGeo(cloudFolderID = "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP", # "1I-aVs_cZQmjXwf9DWh3gt5fINlNlddIZ",
-                         targetFile = "fireSenseParams.rds", domain = sim$studyArea, action = "nothing",
-                         destinationPath = getPaths()$inputPath, bufferOK = TRUE)
+      spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
+                                  targetFile = Par$spreadFitFilename,
+                                  domain = sim$studyArea, action = "nothing",
+                                  destinationPath = getPaths()$inputPath, bufferOK = TRUE) |> Cache()
+
       if (!(is(exists, "sf") || is(exists, "data.frame"))) {
         sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$dat$annualDTx1000,
@@ -333,10 +343,23 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
         paramsBest <- lapply(DEBest, function(D) as.data.table(D$member$bestmemit))#, FUN.VALUE = numeric(length(terms)))
         paramsBest <- rbindlist(paramsBest)
-        sim$studyAreaWithSpreadParams <- sim$studyArea |> dplyr::mutate(params = list(paramsBest))
+
+
+        df <- data.frame(I(list(paramsBest)),
+                         I(list(sim$sppEquiv)),
+                         I(list(sim$nonForestedLCCGroups)),
+                         I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
+
+        sim$studyAreaWithSpreadParams <- sim$studyArea |>
+          dplyr::mutate(df)
         le <- function(x) {x}
-        exists <- CacheGeo(targetFile = "fireSenseParams.rds", domain = sim$studyArea, destinationPath = getPaths()$inputPath,
-                           FUN = le(studyAreaFireSense), le = le, studyAreaFireSense = studyAreaFireSense,
+        exists <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
+                           targetFile = Par$spreadFitFilename,
+                           domain = sim$studyArea,
+                           destinationPath = inputPath(sim),
+                           FUN = le(studyAreaFireSense),
+                           le = le,
+                           studyAreaFireSense = sim$studyAreaWithSpreadParams,
                            action = "update")
       } else {
         # exists <- CacheGeo(targetFile = "fireSenseParams.rds", domain = sim$studyArea, destinationPath = getPaths()$inputPath)
@@ -659,15 +682,19 @@ asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
   # Identifying the number of parameters of the logistic function and names
   nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
   if (nParsLogistic == 5) {
-    nms <- c("inflectionPoint1", "inflectionPoint2",
-             "maxAsymptote", "hillSlope1", "hillSlope2")
+    nms <- sim$fireSense_spreadLogisticTermNames
+    # nms <- c("inflectionPoint1", "inflectionPoint2",
+    #          "maxAsymptote", "hillSlope1", "hillSlope2")
   } else if (nParsLogistic == 4) {
-    nms <- c("inflectionPoint1", "inflectionPoint2",
-             "maxAsymptote", "hillSlope1")
+    nms <- sim$fireSense_spreadLogisticTermNames[1:4]
+    # nms <- c("inflectionPoint1", "inflectionPoint2",
+    #          "maxAsymptote", "hillSlope1")
   } else if (nParsLogistic == 3) {
-    nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
+    nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4, 1)]
+    # nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
   } else if (nParsLogistic == 2) {
-    nms <- c("maxAsymptote", "hillSlope1")
+    nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4)]
+    # nms <- c("maxAsymptote", "hillSlope1")
   }
   # Giuseppe Cardillo (2020). Three parameters logistic regression -
   # There and back again (https://www.github.com/dnafinder/logistic3),
@@ -755,6 +782,16 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
     stop("fireSense_spreadFormula must be supplied.")
   }
 
+  if (!suppliedElsewhere("fireSense_spreadLogisticTermNames")) {
+    sim$fireSense_spreadLogisticTermNames <- c("inflectionPoint1", "inflectionPoint2",
+                                               "maxAsymptote", "hillSlope1", "hillSlope2")
+
+  }
+
+  if (!suppliedElsewhere("spreadFitAdditionalColNames")) {
+    sim$spreadFitAdditionalColNames <- c("params", "sppEquiv", "nonForestedLCCGroups", "missingLCCgroup")
+  }
+
   return(invisible(sim))
 }
 
@@ -765,3 +802,5 @@ plotParamsBest <- function(paramsBest) {
   gg$plot_env <- new.env(parent = emptyenv())
   gg
 }
+
+
