@@ -219,6 +219,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                   domain = sim$studyArea, action = "nothing",
                                   destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
+      # spreadFitPreRun <- NULL
       if (is(spreadFitPreRun, "sf") || is(spreadFitPreRun, "data.frame")) {
         sim$studyAreaWithSpreadParams <- spreadFitPreRun
       } else {
@@ -247,7 +248,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
     },
     spreadFitPrepare = {
-      sim <- spreadFitPrep(sim)
+      sim <- spreadFitPrep(sim) # makes the covariates into the x1000 integers
     },
     debug = {
       ## This below is to test the code without running DEOptim
@@ -274,6 +275,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                   destinationPath = getPaths()$inputPath, bufferOK = TRUE) |> Cache()
       sim$studyAreaWithSpreadParams <- spreadFitPreRun
 
+      # spreadFitPreRun <- NULL
       if (!(is(spreadFitPreRun, "sf") || is(spreadFitPreRun, "data.frame"))) {
 
 
@@ -470,7 +472,7 @@ spreadFitPrep <- function(sim) {
         l
     })
     message("Mutually exclusive is now:")
-    message(Par[[mec]])
+    print(Par[[mec]]) # message doesn't show name of list
 
   }
 
@@ -527,16 +529,6 @@ spreadFitPrep <- function(sim) {
     paramOrder = P(sim)$upper)
 
   return(sim)
-}
-
-toX1000 <- function(lst, omitCols = "pixelID") {
-  annualDTx1000 <- lapply(lst, function(dt) {
-    setDT(dt)
-    cns <- setdiff(colnames(dt), omitCols)
-    for (colnam in cns)
-      set(dt, NULL, colnam, fireSenseUtils:::asInteger(dt[[colnam]] * 1000))
-    setDF(dt)
-  })
 }
 
 loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
@@ -608,27 +600,6 @@ histOfCovariates <- function(annualList, nonAnnualList) {
     hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = "year"]
 }
 
-covsX1000AndSetDF <- function(annualList, nonAnnualList, fireBufferedList, fireLociList, paramOrder) {
-
-  annualCols <- colnames(annualList[[1]])
-  nonAnnualCols <- colnames(nonAnnualList[[1]])
-  annualCols <- annualCols[annualCols %in% names(paramOrder)]
-  nonAnnualCols <- nonAnnualCols[nonAnnualCols %in% names(paramOrder)]
-
-  annualList <- lapply(annualList, setcolorder, neworder = c("pixelID", annualCols))
-  nonAnnualCols <- lapply(nonAnnualList, setcolorder, neworder = c("pixelID", nonAnnualCols))
-
-  annualDT <- lapply(annualList, setDF)
-  annualDTx1000 <- toX1000(annualDT)
-  nonAnnualDT <- lapply(nonAnnualList, setDF)
-  nonAnnualDTx1000 <- toX1000(nonAnnualDT)
-  fireBufferedListDT <- lapply(fireBufferedList, setDF)
-  historicalFires <- lapply(fireLociList, setDF)
-  list(annualDTx1000 = annualDTx1000,
-       nonAnnualDTx1000 = nonAnnualDTx1000,
-       fireBufferedListDT = fireBufferedListDT,
-       historicalFires = historicalFires)
-}
 
 estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
