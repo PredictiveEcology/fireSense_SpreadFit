@@ -223,7 +223,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (is(spreadFitPreRun, "sf") || is(spreadFitPreRun, "data.frame")) {
         sim$studyAreaWithSpreadParams <- spreadFitPreRun
       } else {
-        browser()
 
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
 
