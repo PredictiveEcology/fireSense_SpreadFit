@@ -272,6 +272,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
                                   targetFile = Par$spreadFitFilename,
                                   domain = sim$studyArea, action = "nothing",
+                                  purge = 7,
                                   destinationPath = getPaths()$inputPath, bufferOK = TRUE) |> Cache()
       sim$studyAreaWithSpreadParams <- spreadFitPreRun
 
