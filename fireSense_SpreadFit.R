@@ -369,16 +369,20 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          I(list(sim$sppEquiv)),
                          I(list(sim$nonForestedLCCGroups)),
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
+        df <- data.frame(df, "polygonID" = sim$currentName)
 
-        sim$studyAreaWithSpreadParams <- sim$studyArea |>
+        saHere <- if (is(sim$studyArea, "SpatVector")) sf::st_as_sf(sim$studyArea) else sim$studyArea
+        saHere <- sf::st_as_sf(sf::st_geometry(saHere))
+        sf::st_geometry(saHere) <- "geometry"
+        sim$studyAreaWithSpreadParams <- saHere |>
           dplyr::mutate(df)
         le <- function(x) {x}
         spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
                            targetFile = Par$spreadFitFilename,
-                           domain = sim$studyArea,
+                           domain = saHere,
                            destinationPath = inputPath(sim),
                            FUN = le(studyAreaFireSense),
-                           le = le,
+                           le = le, purge = 7,
                            studyAreaFireSense = sim$studyAreaWithSpreadParams,
                            action = "update")
       } else {
