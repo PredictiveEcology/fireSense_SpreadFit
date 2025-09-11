@@ -304,6 +304,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           #   message("Using only: ")
           # } else {
           best <- list(cluster = Par$cores)
+          # while n105 is unavailable
+          # best <- list(cluster = setdiff(Par$cores, "n105"))
           # }
         } else {
 
