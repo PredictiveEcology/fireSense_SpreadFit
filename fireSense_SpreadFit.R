@@ -399,7 +399,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
     },
     retrieveDEOptim = {
-      browser()
       if (!is.null(Par$urlDEOptimObject))
         message("Loading ", Par$urlDEOptimObject)
       out <- Cache(loadPrevDEOptimRun, url = Par$urlDEOptimObject,
@@ -418,7 +417,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     # makefireSense_SpreadFitted = {
     #
-    #   browser()
     #   objFunValsAll <- unlist(lapply(sim$DE, function(x) x$optim$bestval))
     #   ordered <- order(objFunValsAll)
     #   outs <- rbindlist(lapply(sim$DE, function(x) data.frame(t(x$optim$bestmem))))
@@ -435,7 +433,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     #
     # },
     plot = {
-      browser()
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
       colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
       sim$fsSpreadFit_hists <- ggplot(tidyr::gather(DEpop_df), aes(value)) +
@@ -528,10 +525,11 @@ spreadFitPrep <- function(sim) {
 
   sim$lociList <- makeLociList(ras = sim$rasterToMatch, pts = sim$spreadFirePoints)
 
+  keepNames <- intersect(names(sim$fireSense_annualSpreadFitCovariates), names(sim$fireBufferedListDT))
   mod$dat <- covsX1000AndSetDF(
-    annualList = sim$fireSense_annualSpreadFitCovariates,
+    annualList = sim$fireSense_annualSpreadFitCovariates[keepNames],
     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
-    fireBufferedList = sim$fireBufferedListDT,
+    fireBufferedList = sim$fireBufferedListDT[keepNames],
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
 
@@ -579,7 +577,7 @@ deriveCovMinMax <- function(annualList, nonAnnualList) {
   setcolorder(covMinMax1, vals1)
 
   #annual covariates (climate/youngAge)
-  annRescales <- rbindlist(annualList)
+  annRescales <- rbindlist(annualList, fill = TRUE)
   vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
   covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
   covMinMax <- cbind(covMinMax1, covMinMax2)
@@ -639,7 +637,6 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 }
 
 # asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
-#   browser()
 #   DE2 <- if (is(DE, "list")) {
 #     DE2 <- tail(DE, 1)[[1]]
 #   } else {
