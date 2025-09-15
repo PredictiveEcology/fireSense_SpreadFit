@@ -579,7 +579,7 @@ deriveCovMinMax <- function(annualList, nonAnnualList) {
   setcolorder(covMinMax1, vals1)
 
   #annual covariates (climate/youngAge)
-  annRescales <- rbindlist(annualList)
+  annRescales <- rbindlist(annualList, fill = TRUE)
   vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
   covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
   covMinMax <- cbind(covMinMax1, covMinMax2)
