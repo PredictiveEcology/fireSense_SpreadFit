@@ -154,15 +154,15 @@ defineModule(sim, list(
                                   "e.g., print median of spreadProb during calculations")),
     defineParameter("visualizeDEoptim", "Path", default = figurePath(sim),
                     desc = paste("Passed to runDEoptim. This makes histographs at each iterStep and saves them ",
-                    "to this path")),
+                                 "to this path")),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
                     desc = "This will be given to the upper and -lower values if not supplied by user")
   ),
   inputObjects = rbind(
     expectsInput("fireBufferedListDT", "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
-    expectsInput("rasterToMatch", "SpatRaster",
-                 desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1."),
+    # expectsInput("rasterToMatch", "SpatRaster",
+    #              desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1."),
     expectsInput("fireSense_annualSpreadFitCovariates", "data.table",
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput("fireSense_nonAnnualSpreadFitCovariates", "data.table",
@@ -205,7 +205,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   switch(
     eventType,
     init = {
-      moduleName <- currentModule(sim)
+      # moduleName <- currentModule(sim)
       if (!is.null(Par$debugMode)) if (Par$debugMode)
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
 
@@ -214,34 +214,37 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
       }
 
-      spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-                                  targetFile = Par$spreadFitFilename,
-                                  domain = sim$studyArea, action = "nothing",
-                                  destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
+      # spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
+      #                             targetFile = Par$spreadFitFilename,
+      #                             domain = sim$studyArea, action = "nothing",
+      #                             destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
+
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
-      # spreadFitPreRun <- NULL
-      if (is(spreadFitPreRun, "sf") || is(spreadFitPreRun, "data.frame")) {
-        sim$studyAreaWithSpreadParams <- spreadFitPreRun
-      } else {
-
+      if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
+        # sim$studyAreaWithSpreadParams <- spreadFitPreRun
+        #   colsToUse <- setdiff(colnames(sim$studyAreaWithSpreadParams$params[[1]]),
+        #                        unique(unlist(fireSenseUtils::logisticParamNames)))
+        #
+        # } else {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
+      }
 
-        if ("debug" %in% P(sim)$mode) {
+      if ("debug" %in% P(sim)$mode) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
+      } else {
+        # if ("fit" %in% P(sim)$mode) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+        # sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
+        # } else {
+        #   sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
+        # }
+
+        if ("visualize" %in% P(sim)$mode) {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
-        } else {
-          # if ("fit" %in% P(sim)$mode) {
-          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
-          # sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
-          # } else {
-          #   sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
-          # }
-
-          if ("visualize" %in% P(sim)$mode) {
-            sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
-            sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
-          }
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
         }
       }
+
 
 
 
@@ -268,16 +271,15 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-
-      spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-                                  targetFile = Par$spreadFitFilename,
-                                  domain = sim$studyArea, action = "nothing",
-                                  purge = 7,
-                                  destinationPath = getPaths()$inputPath, bufferOK = TRUE) |> Cache()
-      sim$studyAreaWithSpreadParams <- spreadFitPreRun
-
-      # spreadFitPreRun <- NULL
-      if (!(is(spreadFitPreRun, "sf") || is(spreadFitPreRun, "data.frame"))) {
+      if (is.null(sim$studyAreaWithSpreadParams)) {
+        #   sim$studyAreaWithSpreadParams <-
+        #     CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
+        #              targetFile = Par$spreadFitFilename,
+        #              domain = sim$studyArea, action = "nothing",
+        #              destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
+        # }
+        #
+        # if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
 
 
         termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
@@ -377,18 +379,14 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$studyAreaWithSpreadParams <- saHere |>
           dplyr::mutate(df)
         le <- function(x) {x}
-        spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-                           targetFile = Par$spreadFitFilename,
-                           domain = saHere,
-                           destinationPath = inputPath(sim),
-                           FUN = le(studyAreaFireSense),
-                           le = le, purge = 7,
-                           studyAreaFireSense = sim$studyAreaWithSpreadParams,
-                           action = "update")
-      } else {
-        # spreadFitPreRun <- CacheGeo(targetFile = "fireSenseParams.rds", domain = sim$studyArea, destinationPath = getPaths()$inputPath)
-        sim$studyAreaWithSpreadParams <- spreadFitPreRun
-        # paramsBest <- spreadFitPreRun$params[[1]]
+        sim$studyAreaWithSpreadParams <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
+                                                  targetFile = Par$spreadFitFilename,
+                                                  domain = saHere,
+                                                  destinationPath = inputPath(sim),
+                                                  FUN = le(studyAreaFireSense),
+                                                  le = le, purge = 7,
+                                                  studyAreaFireSense = sim$studyAreaWithSpreadParams,
+                                                  action = "update")
       }
 
       # st <- format(Sys.time(), format = "%Y_%m_%d %H:%M")
@@ -446,7 +444,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim$fsSpreadFit_hists ## show plot in session
     },
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
-                    "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
+                  "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
 
   invisible(sim)
@@ -458,7 +456,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 # }
 
 spreadFitPrep <- function(sim) {
-  moduleName <- current(sim)$moduleName
+  # moduleName <- current(sim)$moduleName
 
   # Mutually Exclusive Columns -- basically no class with biomass or land cover can also be in the
   #   youngAge class. Inside the optimization function, the covariates are set to zero if
@@ -612,22 +610,22 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 
     # Took 50 minutes using 10 cores for Taiga studyArea
     Cache(runSpreadWithoutDEoptim(
-          iterThres = P(sim)$iterThresh,
-          lower = P(sim)$lower, upper = P(sim)$upper,
-          fireSense_spreadFormula = sim$fireSense_spreadFormula,
-          flammableRTM = sim$rasterToMatch,
-          mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
-          doObjFunAssertions = P(sim)$doObjFunAssertions,
-          annualDTx1000 = mod$dat$annualDTx1000,
-          nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
-          fireBufferedListDT = mod$dat$fireBufferedListDT,
-          historicalFires = mod$dat$historicalFires,
-          covMinMax = sim$covMinMax_spread,
-          objfunFireReps = P(sim)$objfunFireReps,
-          tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-          mode = Par$mode,
-          maxFireSpread = P(sim)$maxFireSpread),
-          omitArgs = c("objfunFireReps", "mode")
+      iterThres = P(sim)$iterThresh,
+      lower = P(sim)$lower, upper = P(sim)$upper,
+      fireSense_spreadFormula = sim$fireSense_spreadFormula,
+      flammableRTM = sim$rasterToMatch,
+      mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
+      doObjFunAssertions = P(sim)$doObjFunAssertions,
+      annualDTx1000 = mod$dat$annualDTx1000,
+      nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
+      fireBufferedListDT = mod$dat$fireBufferedListDT,
+      historicalFires = mod$dat$historicalFires,
+      covMinMax = sim$covMinMax_spread,
+      objfunFireReps = P(sim)$objfunFireReps,
+      tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+      mode = Par$mode,
+      maxFireSpread = P(sim)$maxFireSpread),
+      omitArgs = c("objfunFireReps", "mode")
     )
   } else {
     P(sim)$SNLL_FS_thresh
