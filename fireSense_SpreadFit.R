@@ -26,7 +26,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>=0.0.14)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9087)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.6.9003)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -521,7 +521,9 @@ spreadFitPrep <- function(sim) {
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
   }
 
-  sim$lociList <- makeLociList(ras = sim$rasterToMatch, pts = sim$spreadFirePoints)
+  IDvar <- grep("ID", names(sim$spreadFirePoints[[1]]), value = TRUE) |> setdiff("GID")
+  sim$lociList <- makeLociList(ras = sim$rasterToMatch, pts = sim$spreadFirePoints, idsCol = IDvar,
+                               yearPrefix = fireSenseUtils::yearChar)
 
   keepNames <- intersect(names(sim$fireSense_annualSpreadFitCovariates), names(sim$fireBufferedListDT))
   mod$dat <- covsX1000AndSetDF(
