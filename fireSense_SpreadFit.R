@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.1"),
+  version = list(fireSense_SpreadFit = "1.0.2"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -26,7 +26,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>=0.0.14)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.6.9003)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.6.9005)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -44,7 +44,7 @@ defineModule(sim, list(
                     desc = "optional. When to start saving output to a file."),
     defineParameter(".saveInterval", "numeric", default = NA,
                     desc = "optional. Interval between save events."),
-    defineParameter(".useCache", "logical", "init", NA, NA,
+    defineParameter(".useCache", c("logical", "character"), "init", NA, NA,
                     desc = paste("Should this entire module be run",
                                  "with caching activated? This is generally intended for data-type",
                                  "modules, where stochasticity and time are not relevant.")),
@@ -120,7 +120,10 @@ defineModule(sim, list(
                     desc = "the `c` argument passed to DEoptim.control"),
     defineParameter("rescaleAll", "logical", TRUE, NA, NA,
                     desc = "rescale covariates for `DEOptim`"),
-    defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP",
+    # This was KNN drive URL
+    # defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP",
+    #                 NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
+    defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/folders/1X9-mRjyLMNpgkP_cfqhbr_AQEPOsVCHf",
                     NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
     defineParameter("spreadFitFilename", "character", "fireSenseParams.rds",
                     NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
@@ -152,13 +155,14 @@ defineModule(sim, list(
                     desc = paste0("optional. With increasing number, more verbosity. Level 1 is ",
                                   "normal reproducible (e.g., Cache), level 2 includes objective function ",
                                   "e.g., print median of spreadProb during calculations")),
-    defineParameter("visualizeDEoptim", "Path", default = figurePath(sim),
+    defineParameter("visualizeDEoptim", "Path", default = asPath(figurePath(sim)),
                     desc = paste("Passed to runDEoptim. This makes histographs at each iterStep and saves them ",
                                  "to this path")),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
                     desc = "This will be given to the upper and -lower values if not supplied by user")
   ),
   inputObjects = rbind(
+    expectsInput(".runName", "character", "Some descriptive, short name for this fitting, e.g., ELF14.1"),
     expectsInput("fireBufferedListDT", "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
     # expectsInput("rasterToMatch", "SpatRaster",
@@ -205,7 +209,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   switch(
     eventType,
     init = {
-      # moduleName <- currentModule(sim)
       if (!is.null(Par$debugMode)) if (Par$debugMode)
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
 
@@ -213,42 +216,20 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (!is.null(sim$parsKnown)) {
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
       }
-
-      # spreadFitPreRun <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-      #                             targetFile = Par$spreadFitFilename,
-      #                             domain = sim$studyArea, action = "nothing",
-      #                             destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
-
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
       if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
-        # sim$studyAreaWithSpreadParams <- spreadFitPreRun
-        #   colsToUse <- setdiff(colnames(sim$studyAreaWithSpreadParams$params[[1]]),
-        #                        unique(unlist(fireSenseUtils::logisticParamNames)))
-        #
-        # } else {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
       }
 
       if ("debug" %in% P(sim)$mode) {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
       } else {
-        # if ("fit" %in% P(sim)$mode) {
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
-        # sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "makefireSense_SpreadFitted")
-        # } else {
-        #   sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "retrieveDEOptim")
-        # }
-
         if ("visualize" %in% P(sim)$mode) {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
         }
       }
-
-
-
-
-
     },
     spreadFitPrepare = {
       sim <- spreadFitPrep(sim) # makes the covariates into the x1000 integers
@@ -272,54 +253,20 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     run = {
       if (is.null(sim$studyAreaWithSpreadParams)) {
-        #   sim$studyAreaWithSpreadParams <-
-        #     CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-        #              targetFile = Par$spreadFitFilename,
-        #              domain = sim$studyArea, action = "nothing",
-        #              destinationPath = inputPath(sim), bufferOK = TRUE) |> Cache()
-        # }
-        #
-        # if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
-
 
         termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
-        # termsInForm <- attr(terms(as.formula(sim$fireSense_spreadFormula, env = .GlobalEnv)), "term.labels")
-        # logitNumParams <- length(P(sim)$lower) - length(termsInForm)
-        # message("Using a ", logitNumParams, " parameter logistic equation")
-        # message("  There will be ", length(P(sim)$lower), " terms: ")
-        # message("  ", paste(c(paste0("logit", seq(logitNumParams)), termsInForm), collapse = ", "))
-        # message("  objectiveFunction threshold SNLL to run all years after first 2 years: ", mod$thresh)
-
         useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
-        # if (isRstudioServer() || any(grepl("positron", search()))) {
-        #   a <- Par$cores# <- NULL
-        #   Par$cores <- NULL
-        # }
         if (!is.null(Par$cores) && !any(is.na(Par$cores)) && identical(sort(unique(Par$cores)), sort(Par$cores))) {
-          # if (length(unique(Par$cores)) > 1) {
-          #   message("Running tests on cluster to determine current speed...")
-          #   best <- clusters::runTests(unique(Par$cores), repos = c("predictiveecology.r-universe.dev", getOption("repos")),
-          #                              clustersBranch = "main") |> Cache(useCache = useCache)
-          #   message("The following is the current speed of the cluster")
-          #   messageDF(best$wholeCluster)
-          #   message("")
-          #   message("Using only: ")
-          # } else {
           best <- list(cluster = Par$cores)
-          # while n105 is unavailable
-          # best <- list(cluster = setdiff(Par$cores, "n105"))
-          # }
         } else {
 
           best <- list(cluster = Par$cores,
                        bestCluster = as.data.table(table(Par$cores)))
         }
-        # if (isRstudioServer() || any(grepl("positron", search()))) {
-        #   Par$cores <- a
-        # }
         messageDF(best$bestCluster)
         fnName <- paste0("runDEoptim_", P(sim)$rep)
 
+        # stop("Ended just before the runDEoptim")
         sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$dat$annualDTx1000,
                                    nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
@@ -356,8 +303,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         .cacheExtra = fnName,
                         omitArgs = c(".verbose", "cores"),
                         useCache = P(sim)$useCache_DE#,
-                        #useCloud = P(sim)$useCloud_DE,
-                        #cloudFolderID = P(sim)$cloudFolderID_DE ## Cloud cache was being a problem
         )
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
         ord <- order(objFunVal, decreasing = TRUE)
@@ -371,7 +316,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          I(list(sim$sppEquiv)),
                          I(list(sim$nonForestedLCCGroups)),
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
-        df <- data.frame(df, "polygonID" = sim$currentName)
+        df <- data.frame(df, "polygonID" = sim$.runName)
 
         saHere <- if (is(sim$studyArea, "SpatVector")) sf::st_as_sf(sim$studyArea) else sim$studyArea
         saHere <- sf::st_as_sf(sf::st_geometry(saHere))
@@ -388,13 +333,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                   studyAreaFireSense = sim$studyAreaWithSpreadParams,
                                                   action = "update")
       }
-
-      # st <- format(Sys.time(), format = "%Y_%m_%d %H:%M")
-      # filenameBase <- file.path(P(sim)$visualizeDEoptim, paste0("FireSense_spreadFit_histograms_", Par$rep))
-      # gg2 <- Plots(plotParamsBest(paramsBest), filename = paste0(filenameBase, st)) |>
-      #   Cache(omitArgs = c("data", "fn", "filename"),
-      #         .cacheExtra = list(paramsBest = paramsBest, filenameBase = filenameBase))
-
     },
     retrieveDEOptim = {
       if (!is.null(Par$urlDEOptimObject))
@@ -468,13 +406,13 @@ spreadFitPrep <- function(sim) {
     sp_lcc <- colnames(sim$fireSense_nonAnnualSpreadFitCovariates[[1]])
     sp_lcc <- grep("pixel", sp_lcc, invert = TRUE, value = TRUE)
     P(sim)[[mec]] <- Map(l = Par[[mec]], nam = names(Par[[mec]]), function(l, nam) {
-      if (identical(nam, "youngAge"))
+      if (identical(nam, youngAge))
         c(l, sp_lcc)
       else
         l
     })
     message("Mutually exclusive is now:")
-    print(Par[[mec]]) # message doesn't show name of list
+    message(Par[[mec]]) # message doesn't show name of list
 
   }
 
@@ -532,6 +470,12 @@ spreadFitPrep <- function(sim) {
     fireBufferedList = sim$fireBufferedListDT[keepNames],
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
+
+  namesWithGTZeroRows <- lapply(mod$dat, function(x) names(x[sapply(x, function(y) NROW(y)) > 0]))
+  annualDataNames <- grep("nonAnnual", names(namesWithGTZeroRows), invert = TRUE, value = TRUE)
+  keepYearsNamed <- table(unname(unlist(namesWithGTZeroRows[annualDataNames]))) == length(annualDataNames)
+  keepYears <- names(keepYearsNamed)[keepYearsNamed]
+  mod$dat[annualDataNames] <- lapply(mod$dat[annualDataNames], function(x) x[keepYears])
 
   return(sim)
 }
@@ -731,7 +675,7 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   }
   newParams <- as.vector(newParams)
   whAnnual <- formulaTerms %in% colnames(anyAnnualCovariates[[1]])
-  whYA <- formulaTerms[whAnnual] %in% "youngAge"
+  whYA <- formulaTerms[whAnnual] %in% youngAge
   newParams[whAnnual] <- ifelse(whichBound == "upper", upperAndLower, 0)
   newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -(upperAndLower))
 
@@ -794,3 +738,4 @@ plotParamsBest <- function(paramsBest) {
 }
 
 
+youngAge <- fireSenseUtils::youngAgeName

@@ -58,17 +58,31 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     }
   } else {
+    browser()
     message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
-    nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.9) #only use 90% of the resources
-    # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
-    # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
-    message("Using ", nCores, " cores.")
+    # Check for being in a future
+    a <- future::plan()
+    if (is(a, "FutureStrategy")) {
+      coresToUse <- nbrOfWorkers()
+      message("Using ", coresToUse, " cores.")
+    } else {
+      nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.9) #only use 90% of the resources
+      coresToUse <- min(c(nCores, length(pars), getOption("mc.cores")))
+      future::plan(multisession(workers = coresToUse))
+      # withr::local_options("mc.cores" = 4L)
+      # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
+      # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
+    }
+    message("Using ", coresToUse, " cores.")
+
 
     st1 <- system.time({
-      a <- mcmapply(mc.cores = min(nCores, length(pars)),
+      # a <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
+      #               mc.preschedule = FALSE,
+      a <- future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     par = pars, FUN = .objfunSpreadFit,
-                    mc.preschedule = FALSE, thresh = thresholds,
+                    thresh = thresholds,
                     MoreArgs = list(
                       FS_formula = fireSense_spreadFormula, #loci = loci,
                       landscape = flammableRTM,
@@ -87,6 +101,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     })
 
+    browser()
     valsdt <- data.table(thresholds = thresholds, objFun = a)
     valsdt <- valsdt[objFun < 1e5]
     threshToUse <- min(valsdt$thresholds)
