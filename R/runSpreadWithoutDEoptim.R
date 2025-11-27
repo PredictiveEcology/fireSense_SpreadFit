@@ -58,29 +58,31 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     }
   } else {
-    browser()
     message("SNLL_FS_thresh not specified. Self calibrating threshold value for runDEoptim (n=", n, ")")
 
     # Check for being in a future
     a <- future::plan()
-    if (is(a, "FutureStrategy")) {
+    if (is(a, "FutureStrategy") && !is(a, "sequential")) {
       coresToUse <- nbrOfWorkers()
       message("Using ", coresToUse, " cores.")
     } else {
+      activeThreads <- clusters::numActiveThreads()
       nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.9) #only use 90% of the resources
-      coresToUse <- min(c(nCores, length(pars), getOption("mc.cores")))
-      future::plan(multisession(workers = coresToUse))
+      coresToUse <- min(c(nCores, length(pars), getOption("mc.cores"))) -
+        activeThreads
+      future::plan("multisession", workers = coresToUse)
+      on.exit(future::plan("sequential"))
       # withr::local_options("mc.cores" = 4L)
       # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
       # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
+      message("Using ", coresToUse, " cores.")
     }
-    message("Using ", coresToUse, " cores.")
 
 
     st1 <- system.time({
       # a <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
       #               mc.preschedule = FALSE,
-      a <- future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
+      a <- future.apply::future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     par = pars, FUN = .objfunSpreadFit,
                     thresh = thresholds,
                     MoreArgs = list(
@@ -101,7 +103,6 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     })
 
-    browser()
     valsdt <- data.table(thresholds = thresholds, objFun = a)
     valsdt <- valsdt[objFun < 1e5]
     threshToUse <- min(valsdt$thresholds)
