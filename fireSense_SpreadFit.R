@@ -24,7 +24,7 @@ defineModule(sim, list(
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future", "ggplot2", "kSamples",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
-                  "PredictiveEcology/clusters@main (>=0.0.14)",
+                  "PredictiveEcology/clusters@main (>=0.0.18)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
                   "PredictiveEcology/fireSenseUtils@development (>= 0.0.6.9005)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),

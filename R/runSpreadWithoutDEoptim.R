@@ -67,10 +67,10 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       message("Using ", coresToUse, " cores.")
     } else {
       activeThreads <- clusters::numActiveThreads()
-      nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.9) #only use 90% of the resources
+      nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.5) #only use 90% of the resources
       coresToUse <- min(c(nCores, length(pars), getOption("mc.cores"))) -
         activeThreads
-      future::plan("multisession", workers = coresToUse)
+      future::plan("multicore", workers = coresToUse)
       on.exit(future::plan("sequential"))
       # withr::local_options("mc.cores" = 4L)
       # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
