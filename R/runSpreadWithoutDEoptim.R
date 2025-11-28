@@ -70,9 +70,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detectCores() * 0.5) #only use 90% of the resources
       coresToUse <- min(c(nCores, length(pars), getOption("mc.cores"))) -
         activeThreads
-      future::plan("multicore", workers = coresToUse)
-      on.exit(future::plan("sequential"))
-      # withr::local_options("mc.cores" = 4L)
+      # future::plan("multicore", workers = coresToUse)
+      # on.exit(future::plan("sequential"))
+      withr::local_options("mc.cores" = coresToUse)
       # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
       # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
       message("Using ", coresToUse, " cores.")
@@ -80,9 +80,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
 
     st1 <- system.time({
-      # a <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
-      #               mc.preschedule = FALSE,
-      a <- future.apply::future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
+      a <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
+                    mc.preschedule = FALSE,
+      # a <- future.apply::future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     par = pars, FUN = .objfunSpreadFit,
                     thresh = thresholds,
                     MoreArgs = list(
