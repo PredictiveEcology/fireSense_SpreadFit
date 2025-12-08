@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.2"),
+  version = list(fireSense_SpreadFit = "1.0.3"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -265,6 +265,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         }
         messageDF(best$bestCluster)
         fnName <- paste0("runDEoptim_", P(sim)$rep)
+        stop("Don't RUN DEOPTIM YET")
 
         # stop("Ended just before the runDEoptim")
         sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
@@ -555,7 +556,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
 
     # Took 50 minutes using 10 cores for Taiga studyArea
-    Cache(runSpreadWithoutDEoptim(
+    runSpreadWithoutDEoptim(
       iterThres = P(sim)$iterThresh,
       lower = P(sim)$lower, upper = P(sim)$upper,
       fireSense_spreadFormula = sim$fireSense_spreadFormula,
@@ -567,12 +568,12 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       fireBufferedListDT = mod$dat$fireBufferedListDT,
       historicalFires = mod$dat$historicalFires,
       covMinMax = sim$covMinMax_spread,
+      formulaToFit = sim$fireSense_spreadFormula,
       objfunFireReps = P(sim)$objfunFireReps,
       tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
       mode = Par$mode,
-      maxFireSpread = P(sim)$maxFireSpread),
-      omitArgs = c("objfunFireReps", "mode")
-    )
+      maxFireSpread = P(sim)$maxFireSpread) |>
+      Cache(omitArgs = c("objfunFireReps", "mode"))
   } else {
     P(sim)$SNLL_FS_thresh
   }

@@ -4,6 +4,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     doObjFunAssertions = getOption("fireSenseUtils.assertions", TRUE),
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
                                     weighted = TRUE, tests = c("snll_fs", "adtest"),
+                                    formulaToFit,
                                     pars = NULL, plot.it = TRUE, mode = "fit") {
   seed <- sample(1e6, 1)
   set.seed(seed)
@@ -48,6 +49,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  mutuallyExclusive = mutuallyExclusive,
                                  doAssertions = doObjFunAssertions,
                                  historicalFires = historicalFires,
+                                 formulaToFit = formulaToFit,
                                  tests = tests,
                                  covMinMax = covMinMax,
                                  Nreps = objfunFireReps,
@@ -80,7 +82,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
 
     st1 <- system.time({
-      a <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
+      objSpreadFit <- mcmapply(mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     mc.preschedule = FALSE,
       # a <- future.apply::future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     par = pars, FUN = .objfunSpreadFit,
@@ -94,6 +96,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       mutuallyExclusive = mutuallyExclusive,
                       doAssertions = doObjFunAssertions,
                       historicalFires = historicalFires,
+                      formulaToFit = formulaToFit,
                       tests = tests,
                       covMinMax = covMinMax,
                       Nreps = objfunFireReps,
@@ -103,7 +106,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     })
 
-    valsdt <- data.table(thresholds = thresholds, objFun = a)
+    valsdt <- data.table(thresholds = thresholds, objFun = objSpreadFit)
     valsdt <- valsdt[objFun < 1e5]
     threshToUse <- min(valsdt$thresholds)
     message("  using SNLL_FS_thresh value: ", threshToUse)
