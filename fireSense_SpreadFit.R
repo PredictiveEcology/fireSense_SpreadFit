@@ -265,7 +265,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         }
         messageDF(best$bestCluster)
         fnName <- paste0("runDEoptim_", P(sim)$rep)
-        stop("Don't RUN DEOPTIM YET")
+        if (isRstudioServer())
+          stop("Don't RUN DEOPTIM WITH RSTUDIO SERVER")
 
         # stop("Ended just before the runDEoptim")
         sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
