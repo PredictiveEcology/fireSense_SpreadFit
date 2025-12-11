@@ -21,7 +21,8 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_ignitionFit")),
-  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future", "ggplot2", "kSamples",
+  reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future",
+                  "ggplot2", "scales", "kSamples",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>=0.0.19)",
@@ -456,9 +457,11 @@ spreadFitPrep <- function(sim) {
     }
   }
 
-  if (anyPlotting(Par$.plots) && "debug" %in% P(sim)$mode) {
-    try(histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
-                         nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates))
+  if (anyPlotting(Par$.plots)) {
+    histOuts <- histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
+                         nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
+    Plots(histOuts[["annual"]], filename = "Histograms of AnnualClimateLayers")
+    Plots(histOuts[["nonAnnual"]], filename = "Histograms of FuelLayers")
   }
 
   IDvar <- grep("ID", names(sim$spreadFirePoints[[1]]), value = TRUE) |> setdiff("GID")
@@ -536,19 +539,69 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   nonAnnualCols <- colnames(nonAnnualList[[1]])
   nonAnnualColsToPlot <- setdiff(nonAnnualCols, "pixelID")
 
+  yr <- "year"
+
   nplots <- length(annualColsToPlot) * length(annualList) +
     length(nonAnnualColsToPlot) * length(nonAnnualList)
   ncols <- ceiling(sqrt(nplots))
   nrows <- ceiling(nplots/ncols)
   par(mfrow = c(ncols, nrows))
-  ann <- rbindlist(annualList, idcol = "year")
+  ann <- rbindlist(annualList, idcol = yr, use.names = TRUE, fill = TRUE)
   set(ann, NULL, "pixelID", NULL)
-  out <- ann[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
-    hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = "year"]
-  nonAnn <- rbindlist(nonAnnualList, idcol = "year")
+
+  annHists <- ggplot(ann) + geom_histogram(aes_string("CMDsm")) +
+    facet_wrap(yr) + #, ncol=ncols) +
+    ggplot2::theme_bw()
+  # out <- ann[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
+  #   hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = yr]
+  nonAnn <- rbindlist(nonAnnualList, idcol = yr, use.names = TRUE, fill = TRUE)
   set(nonAnn, NULL, "pixelID", NULL)
-  out <- nonAnn[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
-    hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = "year"]
+
+  v <- "LogBiomass"
+  Fue <- "Fuel"
+  nonAnnDT <- melt(
+    nonAnn,
+    id.vars = yr,              # keep year as an identifier
+    variable.name = Fue,        # new column holding the old column names
+    value.name = v           # numeric values
+  )
+  whMin <- which(nonAnnDT[[v]] == min(nonAnnDT[[v]]))
+  set(nonAnnDT, NULL, v, exp(nonAnnDT[[v]]))
+  set(nonAnnDT, whMin, v, 1)
+  # set(nonAnnDT, NULL, v, 1)
+
+  nonAnnHists <-
+    ggplot(nonAnnDT, aes(x = .data[[v]])) +
+    geom_histogram(bins = 20, color = "white") +
+    facet_grid(
+      rows = vars(.data[[yr]]),      # one strip per row, showing year
+      cols = vars(.data[[Fue]]),     # one strip per column, showing fuel
+      labeller = labeller(.multi_line = FALSE)  # cleaner strip labels
+    ) +
+    scale_x_log10(                     # compress the axis but keep original values
+      breaks = scales::breaks_log(n = 6),                   # nice log breaks
+      labels = scales::label_number(scale_cut = scales::cut_short_scale())
+    ) +
+    labs(
+      x = "Biomass (log-compressed axis)",
+      y = "Num Pixels",
+      title = "Histogram of Biomass by Fuel × Year"
+    ) +
+    theme_bw() +
+    theme(
+      strip.placement = "outside",   # move strips outside the panels
+      strip.background = element_rect(fill = "grey90", color = NA),
+      strip.text.y.left = element_text(angle = 0)  # readable vertical strips
+    )
+
+    # ggplot(nonAnnDT) + geom_histogram(aes_string(x = v)) +
+    #   facet_wrap(c(Fue, yr), ncol=ncol(nonAnn) - 1) +
+    #   ggplot2::theme_bw()
+
+
+  # out <- nonAnn[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
+  #   hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = yr]
+  list(annual = annHists, nonAnnual = nonAnnHists)
 }
 
 
