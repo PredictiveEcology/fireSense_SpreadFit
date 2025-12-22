@@ -265,9 +265,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                        bestCluster = as.data.table(table(Par$cores)))
         }
         messageDF(best$bestCluster)
-        fnName <- paste0("runDEoptim_", P(sim)$rep)
-        if (isRstudioServer())
-          stop("Don't RUN DEOPTIM WITH RSTUDIO SERVER")
+        fnName <- paste0("runDEoptim_", sim$.runName, "_", P(sim)$rep)
+        # if (isRstudioServer())
+        #   stop("Don't RUN DEOPTIM WITH RSTUDIO SERVER")
+
 
         # stop("Ended just before the runDEoptim")
         sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
@@ -300,17 +301,18 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                    visualizeDEoptim = P(sim)$visualizeDEoptim,
                                    .plotSize = P(sim)$.plotSize,
                                    .plots = P(sim)$.plots,
-                                   rep = P(sim)$rep),
-                        cacheId = P(sim)$cacheId_DE,
+                                   rep = P(sim)$rep,
+                                   runName = sim$.runName),
+                        # cacheId = ci, #P(sim)$cacheId_DE,
                         .functionName = fnName,
                         .cacheExtra = fnName,
-                        omitArgs = c(".verbose", "cores"),
+                        omitArgs = c(".verbose", "cores", "paths", "logPath"),
                         useCache = P(sim)$useCache_DE#,
         )
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
         ord <- order(objFunVal, decreasing = TRUE)
         DEBest <- head(sim$DE[ord], 5)
-        terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
+        # terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
         paramsBest <- lapply(DEBest, function(D) as.data.table(D$member$bestmemit))#, FUN.VALUE = numeric(length(terms)))
         paramsBest <- rbindlist(paramsBest)
 
