@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = c("ctb"))
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.3"),
+  version = list(fireSense_SpreadFit = "1.0.4"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -271,7 +271,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
 
         # stop("Ended just before the runDEoptim")
-        sim$DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
+        DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$dat$annualDTx1000,
                                    nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
                                    fireBufferedListDT = mod$dat$fireBufferedListDT,
@@ -309,15 +309,23 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                         omitArgs = c(".verbose", "cores", "paths", "logPath"),
                         useCache = P(sim)$useCache_DE#,
         )
+        sim$DE <- DE
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
-        ord <- order(objFunVal, decreasing = TRUE)
-        DEBest <- head(sim$DE[ord], 5)
+        ord <- order(objFunVal, decreasing = FALSE)
+        sim$DE <- sim$DE[ord]
+        DEBest <- head(sim$DE, 5)
         # terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
         paramsBest <- lapply(DEBest, function(D) as.data.table(D$member$bestmemit))#, FUN.VALUE = numeric(length(terms)))
         paramsBest <- rbindlist(paramsBest)
+        objFunValBest <- vapply(DEBest, function(D) D$member$bestval, FUN.VALUE = numeric(length(terms)))
+        numIterations <- length(sim$DE)
+        
 
-
-        df <- data.frame(I(list(paramsBest)),
+        
+        browser() # add bestfit value, plus maybe other things
+        df <- data.frame(I(list(numIterations)),
+                         I(list(objFunValBest)),
+                         I(list(paramsBest)),
                          I(list(sim$sppEquiv)),
                          I(list(sim$nonForestedLCCGroups)),
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
