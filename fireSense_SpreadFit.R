@@ -320,9 +320,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         objFunValBest <- vapply(DEBest, function(D) D$member$bestval, FUN.VALUE = numeric(length(terms)))
         numIterations <- length(sim$DE)
         
-
+        # This is normally OK, but there are cached calls that are recovering the wrong ones.
+        if (!all(sim$spreadFitAdditionalColNames %in% fireSenseUtils::spreadFitAdditionalColNames)) {
+          sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNames
+        }
         
-        browser() # add bestfit value, plus maybe other things
         df <- data.frame(I(list(numIterations)),
                          I(list(objFunValBest)),
                          I(list(paramsBest)),
