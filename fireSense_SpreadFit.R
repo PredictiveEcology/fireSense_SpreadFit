@@ -271,6 +271,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
 
         # stop("Ended just before the runDEoptim")
+        if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
+          params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
+        }
         DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$dat$annualDTx1000,
                                    nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
@@ -391,8 +394,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         facet_wrap(~key, scales = "free_x") +
         ggtitle(paste("distributions of SpreadFit coefficients for", basename(outputPath(sim))))
 
-      checkPath(file.path(outputPath(sim), "figures"), create = TRUE)
-      ggsave(file.path(outputPath(sim), "figures", "spreadFit_coeffs.png"), sim$fsSpreadFit_hists)
+      checkPath(file.path(outputPath(sim), currentModule(sim), "figures"), create = TRUE)
+      ggsave(file.path(outputPath(sim), currentModule(sim), "figures", "spreadFit_coeffs.png"), sim$fsSpreadFit_hists)
 
       sim$fsSpreadFit_hists ## show plot in session
     },
