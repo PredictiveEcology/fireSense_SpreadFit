@@ -218,35 +218,56 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
       }
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
+      
       if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
-      }
-
-      if ("debug" %in% P(sim)$mode) {
-        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
-      } else {
-        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
-        if ("visualize" %in% P(sim)$mode) {
+        if ("debug" %in% P(sim)$mode) {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
-          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
+        } else {
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+          if ("visualize" %in% P(sim)$mode) {
+            sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
+            sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
+          }
         }
-      }
+      } 
     },
     spreadFitPrepare = {
       sim <- spreadFitPrep(sim) # makes the covariates into the x1000 integers
     },
     debug = {
+      browser()
       ## This below is to test the code without running DEOptim
       thresh <- runSpreadWithoutDEoptim(
-        iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
-        sim$fireSense_spreadFormula, sim$rasterToMatch,
-        mod$dat$annualDTx1000, mod$dat$nonAnnualDTx1000, mod$dat$fireBufferedListDT,
-        mutuallyExclusive = P(sim)$mutuallyExclusiveCols,
+        iterThres = P(sim)$iterThresh,
+        lower = P(sim)$lower, upper = P(sim)$upper,
+        fireSense_spreadFormula = sim$fireSense_spreadFormula,
+        flammableRTM = sim$rasterToMatch,
+        mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
         doObjFunAssertions = P(sim)$doObjFunAssertions,
-        mod$dat$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
-        P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plots,
-        tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-        mode = Par$mode)
+        annualDTx1000 = mod$covsX1000$annualDTx1000,
+        nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
+        fireBufferedListDT = mod$covsX1000$fireBufferedListDT,
+        historicalFires = mod$covsX1000$historicalFires,
+        covMinMax = sim$covMinMax_spread,
+        formulaToFit = sim$fireSense_spreadFormula,
+        objfunFireReps = P(sim)$objfunFireReps,
+        # tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+        tests = "",
+        mode = Par$mode,
+        maxFireSpread = P(sim)$maxFireSpread) 
+      
+      # thresh <- runSpreadWithoutDEoptim(
+      #   iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
+      #   sim$fireSense_spreadFormula, sim$rasterToMatch,
+      #   mod$covsX1000$annualDTx1000, mod$covsX1000$nonAnnualDTx1000, mod$covsX1000$fireBufferedListDT,
+      #   mutuallyExclusive = P(sim)$mutuallyExclusiveCols,
+      #   doObjFunAssertions = P(sim)$doObjFunAssertions,
+      #   mod$covsX1000$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
+      #   P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plots,
+      #   tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+      #   mode = Par$mode)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
@@ -274,11 +295,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
           params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
         }
+        browser()
         DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
-                                   annualDTx1000 = mod$dat$annualDTx1000,
-                                   nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
-                                   fireBufferedListDT = mod$dat$fireBufferedListDT,
-                                   historicalFires = mod$dat$historicalFires,
+                                   annualDTx1000 = mod$covsX1000$annualDTx1000,
+                                   nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
+                                   fireBufferedListDT = mod$covsX1000$fireBufferedListDT,
+                                   historicalFires = mod$covsX1000$historicalFires,
                                    itermax = P(sim)$iterDEoptim,
                                    iterStep = P(sim)$iterStep,
                                    trace = P(sim)$trace,
@@ -335,6 +357,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          I(list(sim$nonForestedLCCGroups)),
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
         df <- data.frame(df, "polygonID" = sim$.runName)
+        
+        browser()
+        crses <- terra::crs(sim$studyArea)
+        b <- dplyr::mutate(df, crs = I(crses)) 
+        
+        # need to add crs as an entry in a column
 
         saHere <- if (is(sim$studyArea, "SpatVector")) sf::st_as_sf(sim$studyArea) else sim$studyArea
         saHere <- sf::st_as_sf(sf::st_geometry(saHere))
@@ -342,6 +370,19 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$studyAreaWithSpreadParams <- saHere |>
           dplyr::mutate(df)
         le <- function(x) {x}
+        browser()
+        if (FALSE) {
+          a <- googledrive::drive_ls(Par$spreadFitGoogleDriveFolder)
+          b <- a[a$name %in% Par$spreadFitFilename,]
+          tf <- tempfile(fileext = ".rds")
+          d <- googledrive::drive_download(b, path = tf)
+          e <- readRDS(tf)
+          g <- e[e$polygonID %in% sim$.runName,]
+          sf_obj <- st_as_sf(g, sf_column_name = "geometry")
+          e[e$polygonID == sim$.runName,] <- as.data.frame(sf_obj)
+          h <- terra::vect(sf_obj)
+          
+        }
         sim$studyAreaWithSpreadParams <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
                                                   targetFile = Par$spreadFitFilename,
                                                   domain = saHere,
@@ -437,13 +478,13 @@ spreadFitPrep <- function(sim) {
   # veg coefficients should probably have bounds of 4
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
   # MDC should have a lower limit of zero - drought shouldn't increase spread probability
-  if (is.null(P(sim)$upper) | is.na(P(sim)$upper)) {
+  if (is.null(P(sim)$upper) || any(is.na(P(sim)$upper))) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates,
                                          whichBound = "upper", upperAndLower = Par$upperAndLowerVal)
   }
 
-  if (is.null(P(sim)$lower) | is.na(P(sim)$lower)) {
+  if (is.null(P(sim)$lower) || any(is.na(P(sim)$lower))) {
     ## TODO - figure out the 2-4 piece logistic defaults :S
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
                                           sim$fireSense_annualSpreadFitCovariates,
@@ -473,10 +514,17 @@ spreadFitPrep <- function(sim) {
   }
 
   if (anyPlotting(Par$.plots)) {
+    digASFC <- .robustDigest(sim$fireSense_annualSpreadFitCovariates)
+    digNASFC <- .robustDigest(sim$fireSense_nonAnnualSpreadFitCovariates)
     histOuts <- histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
-    Plots(histOuts[["annual"]], filename = "Histograms of AnnualClimateLayers")
-    Plots(histOuts[["nonAnnual"]], filename = "Histograms of FuelLayers")
+    
+    # needPlot <- list(digASFC) |> Cache(.functionName = "Plots_hists_AnnualSpreadCovs")
+    # if (isTRUE(attr(needPlot, ".Cache")$newCache))
+    # aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
+    # source("~/GitHub/SpaDES.core/R/Plots.R", local = environment())
+    Plots(histOuts[["annual"]], filename = "Histograms of AnnualClimateLayers", useCache = "png")
+    Plots(histOuts[["nonAnnual"]], filename = "Histograms of FuelLayers", useCache = "png") 
   }
 
   IDvar <- grep("ID", names(sim$spreadFirePoints[[1]]), value = TRUE) |> setdiff("GID")
@@ -484,18 +532,18 @@ spreadFitPrep <- function(sim) {
                                yearPrefix = fireSenseUtils::yearChar)
 
   keepNames <- intersect(names(sim$fireSense_annualSpreadFitCovariates), names(sim$fireBufferedListDT))
-  mod$dat <- covsX1000AndSetDF(
+  mod$covsX1000 <- covsX1000AndSetDF(
     annualList = sim$fireSense_annualSpreadFitCovariates[keepNames],
     nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
     fireBufferedList = sim$fireBufferedListDT[keepNames],
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
-
-  namesWithGTZeroRows <- lapply(mod$dat, function(x) names(x[sapply(x, function(y) NROW(y)) > 0]))
+  
+  namesWithGTZeroRows <- lapply(mod$covsX1000, function(x) names(x[sapply(x, function(y) NROW(y)) > 0]))
   annualDataNames <- grep("nonAnnual", names(namesWithGTZeroRows), invert = TRUE, value = TRUE)
   keepYearsNamed <- table(unname(unlist(namesWithGTZeroRows[annualDataNames]))) == length(annualDataNames)
   keepYears <- names(keepYearsNamed)[keepYearsNamed]
-  mod$dat[annualDataNames] <- lapply(mod$dat[annualDataNames], function(x) x[keepYears])
+  mod$covsX1000[annualDataNames] <- lapply(mod$covsX1000[annualDataNames], function(x) x[keepYears])
 
   return(sim)
 }
@@ -564,9 +612,25 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   ann <- rbindlist(annualList, idcol = yr, use.names = TRUE, fill = TRUE)
   set(ann, NULL, "pixelID", NULL)
 
-  annHists <- ggplot(ann) + geom_histogram(aes_string("CMDsm")) +
-    facet_wrap(yr) + #, ncol=ncols) +
-    ggplot2::theme_bw()
+  # 1. Create a clean environment
+  clean_env <- new.env(parent = .GlobalEnv)
+  # 2. "Inject" only the necessary objects
+  clean_env$ann <- ann
+  clean_env$yr  <- yr
+  # 3. Evaluate the plot inside that environment
+  annHists <- local({
+    ggplot(ann) + 
+      geom_histogram(aes_string("CMDsm")) +
+      facet_wrap(yr) + 
+      ggplot2::theme_bw()
+  }, envir = clean_env)
+  
+  
+  # annHists2 <- 
+  #   ggplot(ann) + geom_histogram(aes_string("CMDsm")) +
+  #     facet_wrap(yr) + #, ncol=ncols) +
+  #     ggplot2::theme_bw()
+  
   # out <- ann[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
   #   hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = yr]
   nonAnn <- rbindlist(nonAnnualList, idcol = yr, use.names = TRUE, fill = TRUE)
@@ -585,7 +649,15 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   set(nonAnnDT, whMin, v, 1)
   # set(nonAnnDT, NULL, v, 1)
 
-  nonAnnHists <-
+  # 1. Create a clean environment
+  clean_env <- new.env(parent = .GlobalEnv)
+  # 2. "Inject" only the necessary objects
+  clean_env$nonAnnDT <- nonAnnDT
+  clean_env$yr  <- yr
+  clean_env$Fue  <- Fue
+  clean_env$v <- v
+  
+  nonAnnHists <- local({
     ggplot(nonAnnDT, aes(x = .data[[v]])) +
     geom_histogram(bins = 20, color = "white") +
     facet_grid(
@@ -607,7 +679,7 @@ histOfCovariates <- function(annualList, nonAnnualList) {
       strip.placement = "outside",   # move strips outside the panels
       strip.background = element_rect(fill = "grey90", color = NA),
       strip.text.y.left = element_text(angle = 0)  # readable vertical strips
-    )
+    )}, envir = clean_env)
 
     # ggplot(nonAnnDT) + geom_histogram(aes_string(x = v)) +
     #   facet_wrap(c(Fue, yr), ncol=ncol(nonAnn) - 1) +
@@ -632,10 +704,10 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       flammableRTM = sim$rasterToMatch,
       mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
       doObjFunAssertions = P(sim)$doObjFunAssertions,
-      annualDTx1000 = mod$dat$annualDTx1000,
-      nonAnnualDTx1000 = mod$dat$nonAnnualDTx1000,
-      fireBufferedListDT = mod$dat$fireBufferedListDT,
-      historicalFires = mod$dat$historicalFires,
+      annualDTx1000 = mod$covsX1000$annualDTx1000,
+      nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
+      fireBufferedListDT = mod$covsX1000$fireBufferedListDT,
+      historicalFires = mod$covsX1000$historicalFires,
       covMinMax = sim$covMinMax_spread,
       formulaToFit = sim$fireSense_spreadFormula,
       objfunFireReps = P(sim)$objfunFireReps,
