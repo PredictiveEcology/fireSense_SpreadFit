@@ -237,7 +237,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- spreadFitPrep(sim) # makes the covariates into the x1000 integers
     },
     debug = {
-      browser()
       ## This below is to test the code without running DEOptim
       thresh <- runSpreadWithoutDEoptim(
         iterThres = P(sim)$iterThresh,
