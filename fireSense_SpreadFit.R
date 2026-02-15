@@ -22,7 +22,7 @@ defineModule(sim, list(
   documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
   loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_ignitionFit")),
   reqdPkgs = list("data.table", "DEoptim", "fastdigest", "fpCompare", "future",
-                  "ggplot2", "scales", "kSamples",
+                  "ggplot2", "scales", "kSamples", "munsell",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>=0.0.19)",
@@ -294,7 +294,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
           params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
         }
-        browser()
+        # browser()
         DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$covsX1000$annualDTx1000,
                                    nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
