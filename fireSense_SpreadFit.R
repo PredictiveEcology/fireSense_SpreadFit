@@ -132,6 +132,9 @@ defineModule(sim, list(
                     desc = "Passed to `DEoptim.control`"),
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
                     desc = "Threshold multiplier used in objective function SNLL fire size test."),
+    defineParameter("stopIfNoPreRunFit", "logical", default = TRUE,
+                    desc = "This will cause this module to abort early if there is no preRunFit"),
+    
     defineParameter("trace", "numeric", default = 1L,
                     desc = paste("non-negative integer. If > 0, tracing information on",
                                  "the progress of the optimization are printed every",
@@ -220,6 +223,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
       
       if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
+        if (isTRUE(Par$stopIfNoPreRunFit))
+          stop("There is no pre-run SpreadFit (sim$studyAreaWithSpreadParams), ",
+               "but parameter `stopIfNoPreRunFit` is `TRUE`")
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
         if ("debug" %in% P(sim)$mode) {
@@ -552,12 +558,12 @@ loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
   if (file.exists(url)) {
     sim2 <- try(Cache(readRDS, url))
     if (is(sim2, "try-error")) {
-      sim2 <- try(Cache(qs::qread, url))
+      sim2 <- try(Cache(qs2::qs_read, url))
     }
   } else {
     sim2 <- try(Cache(prepInputs, url = url,
                       destinationPath = destinationPath,
-                      fun = "qs::qread"))
+                      fun = "qs2::qs_read"))
     if (is(sim2, "try-error"))
       sim2 <- try(Cache(prepInputs, url = url,
                         destinationPath = destinationPath,
