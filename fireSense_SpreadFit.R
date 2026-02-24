@@ -300,7 +300,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
           params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
         }
-        # browser()
         DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                                    annualDTx1000 = mod$covsX1000$annualDTx1000,
                                    nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
@@ -363,7 +362,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
         df <- data.frame(df, "polygonID" = sim$.runName)
         
-        browser()
         crses <- terra::crs(sim$studyArea)
         b <- dplyr::mutate(df, crs = I(crses)) 
         
@@ -375,7 +373,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$studyAreaWithSpreadParams <- saHere |>
           dplyr::mutate(df)
         le <- function(x) {x}
-        browser()
         if (FALSE) {
           a <- googledrive::drive_ls(Par$spreadFitGoogleDriveFolder)
           b <- a[a$name %in% Par$spreadFitFilename,]
