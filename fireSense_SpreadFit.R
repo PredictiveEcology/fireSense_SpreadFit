@@ -350,8 +350,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         numIterations <- length(sim$DE)
         
         # This is normally OK, but there are cached calls that are recovering the wrong ones.
-        if (!all(sim$spreadFitAdditionalColNames %in% fireSenseUtils::spreadFitAdditionalColNames)) {
-          sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNames
+        if (!all(sim$spreadFitAdditionalColNames %in% fireSenseUtils::spreadFitAdditionalColNamesTxt)) {
+          sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNamesTxt
         }
         
         df <- data.frame(I(list(numIterations)),
@@ -531,7 +531,7 @@ spreadFitPrep <- function(sim) {
 
   IDvar <- grep("ID", names(sim$spreadFirePoints[[1]]), value = TRUE) |> setdiff("GID")
   sim$lociList <- makeLociList(ras = sim$rasterToMatch, pts = sim$spreadFirePoints, idsCol = IDvar,
-                               yearPrefix = fireSenseUtils::yearChar)
+                               yearPrefix = fireSenseUtils::yearTxt)
 
   keepNames <- intersect(names(sim$fireSense_annualSpreadFitCovariates), names(sim$fireBufferedListDT))
   mod$covsX1000 <- covsX1000AndSetDF(
@@ -867,7 +867,7 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   # }
 
   if (!suppliedElsewhere("spreadFitAdditionalColNames")) {
-    sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNames
+    sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNamesTxt
   }
 
   return(invisible(sim))
@@ -882,4 +882,4 @@ plotParamsBest <- function(paramsBest) {
 }
 
 
-youngAge <- fireSenseUtils::youngAgeName
+youngAge <- fireSenseUtils::youngAgeTxt
