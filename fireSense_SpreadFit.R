@@ -167,6 +167,16 @@ defineModule(sim, list(
   ),
   inputObjects = rbind(
     expectsInput(".runName", "character", "Some descriptive, short name for this fitting, e.g., ELF14.1"),
+    expectsInput(".ELFind", "character",
+                 desc = paste("Identifier of the polygon being fit, e.g. '6.1.1'. This becomes the",
+                              "`polygonID` of the row this module writes to the shared cloud fit",
+                              "ledger (`spreadFitFilename` in `spreadFitGoogleDriveFolder`), which",
+                              "`fireSense_dataPrepFit` matches against the polygon ids carried by",
+                              "`rasterToMatchELF`. It must therefore be the polygon's identity, not",
+                              "a run label: `.runName` encodes the whole scenario (climate period,",
+                              "GCM, SSP, rep) in some projects, and keying the ledger on it writes",
+                              "rows no other run can find and trips dataPrepFit's id match.",
+                              "Defaults to `.runName` for backwards compatibility.")),
     expectsInput("fireBufferedListDT", "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
     # expectsInput("rasterToMatch", "SpatRaster",
@@ -360,7 +370,16 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                          I(list(sim$sppEquiv)),
                          I(list(sim$nonForestedLCCGroups)),
                          I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
-        df <- data.frame(df, "polygonID" = sim$.runName)
+        # The ledger is keyed by polygon identity, NOT by run label -- see the
+        # `.ELFind` input declaration. This row is shared cloud state that every
+        # other project reads, so validate before writing.
+        polygonID <- sim$.ELFind
+        if (!is.character(polygonID) || length(polygonID) != 1L ||
+            is.na(polygonID) || !nzchar(polygonID))
+          stop("fireSense_SpreadFit: `sim$.ELFind` must be a single non-empty character ",
+               "identifying the polygon being fit; got: ",
+               paste(format(polygonID), collapse = ", "))
+        df <- data.frame(df, "polygonID" = polygonID)
         
         crses <- terra::crs(sim$studyArea)
         b <- dplyr::mutate(df, crs = I(crses)) 
@@ -854,6 +873,17 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
                                overwrite = TRUE, filename2 = NULL,
                                omitArgs = c("destinationPath", "cloudFolderID",
                                             "useCloud", "overwrite", "filename2"))
+  }
+
+  if (!suppliedElsewhere(object = ".ELFind", sim = sim)) {
+    # Backwards compatibility: before `.ELFind` was declared, the ledger was keyed
+    # on `.runName`. Keep that behaviour for pipelines that do not supply a polygon
+    # id, but say so, because a `.runName` that encodes a whole scenario produces a
+    # ledger key nothing else can match.
+    sim$.ELFind <- sim$.runName
+    message(currentModule(sim), ": `.ELFind` not supplied; keying the shared fit ",
+            "ledger on `.runName` ('", sim$.runName, "'). Supply `.ELFind` if this ",
+            "is not the polygon's identifier.")
   }
 
   if (!suppliedElsewhere("fireSense_spreadFormula", sim)) {
