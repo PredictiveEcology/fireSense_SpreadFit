@@ -69,16 +69,26 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     } else {
       activeThreads <- clusters::numActiveThreads()
       detCores <- detectCores()
-      nCores <- pemisc::optimalClusterNum(5000, maxNumClusters = detCores * 0.5) #only use 90% of the resources
-      coresToUse <- max(4L, min(c(nCores, length(pars), getOption("mc.cores"))) -
-        activeThreads) # use at least 4
+      # Each fork is a copy-on-write image of this process that diverges as the
+      # garbage collector marks the heap, so budget one heap per fork; the gc()
+      # call also leaves less garbage to copy. See thresholdForks().
+      heapMB <- sum(gc()[, 2])
+      availMB <- pemisc::availableMemory()
+      availMB <- if (length(availMB)) availMB / 1e6 else NULL
+      coresToUse <- thresholdForks(heapMB = heapMB, availMB = availMB, nPars = length(pars),
+                                   detCores = detCores, activeThreads = activeThreads,
+                                   mcCores = getOption("mc.cores"))
       # future::plan("multicore", workers = coresToUse)
       # on.exit(future::plan("sequential"))
       withr::local_options("mc.cores" = coresToUse)
       # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
       # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     }
-    message("Using ", coresToUse, " cores.")
+    message("Using ", coresToUse, " cores",
+            if (exists("heapMB", inherits = FALSE))
+              paste0(" (R heap ", round(heapMB / 1024), " GB; host has ",
+                     if (length(availMB)) paste(round(availMB / 1024), "GB available") else "unknown memory", ")"),
+            ".")
 
     st1 <- system.time({
       objSpreadFit <- mcmapply(mc.cores = coresToUse,
