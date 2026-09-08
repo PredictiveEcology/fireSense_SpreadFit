@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.4"),
+  version = list(fireSense_SpreadFit = "1.0.5"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -232,7 +232,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       }
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
       
-      if (!(is(sim$studyAreaWithSpreadParams, "sf") || is(sim$studyAreaWithSpreadParams, "data.frame"))) {
+      # Fit unless the ledger already holds parameters for THIS polygon. The object
+      # may exist and be a data.frame while holding only neighbours' rows, or none.
+      if (!hasPreRunFitForThisPolygon(sim)) {
         if (isTRUE(Par$stopIfNoPreRunFit))
           stop("There is no pre-run SpreadFit (sim$studyAreaWithSpreadParams), ",
                "but parameter `stopIfNoPreRunFit` is `TRUE`")
@@ -289,7 +291,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-      if (is.null(sim$studyAreaWithSpreadParams)) {
+      if (!hasPreRunFitForThisPolygon(sim)) {
 
         termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
         useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
