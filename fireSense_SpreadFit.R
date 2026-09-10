@@ -737,7 +737,21 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
       mode = Par$mode,
       maxFireSpread = P(sim)$maxFireSpread) |>
-      Cache(omitArgs = c("objfunFireReps", "mode"))
+      ## Nothing is omitted from the key, because both of the arguments that used to
+      ## be omitted change the result.
+      ##
+      ## `mode` selects which branch of runSpreadWithoutDEoptim runs, and the branches
+      ## return different types -- the fitting branch returns the numeric threshold
+      ## (R/runSpreadWithoutDEoptim.R:122), the debug branch ends in a `for` loop with
+      ## no return and yields NULL. Omitting it let a debug-mode result be served to a
+      ## fit-mode caller and the reverse, which is how `mod$thresh` came back as a
+      ## character and the objective function died at `round(thresh, 0)`.
+      ##
+      ## `objfunFireReps` becomes `Nreps` in the objective function, so it changes the
+      ## threshold's *value* rather than its type: a threshold calibrated at 5
+      ## replicates would be served to a caller asking for 25, with nothing to show
+      ## that it had been.
+      Cache()
   } else {
     P(sim)$SNLL_FS_thresh
   }
