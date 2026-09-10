@@ -270,8 +270,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         covMinMax = sim$covMinMax_spread,
         formulaToFit = sim$fireSense_spreadFormula,
         objfunFireReps = P(sim)$objfunFireReps,
-        # tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-        tests = "",
+        tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
         mode = Par$mode,
         maxFireSpread = P(sim)$maxFireSpread) 
       
