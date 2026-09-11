@@ -1,3 +1,9 @@
 .Rproj.user
 .Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
 
+fireSense_SpreadFit_cache/
+fireSense_SpreadFit2.Rmd

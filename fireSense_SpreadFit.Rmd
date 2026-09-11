@@ -1,123 +1,116 @@
 ---
-title: "fireSense_SpreadFit"
-author: "Jean Marchal (jean.d.marchal@gmail.com)"
-date: "`r format(Sys.time(), '%B %Y')`"
+title: "fireSense_SpreadFit Manual"
+subtitle: "v.`r SpaDES.core::moduleMetadata(module = 'fireSense_SpreadFit', path = '..')$version`"
+date: "Last updated: `r Sys.Date()`"
 output:
-  html_document: default
-  pdf_document: default
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: sandstone
+    number_sections: false
+    df_print: paged
+    keep_md: yes
+editor_options:
+  chunk_output_type: console
+bibliography: citations/references_fireSense_SpreadFit.bib
+link-citations: true
+always_allow_html: true
 ---
 
-# Overview
-Fit statistical models that can be used to parameterize the fire spread component of simulation models (e.g. fireSense). This module implement a Pattern Oriented Modelling (POM) approach to derive spread probabilities from final fire sizes. Spread probabilities can vary between pixels, and thus reflect local heterogeneity in environmental conditions.
+# fireSense_SpreadFit Module
 
-# Download the module
-```{r download module, eval = FALSE, echo = TRUE}
-library(SpaDES)
+<!-- the following are text references used in captions for LaTeX compatibility -->
+(ref:fireSense-SpreadFit) *fireSense_SpreadFit*
 
-moduleName <- "fireSense_SpreadFit"
+```{r setup-fireSense-SpreadFit, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE, results = "hold") ## change to eval = TRUE if all chunks are to be evaluated
 
-spadesModulesDirectory <- tempdir() # Location where the module will be downloaded
+dir.create("figures", showWarnings = FALSE)
 
-downloadModule(moduleName, path = spadesModulesDirectory)
+download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
+              destfile = "figures/markdownBadge.png",
+              mode = "wb")
 ```
 
-# Usage
-## Module parameters
-Name|Default|Description
-----|:-------|---------------------------------------------------------------------
-`formula`|`NA`|an object of class formula: a symbolic description of the model to be fitted. Only the RHS needs to be provided.
-`data`|`"dataFireSense_SpreadFit"`|a character vector indicating the names of objects in the `simList` environment in which to look for variables present in the model formula. `data` objects can be RasterLayers, RasterStacks or RasterBricks. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
-`lower`|`NA`|see `?DEoptim`. Lower limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (in the order they appear in the formula).
-`upper`|`NA`|see `?DEoptim`. Upper limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (in the order they appear in the formula).
-`iterDEoptim`|`500`|integer defining the maximum number of iterations allowed (DEoptim optimizer).
-`cores`|`1`|non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing.
-`clusterEvalExpr`|`expression()`|optional. An expression to evaluate on each cluster node. Ignored when parallel computing is disabled.
-`trace`|`0`|non-negative integer. If > 0, tracing information on the progress of the optimization are printed every `trace` iteration. Default is 0, which turns off tracing.
-`.runInitialTime`|`start(simList)`|when to start this module? By default, the start time of the simulation.
-`.runInterval`|`NA`|optional. Interval between two runs of this module, expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation.
-`.saveInitialTime`|`NA`|optional. When to start saving output to a file.
-`.saveInterval`|`NA`|optional. Interval between save events.
-|||
+[![made-with-Markdown](figures/markdownBadge.png)](https://commonmark.org)
 
-## Usage example
-```{r module usage example, eval = FALSE}
-library(SpaDES)
+<!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
 
-# Define simulation parameters
-times <- list(start = 1, end = 1, timeunit = "year")
-modules <- list("fireSense_SpreadFit")
-paths <- list(
-  modulePath = spadesModulesDirectory
-)
+#### Authors:
 
-# Define module parameters
-parameters <- list(
-  fireSense_SpreadFit = list(
-    formula = ~ weather + vegetation - 1,
-    lower = c(.01, .2, .1, .3, .001, .001),
-    upper = c(.20, .5, 10, 4., .300, .300),
-    trace = 5,
-    cores = 8,
-    iterDEoptim = 5
-  )
-)
+`r paste(as.character(SpaDES.core::moduleMetadata(module = "fireSense_SpreadFit", path = '..')$authors), sep = ', ')`
+<!-- ideally separate authors with new lines, '\n' not working -->
 
-# Define from where and how data will be loaded in the simList environment
-inputs <- data.frame(
-  objectName = c("firePoints", "beta", "theta"),
-  file = c("fires.shp", "weather.tif", "vegetation.tif"),
-  fun = c("shapefile", "stack", "stack"),
-  package = c("raster", "raster", "raster"),
-  loadTime = 1
-)
+## Module Overview
 
-# Create the simList
-sim <- simInit(
-  times = times,
-  modules = modules,
-  paths = paths,
-  params = parameters,
-  inputs = inputs
-)
+### Module summary
 
-tweakSimList <- function(sim) {
-  loadFiles(sim)
-  sim[["firePoints"]][["date"]] <- NULL
-  sim[["beta"]] <- setNames(raster::unstack(sim[["beta"]])[[1]], "beta")
-  sim[["theta"]] <- setNames(raster::unstack(sim[["theta"]])[[1]], "theta")
-  inputs(sim) <- list()
-  sim
-}
+Fit statistical models that can be used to parameterize the fire spread component of simulation models (e.g., fireSense [@Marchal:2017a; @Marchal:2017b; @Marchal:2019]).
+This module implement a Pattern Oriented Modelling (POM) approach to derive spread probabilities from final fire sizes. <!-- TODO add citation for POM -->
+Spread probabilities can vary between pixels, and thus reflect local heterogeneity in environmental conditions.
 
-# Fires spread at different times
-sim2 <- spades(sim)
-sim2$fireSense_SpreadFitted
+### Module inputs and parameters
 
-# All fires at the same time
-sim <- tweakSimList(sim)
+Describe input data required by the module and how to obtain it (e.g., directly from online sources or supplied by other modules)
+If `sourceURL` is specified, `downloadData("fireSense_SpreadFit", "..")` may be sufficient.
 
-sim3 <- spades(sim)
-sim3$fireSense_SpreadFitted
+Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module inputs.
+
+```{r moduleInputs-fireSense-SpreadFit, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_inputs <- SpaDES.core::moduleInputs("fireSense_SpreadFit", "..")
+knitr::kable(df_inputs,
+             caption = "List of (ref:fireSense-SpreadFit) input objects and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
 ```
 
-# Events
-Events are scheduled as follows:
+Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-SpreadFit))
 
-- Module initialisation
-- Model fitting
 
-# Data dependencies
-## Input data
-- **dataFireSense_SpreadFit**: One or more objects of class 'RasterLayer', 'RasterStack' or 'RasterBrick', in which to look for variables present in the model formula. RasterStacks and RasterBricks can be used in cases where fires have started at different times and should not be spread at the same time interval, but are still used to describe the same fire size distribution. In this case, the number of layers in the RasterStack should equal the number of distinct dates in column 'date'.
-- **firePoints**: an object of class SpatialPointsDataFrame describing fires starting locations, final sizes ('size' column), and possibly the starting dates ('date' column) if fires are to be spread at different time intervals. If the 'date' column is not present, all fires are assumed to have started at the same time interval.
+```{r moduleParams-fireSense-SpreadFit, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_params <- SpaDES.core::moduleParams("fireSense_SpreadFit", "..")
+knitr::kable(df_params, caption = "List of (ref:fireSense-SpreadFit) parameters and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
 
-## Output data
-- **fireSense_SpreadFitted**: an object of class `fireSense_SpreadFit`, i.e. a list containing the following components:
+### Events
 
-    - formula
-    - coef (d, a, b, g) are parameters of the logistic function, see Gottschalk and Dunn 2005)
-    - AD (Two-samples Anderson-Darling statistic)
+<!-- TODO -->
+- Module initialization;
+- Prepare spread fit;
+- debug;
+- estimate threshold;
+- run spreadFit;
+- retrieve DEoptim;
+- make `makefireSense_SpreadFitted`;
+- plot;
 
-# Links to other modules
-This module can be used in association with fireSense_SpreadPredict to derive fire spread probabilities that are sensistive to environmental conditions.
+### Plotting
 
+Write what is plotted.
+
+### Saving
+
+Write what is saved.
+
+### Module outputs
+
+Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-SpreadFit)).
+
+```{r moduleOutputs-fireSense-SpreadFit, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_outputs <- SpaDES.core::moduleOutputs("fireSense_SpreadFit", "..")
+knitr::kable(df_outputs, caption = "List of (ref:fireSense-SpreadFit) outputs and their description.") |>
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+### Links to other modules
+
+<!-- TODO: add links to other modules -->
+This module can be used in association with `fireSense_SpreadPredict` to derive fire spread probabilities that are sensitive to environmental conditions.
+
+### Getting help
+
+- <https://github.com/PredictiveEcology/fireSense_SpreadFit/issues>
+
+## References
+
+<!-- autogenerated from bibligraphy -->
