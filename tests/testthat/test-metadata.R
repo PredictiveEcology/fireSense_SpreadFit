@@ -61,3 +61,14 @@ test_that("parameters are the expected names", {
            "useCloud_DE", "verbose", "visualizeDEoptim"))
   )
 })
+
+test_that("the required clusters has the fixes a fit on the fleet needs", {
+  ## clusters 0.0.41 (2026-09-15): clusterSetup() no longer sends the cluster object to every worker (a fit
+  ## stalled for hours), works without reproducible attached or ~/.ssh/config, picks tunnel ports below the
+  ## ephemeral range (a 110-worker build hung), and runs iterStep generations per DEoptim call. With a lower
+  ## floor, Require keeps an installed clusters that has none of these (the fleet had 0.0.31).
+  md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
+  clustersReq <- grep("/clusters@", unlist(md$reqdPkgs), value = TRUE)
+  expect_length(clustersReq, 1L)
+  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.41")
+})
