@@ -51,7 +51,7 @@ test_that("parameters are the expected names", {
     sort(md$parameters$paramName),
     sort(c(".c", ".plots", ".plotSize", ".runInitialTime", ".runInterval",
            ".saveInitialTime", ".saveInterval", ".useCache", "cacheId_DE",
-           "cloudFolderID_DE", "cores", "DEoptimTests", "doObjFunAssertions",
+           "cloudFolderID_DE", "cores", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
            "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "NP",
            "objFunCoresInternal", "objfunFireReps", "onlyLoadDEOptim", "rep",

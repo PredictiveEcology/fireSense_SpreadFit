@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9000"),
+  version = list(fireSense_SpreadFit = "1.0.6.9001"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>=0.0.19)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.0.9000)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9018)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -119,6 +119,11 @@ defineModule(sim, list(
                                  "should recover the cache result, unless this `rep` is modified")),
     defineParameter(".c", "numeric", 0.5, NA, NA,
                     desc = "the `c` argument passed to DEoptim.control"),
+    defineParameter("DEoptimControl", "list", list(), NA, NA,
+                    desc = paste("Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`,",
+                                 "passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be",
+                                 "`DEoptim.control()` arguments. `strategy`, `trace`, `initialpop` and `.c`",
+                                 "have their own parameters; `NP` is the number of workers the cluster gets.")),
     defineParameter("rescaleAll", "logical", TRUE, NA, NA,
                     desc = "rescale covariates for `DEOptim`"),
     # This was KNN drive URL
@@ -337,6 +342,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                    Nreps = P(sim)$objfunFireReps,
                                    thresh = mod$thresh,
                                    .c = P(sim)$.c,
+                                   DEoptimControl = P(sim)$DEoptimControl,
                                    .verbose = P(sim)$verbose,
                                    visualizeDEoptim = P(sim)$visualizeDEoptim,
                                    .plotSize = P(sim)$.plotSize,
