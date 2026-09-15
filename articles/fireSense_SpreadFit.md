@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9001"
+subtitle: "v.1.0.6.9002"
 date: "Last updated: 2026-09-15"
 output:
   bookdown::html_document2:
