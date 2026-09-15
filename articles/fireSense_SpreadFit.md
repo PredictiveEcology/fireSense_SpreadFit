@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9000"
+subtitle: "v.1.0.6.9001"
 date: "Last updated: 2026-09-15"
 output:
   bookdown::html_document2:
@@ -361,6 +361,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> the `c` argument passed to DEoptim.control </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> DEoptimControl </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`, passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be `DEoptim.control()` arguments. `strategy`, `trace`, `initialpop` and `.c` have their own parameters; `NP` is the number of workers the cluster gets. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> rescaleAll </td>
