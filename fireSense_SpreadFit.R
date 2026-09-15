@@ -293,7 +293,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (!hasPreRunFitForThisPolygon(sim)) {
 
         termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
-        useCache <- (isFALSE(getOption("fireSenseUtils.runTests")))
+        useCache <- (isFALSE(getOption("fireSense.runTests")))
         if (!is.null(Par$cores) && !any(is.na(Par$cores)) && identical(sort(unique(Par$cores)), sort(Par$cores))) {
           best <- list(cluster = Par$cores)
         } else {
