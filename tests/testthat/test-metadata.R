@@ -53,7 +53,7 @@ test_that("parameters are the expected names", {
            ".saveInitialTime", ".saveInterval", ".useCache", "cacheId_DE",
            "cloudFolderID_DE", "cores", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
-           "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "NP",
+           "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded", "NP",
            "objFunCoresInternal", "objfunFireReps", "onlyLoadDEOptim", "rep",
            "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
            "spreadFitGoogleDriveFolder", "stopIfNoPreRunFit", "strategy", "trace",

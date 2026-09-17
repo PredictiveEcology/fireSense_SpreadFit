@@ -97,7 +97,16 @@ defineModule(sim, list(
     defineParameter("mutuallyExclusiveCols", "list", list("youngAge" = c("class", "nonForest")), NA, NA,
                     desc = "a named list of mutually exclusive covariates - see `fireSenseUtils::makeMutuallyExclusive`"),
     defineParameter("NP", "integer", default = NULL,
-                    desc = "Number of Populations. See `?DEoptim.control`."),
+                    desc = paste("Number of Populations. See `?DEoptim.control`. NOTE: this is DISCARDED --",
+                                 "`clusters:::.clusterNP()` sets NP to the number of workers the cluster was",
+                                 "built with. Use `nCoresNeeded` to choose NP.")),
+    defineParameter("nCoresNeeded", "integer", default = NULL,
+                    desc = paste("How many workers to request for the DEoptim cluster. This IS the population",
+                                 "size: `clusters::clusterSetup()` sets NP to the workers it builds. `NULL`",
+                                 "leaves `fireSenseUtils::runDEoptim()`'s default of 10 per estimated",
+                                 "parameter. A generation costs the slowest of NP evaluations and that barely",
+                                 "falls as NP falls, so a smaller NP buys throughput by allowing more fits at",
+                                 "once rather than by shortening generations (measured 2026-09-16).")),
     defineParameter("objFunCoresInternal", "integer", default = 1L,
                     desc = paste("Integer defining the number of cores to pass to `mcmapply(mc.cores = ...)`",
                                  "This will fork this many to do the years loop internally.",
@@ -323,6 +332,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                    historicalFires = mod$covsX1000$historicalFires,
                                    itermax = P(sim)$iterDEoptim,
                                    iterStep = P(sim)$iterStep,
+                                   ## the cluster's size is the population size; see the parameter's doc
+                                   nCoresNeeded = P(sim)$nCoresNeeded,
                                    trace = P(sim)$trace,
                                    initialpop = P(sim)$initialpop,
                                    strategy = P(sim)$strategy,
@@ -724,6 +735,23 @@ histOfCovariates <- function(annualList, nonAnnualList) {
 }
 
 
+#' A seed that depends only on the ELF
+#'
+#' The SNLL threshold becomes `thresh` in `runDEoptim()`, so it is part of every cached DEoptim
+#' generation's key. Drawing the seed by chance meant a single cache miss on `estimateThreshold`
+#' re-drew the threshold and invalidated every cached generation for that ELF. Keyed on the ELF, a
+#' miss costs only the threshold estimate.
+#'
+#' @param elf character; `sim$.ELFind` (which falls back to `sim$.runName`).
+#' @return a single integer in `1:1e6`.
+.elfSeed <- function(elf) {
+  stopifnot(is.character(elf), length(elf) == 1L, nzchar(elf))
+  ## a stable digest of the identifier, folded into DEoptim's seed range; no RNG involved, so it is
+  ## identical across sessions, machines and R versions
+  bytes <- utils::head(as.integer(charToRaw(elf)), 64L)
+  1L + as.integer(sum(bytes * seq_along(bytes) * 7919) %% 1e6)
+}
+
 estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
@@ -745,6 +773,11 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       objfunFireReps = P(sim)$objfunFireReps,
       tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
       mode = Par$mode,
+      ## Deterministic per ELF: the threshold feeds every DEoptim generation's cache key, so a
+      ## re-drawn threshold discards the whole fit's cached generations (2026-09-16: 1236 -> 1416
+      ## cost ~17 h). `seed` is an argument, so it is in this Cache key too -- which is what
+      ## test-thresholdCacheKey.R asks for: nothing that changes the result is omitted.
+      seed = .elfSeed(sim$.ELFind),
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
