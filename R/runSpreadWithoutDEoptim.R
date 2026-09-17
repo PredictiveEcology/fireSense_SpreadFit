@@ -123,9 +123,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     })
 
-    valsdt <- data.table(thresholds = thresholds, objFun = objSpreadFit)
-    valsdt <- valsdt[objFun < 1e5]
-    threshToUse <- min(valsdt$thresholds)
+    threshToUse <- pickThreshold(thresholds = thresholds, objFun = objSpreadFit)
     message("  using SNLL_FS_thresh value: ", threshToUse)
     return(threshToUse)
   }
