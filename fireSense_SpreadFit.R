@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.41)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9018)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9022)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -359,24 +359,28 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
         ord <- order(objFunVal, decreasing = FALSE)
         sim$DE <- sim$DE[ord]
-        DEBest <- head(sim$DE, 5)
-        # terms <- fireSenseUtils:::termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
-        paramsBest <- lapply(DEBest, function(D) as.data.table(D$member$bestmemit))#, FUN.VALUE = numeric(length(terms)))
-        paramsBest <- rbindlist(paramsBest)
-        objFunValBest <- vapply(DEBest, function(D) D$member$bestval, FUN.VALUE = numeric(length(terms)))
+        ## The 5 distinct members of the final population with the lowest replicated mean -- not the 5
+        ## generations with the lowest best value, which are copies of one (lucky) member. Read from `DE`:
+        ## reordering `sim$DE` above drops its "finalRescore" attribute.
+        best <- bestParamSets(DE, names(P(sim)$lower), n = 5L)
+        paramsBest <- best$params
+        objFunValBest <- best$objFunVal
         numIterations <- length(sim$DE)
         
         # This is normally OK, but there are cached calls that are recovering the wrong ones.
-        if (!all(sim$spreadFitAdditionalColNames %in% fireSenseUtils::spreadFitAdditionalColNamesTxt)) {
+        if (!setequal(sim$spreadFitAdditionalColNames, fireSenseUtils::spreadFitAdditionalColNamesTxt)) {
           sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNamesTxt
         }
         
+        ## covMinMax_spread: prediction rescales covariates with it, exactly as this fit did
         df <- data.frame(I(list(numIterations)),
                          I(list(objFunValBest)),
                          I(list(paramsBest)),
                          I(list(sim$sppEquiv)),
                          I(list(sim$nonForestedLCCGroups)),
-                         I(list(sim$missingLCCgroup))) |> setNames(sim$spreadFitAdditionalColNames)
+                         I(list(sim$missingLCCgroup)),
+                         I(list(sim$covMinMax_spread))) |>
+          setNames(fireSenseUtils::spreadFitAdditionalColNamesTxt)
         # The ledger is keyed by polygon identity, NOT by run label -- see the
         # `.ELFind` input declaration. This row is shared cloud state that every
         # other project reads, so validate before writing.
