@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
 subtitle: "v.1.0.6.9002"
-date: "Last updated: 2026-09-17"
+date: "Last updated: 2026-09-18"
 output:
   bookdown::html_document2:
     toc: true
@@ -320,7 +320,15 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;">  </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Number of Populations. See `?DEoptim.control`. </td>
+   <td style="text-align:left;"> Number of Populations. See `?DEoptim.control`. NOTE: this is DISCARDED -- `clusters:::.clusterNP()` sets NP to the number of workers the cluster was built with. Use `nCoresNeeded` to choose NP. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> nCoresNeeded </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> How many workers to request for the DEoptim cluster. This IS the population size: `clusters::clusterSetup()` sets NP to the workers it builds. `NULL` leaves `fireSenseUtils::runDEoptim()`'s default of 10 per estimated parameter. A generation costs the slowest of NP evaluations and that barely falls as NP falls, so a smaller NP buys throughput by allowing more fits at once rather than by shortening generations (measured 2026-09-16). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> objFunCoresInternal </td>
