@@ -5,8 +5,16 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     historicalFires, covMinMax, objfunFireReps, maxFireSpread,
                                     weighted = TRUE, tests = c("snll_fs", "adtest"),
                                     formulaToFit,
-                                    pars = NULL, plot.it = TRUE, mode = "fit") {
-  seed <- sample(1e6, 1)
+                                    pars = NULL, plot.it = TRUE, mode = "fit",
+                                    seed = NULL) {
+  ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
+  ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
+  ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
+  ## a restarted fit went 1236 -> 1416 and recomputed from generation 1, losing ~17 h, while one that
+  ## hit the cache kept 1705 and replayed 797 generations in ~35 min. A caller that passes a seed
+  ## derived from the ELF gets a reproducible threshold, so a miss costs only this estimate.
+  ## NULL keeps the old behaviour for callers that do not care (e.g. the module's `debug` event).
+  if (is.null(seed)) seed <- sample(1e6, 1)
   set.seed(seed)
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
@@ -21,8 +29,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     (log(largestFireInLargestYear) ^ weighted)
 
   if (is.null(pars)) {
-    seed <- sample(1e6, 1)
-    set.seed(seed)
+    ## do NOT re-draw here: that discarded the seed set above, which is what made the threshold
+    ## irreproducible even when the caller asked for a specific seed
     print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
     userPars <- FALSE
@@ -115,9 +123,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       )
     })
 
-    valsdt <- data.table(thresholds = thresholds, objFun = objSpreadFit)
-    valsdt <- valsdt[objFun < 1e5]
-    threshToUse <- min(valsdt$thresholds)
+    threshToUse <- pickThreshold(thresholds = thresholds, objFun = objSpreadFit)
     message("  using SNLL_FS_thresh value: ", threshToUse)
     return(threshToUse)
   }
