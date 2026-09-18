@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.1"
-date: "Last updated: 2025-04-08"
+subtitle: "v.1.0.6.9002"
+date: "Last updated: 2026-09-18"
 output:
   bookdown::html_document2:
     toc: true
@@ -30,7 +30,7 @@ always_allow_html: true
 
 #### Authors:
 
-Jean Marchal <jean.d.marchal@gmail.com> [aut], Eliot McIntire <eliot.mcintire@nrcan-rncan.gc.ca> [aut, cre], Tati Micheletti <tati.micheletti@gmail.com> [aut], Ian Eddy <ian.eddy@nrcan-rncan.gc.ca> [aut], Alex M. Chubaty <achubaty@for-cast.ca> [ctb]
+Eliot McIntire <eliot.mcintire@nrcan-rncan.gc.ca> [aut, cre], Tati Micheletti <tati.micheletti@gmail.com> [aut], Ian Eddy <ian.eddy@nrcan-rncan.gc.ca> [aut], Jean Marchal <jean.d.marchal@gmail.com> [aut], Alex M. Chubaty <achubaty@for-cast.ca> [ctb]
 <!-- ideally separate authors with new lines, '\n' not working -->
 
 ## Module Overview
@@ -48,7 +48,7 @@ If `sourceURL` is specified, `downloadData("fireSense_SpreadFit", "..")` may be 
 
 Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module inputs.
 
-<table class="table" style="color: black; margin-left: auto; margin-right: auto;">
+<table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>(\#tab:moduleInputs-fireSense-SpreadFit)(\#tab:moduleInputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) input objects and their description.</caption>
  <thead>
   <tr>
@@ -60,15 +60,21 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;"> fireBufferedListDT </td>
-   <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> list of data.tables with fire id, pixelID, and buffer status </td>
+   <td style="text-align:left;"> .runName </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> Some descriptive, short name for this fitting, e.g., ELF14.1 </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> rasterToMatch </td>
-   <td style="text-align:left;"> SpatRaster </td>
-   <td style="text-align:left;"> RTM without ice/rocks/urban/water. Flammable map with 0 and 1. </td>
+   <td style="text-align:left;"> .ELFind </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> Identifier of the polygon being fit, e.g. '6.1.1'. This becomes the `polygonID` of the row this module writes to the shared cloud fit ledger (`spreadFitFilename` in `spreadFitGoogleDriveFolder`), which `fireSense_dataPrepFit` matches against the polygon ids carried by `rasterToMatchELF`. It must therefore be the polygon's identity, not a run label: `.runName` encodes the whole scenario (climate period, GCM, SSP, rep) in some projects, and keying the ledger on it writes rows no other run can find and trips dataPrepFit's id match. Defaults to `.runName` for backwards compatibility. </td>
+   <td style="text-align:left;"> NA </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> fireBufferedListDT </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;"> list of data.tables with fire id, pixelID, and buffer status </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
@@ -81,6 +87,12 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
    <td style="text-align:left;"> fireSense_nonAnnualSpreadFitCovariates </td>
    <td style="text-align:left;"> data.table </td>
    <td style="text-align:left;"> table of veg covariates, burn status, polyID, and pixelID </td>
+   <td style="text-align:left;"> NA </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitAdditionalColNames </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> The column names used to attach the spreadFit object and several ancilliary objects </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
@@ -119,7 +131,7 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
 Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-SpreadFit))
 
 
-<table class="table" style="color: black; margin-left: auto; margin-right: auto;">
+<table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>(\#tab:moduleParams-fireSense-SpreadFit)(\#tab:moduleParams-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) parameters and their description.</caption>
  <thead>
   <tr>
@@ -182,7 +194,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   </tr>
   <tr>
    <td style="text-align:left;"> .useCache </td>
-   <td style="text-align:left;"> logical </td>
+   <td style="text-align:left;"> logical,.... </td>
    <td style="text-align:left;"> init </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
@@ -263,7 +275,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> /Users/a.... </td>
+   <td style="text-align:left;"> /home/ru.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Absolute path specifying R package directory location to use when running DEotpim. NOTE: this path must be read/write accessible on ALL machines used for fitting (identified in cores). Therefore, it's best use a directory in your user's `~` directory. If the directory does not exist at this path, will attempt to create it. </td>
@@ -306,7 +318,15 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;">  </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Number of Populations. See `?DEoptim.control`. </td>
+   <td style="text-align:left;"> Number of Populations. See `?DEoptim.control`. NOTE: this is DISCARDED -- `clusters:::.clusterNP()` sets NP to the number of workers the cluster was built with. Use `nCoresNeeded` to choose NP. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> nCoresNeeded </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> How many workers to request for the DEoptim cluster. This IS the population size: `clusters::clusterSetup()` sets NP to the workers it builds. `NULL` leaves `fireSenseUtils::runDEoptim()`'s default of 10 per estimated parameter. A generation costs the slowest of NP evaluations and that barely falls as NP falls, so a smaller NP buys throughput by allowing more fits at once rather than by shortening generations (measured 2026-09-16). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> objFunCoresInternal </td>
@@ -349,12 +369,36 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> the `c` argument passed to DEoptim.control </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> DEoptimControl </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`, passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be `DEoptim.control()` arguments. `strategy`, `trace`, `initialpop` and `.c` have their own parameters; `NP` is the number of workers the cluster gets. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> rescaleAll </td>
    <td style="text-align:left;"> logical </td>
    <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> rescale covariates for `DEOptim` </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitGoogleDriveFolder </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> https://.... </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitFilename </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> fireSens.... </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object </td>
   </tr>
   <tr>
    <td style="text-align:left;"> strategy </td>
@@ -371,6 +415,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Threshold multiplier used in objective function SNLL fire size test. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> stopIfNoPreRunFit </td>
+   <td style="text-align:left;"> logical </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> This will cause this module to abort early if there is no preRunFit </td>
   </tr>
   <tr>
    <td style="text-align:left;"> trace </td>
@@ -414,16 +466,16 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   </tr>
   <tr>
    <td style="text-align:left;"> verbose </td>
-   <td style="text-align:left;"> logical </td>
-   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. Should it calculate and print median of spread Probability during calculations? </td>
+   <td style="text-align:left;"> optional. With increasing number, more verbosity. Level 1 is normal reproducible (e.g., Cache), level 2 includes objective function e.g., print median of spreadProb during calculations </td>
   </tr>
   <tr>
    <td style="text-align:left;"> visualizeDEoptim </td>
    <td style="text-align:left;"> Path </td>
-   <td style="text-align:left;"> /private.... </td>
+   <td style="text-align:left;"> /tmp/Rtm.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Passed to runDEoptim. This makes histographs at each iterStep and saves them to this path </td>
@@ -431,7 +483,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 6 </td>
+   <td style="text-align:left;"> 9 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This will be given to the upper and -lower values if not supplied by user </td>
@@ -463,7 +515,7 @@ Write what is saved.
 
 Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-SpreadFit)).
 
-<table class="table" style="color: black; margin-left: auto; margin-right: auto;">
+<table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>(\#tab:moduleOutputs-fireSense-SpreadFit)(\#tab:moduleOutputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) outputs and their description.</caption>
  <thead>
   <tr>
