@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9002"
-date: "Last updated: 2026-09-18"
+subtitle: "v.1.0.6.9003"
+date: "Last updated: 2026-09-19"
 output:
   bookdown::html_document2:
     toc: true
@@ -415,6 +415,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Threshold multiplier used in objective function SNLL fire size test. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> refitExisting </td>
+   <td style="text-align:left;"> logical </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Fit this polygon even when the ledger already holds parameters for it. A ledger row normally means the fit is done, and the run event skips it. Set this when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a new objective -- so the stored row is stale and the polygon must be fitted again. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> stopIfNoPreRunFit </td>
