@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9002"),
+  version = list(fireSense_SpreadFit = "1.0.6.9003"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -146,6 +146,11 @@ defineModule(sim, list(
                     desc = "Passed to `DEoptim.control`"),
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
                     desc = "Threshold multiplier used in objective function SNLL fire size test."),
+    defineParameter("refitExisting", "logical", FALSE, NA, NA,
+                    paste("Fit this polygon even when the ledger already holds parameters for it.",
+                          "A ledger row normally means the fit is done, and the run event skips it. Set this",
+                          "when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a",
+                          "new objective -- so the stored row is stale and the polygon must be fitted again.")),
     defineParameter("stopIfNoPreRunFit", "logical", default = TRUE,
                     desc = "This will cause this module to abort early if there is no preRunFit"),
     
@@ -248,7 +253,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       
       # Fit unless the ledger already holds parameters for THIS polygon. The object
       # may exist and be a data.frame while holding only neighbours' rows, or none.
-      if (!hasPreRunFitForThisPolygon(sim)) {
+      # `refitExisting` overrides that: the stored row is stale when the inputs have changed.
+      if (isTRUE(Par$refitExisting) || !hasPreRunFitForThisPolygon(sim)) {
         if (isTRUE(Par$stopIfNoPreRunFit))
           stop("There is no pre-run SpreadFit (sim$studyAreaWithSpreadParams), ",
                "but parameter `stopIfNoPreRunFit` is `TRUE`")
@@ -304,7 +310,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- estimateSNLLThresholdPostLargeFires(sim)
     },
     run = {
-      if (!hasPreRunFitForThisPolygon(sim)) {
+      if (isTRUE(Par$refitExisting) || !hasPreRunFitForThisPolygon(sim)) {
 
         termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
         useCache <- (isFALSE(getOption("fireSense.runTests")))
