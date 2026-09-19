@@ -55,7 +55,7 @@ test_that("parameters are the expected names", {
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
            "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded", "NP",
            "objFunCoresInternal", "objfunFireReps", "onlyLoadDEOptim", "rep",
-           "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
+           "refitExisting", "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
            "spreadFitGoogleDriveFolder", "stopIfNoPreRunFit", "strategy", "trace",
            "upper", "upperAndLowerVal", "urlDEOptimObject", "useCache_DE",
            "useCloud_DE", "verbose", "visualizeDEoptim"))
