@@ -37,22 +37,10 @@ defineModule(sim, list(
                                  "used to plot DEoptim histograms when `visualizeDEoptim` is TRUE.")),
     defineParameter(".runInitialTime", "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start time of the simulation."),
-    defineParameter(".runInterval", "numeric", default = NA,
-                    desc = paste("optional. Interval between two runs of this module,",
-                                 "expressed in units of simulation time. By default, NA, which",
-                                 "means that this module only runs once per simulation.")),
-    defineParameter(".saveInitialTime", "numeric", default = NA,
-                    desc = "optional. When to start saving output to a file."),
-    defineParameter(".saveInterval", "numeric", default = NA,
-                    desc = "optional. Interval between save events."),
     defineParameter(".useCache", c("logical", "character"), "init", NA, NA,
                     desc = paste("Should this entire module be run",
                                  "with caching activated? This is generally intended for data-type",
                                  "modules, where stochasticity and time are not relevant.")),
-    defineParameter("cacheId_DE", "character", default = NULL,
-                    desc = "Not currently used."),
-    defineParameter("cloudFolderID_DE", "character", default = NULL,
-                    desc = "Not currently used."),
     defineParameter("cores", "integer", default = 1L,
                     desc = paste("Passed to `cores` in `fireSenseUtils::runDEoptim()`: a number of local cores, or a",
                                  "character vector of machine names, one element per core wanted on that machine.")),
@@ -93,10 +81,6 @@ defineModule(sim, list(
                                  "`debug` and `plot` events after the fit.")),
     defineParameter("mutuallyExclusiveCols", "list", list("youngAge" = c("class", "nonForest")), NA, NA,
                     desc = "a named list of mutually exclusive covariates - see `fireSenseUtils::makeMutuallyExclusive`"),
-    defineParameter("NP", "integer", default = NULL,
-                    desc = paste("Number of Populations. See `?DEoptim.control`. NOTE: this is DISCARDED --",
-                                 "`clusters:::.clusterNP()` sets NP to the number of workers the cluster was",
-                                 "built with. Use `nCoresNeeded` to choose NP.")),
     defineParameter("nCoresNeeded", "integer", default = NULL,
                     desc = paste("How many workers to request for the DEoptim cluster. This IS the population",
                                  "size: `clusters::clusterSetup()` sets NP to the workers it builds. `NULL`",
@@ -114,8 +98,6 @@ defineModule(sim, list(
                                  "will attempt each fire. Since the default approach is",
                                  "using `EnvStats::demp`, it should be at least 100 to get a",
                                  "smooth distribution for a likelihood.")),
-    defineParameter("onlyLoadDEOptim", "logical", default = FALSE,
-                    desc = "Not currently used."),
     defineParameter("rep", "integer", 1L, NA, NA,
                     desc = paste("An optional integer indicating which replicate run this represents. ",
                                  "This is used to identify unique runs of `runDEoptim`, from a Cache perspective. ",
@@ -140,12 +122,16 @@ defineModule(sim, list(
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
                     desc = "Threshold multiplier used in objective function SNLL fire size test."),
     defineParameter("refitExisting", "logical", FALSE, NA, NA,
-                    paste("Fit this polygon even when the ledger already holds parameters for it.",
-                          "A ledger row normally means the fit is done, and the run event skips it. Set this",
-                          "when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a",
-                          "new objective -- so the stored row is stale and the polygon must be fitted again.")),
+                    paste("FOR DEVELOPERS ONLY: a re-fit is a full DEoptim run and is only practical with",
+                          "access to at least 40 cores. Fit this polygon even when the ledger already holds",
+                          "parameters for it. A ledger row normally means the fit is done, and the run event",
+                          "skips it. Set this when the fit's INPUTS have changed -- new land cover, new",
+                          "vegetation parameters, a new objective -- so the stored row is stale and the",
+                          "polygon must be fitted again. When TRUE it OVERRIDES `stopIfNoPreRunFit`: `init`",
+                          "schedules the fit instead of stopping.")),
     defineParameter("stopIfNoPreRunFit", "logical", default = TRUE,
-                    desc = "If TRUE, `init` stops with an error when this polygon would have to be fitted, instead of fitting it."),
+                    desc = paste("If TRUE, `init` stops with an error when this polygon would have to be",
+                                 "fitted, instead of fitting it. Ignored when `refitExisting` is TRUE.")),
     
     defineParameter("trace", "numeric", default = 1L,
                     desc = paste("non-negative integer. If > 0, tracing information on",
@@ -157,15 +143,8 @@ defineModule(sim, list(
                                  "parameters (lower bound, upper bound, slope, asymmetry)",
                                  "and the statistical model parameters (named in the order they",
                                  "appear in the formula).")),
-    defineParameter("urlDEOptimObject", "character",
-                    default = paste0("https://drive.google.com/file/d/",
-                                     "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
-                    desc = paste0("url or local file of a saved `DEoptim` object or simList. Only read by the ",
-                                  "`retrieveDEOptim` event, which the module never schedules.")),
     defineParameter("useCache_DE", "logical", default = TRUE,
                     desc = "should `DEoptim` use `Cache`? to do multiple independent runs, use FALSE"),
-    defineParameter("useCloud_DE", "logical", default = FALSE,
-                    desc = "Not currently used."),
     defineParameter("verbose", "numeric", default = 1,
                     desc = paste0("optional. With increasing number, more verbosity. Level 1 is ",
                                   "normal reproducible (e.g., Cache), level 2 includes objective function ",
@@ -216,8 +195,6 @@ defineModule(sim, list(
                   desc = "`data.table` of covariates min and max"),
     createsOutput("DE", "data.table",
                   desc = "list of `DEoptim` objects, one per `iterStep` block, ordered by best objective value"),
-    createsOutput("fireSense_SpreadFitted", "fireSense_SpreadFit",
-                  desc = "DEFUNCT -- only set by the `retrieveDEOptim` event, which the module never schedules."),
     createsOutput("studyAreaWithSpreadParams", "sf",
                   desc = paste("Rows of the shared fit ledger that intersect `studyArea`, including the row this",
                                "fit writes: `studyArea` geometry, `polygonID`, and list-columns named by",
@@ -237,7 +214,7 @@ defineModule(sim, list(
 #' @param sim a `simList`.
 #' @param eventTime numeric; current simulation time.
 #' @param eventType character; one of `init`, `spreadFitPrepare`, `estimateThreshold`, `run`,
-#'   `debug`, `plot`, `retrieveDEOptim`.
+#'   `debug`, `plot`.
 #' @param debug not used.
 #' @return the `simList`, invisibly.
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
@@ -258,7 +235,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       # may exist and be a data.frame while holding only neighbours' rows, or none.
       # `refitExisting` overrides that: the stored row is stale when the inputs have changed.
       if (isTRUE(Par$refitExisting) || !hasPreRunFitForThisPolygon(sim)) {
-        if (isTRUE(Par$stopIfNoPreRunFit))
+        # `refitExisting` is an explicit request to fit, so it overrides `stopIfNoPreRunFit`.
+        if (isTRUE(Par$stopIfNoPreRunFit) && !isTRUE(Par$refitExisting))
           stop("There is no pre-run SpreadFit (sim$studyAreaWithSpreadParams), ",
                "but parameter `stopIfNoPreRunFit` is `TRUE`")
         sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
@@ -416,23 +394,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                   action = "update")
       }
     },
-    retrieveDEOptim = {
-      if (!is.null(Par$urlDEOptimObject))
-        message("Loading ", Par$urlDEOptimObject)
-      out <- Cache(loadPrevDEOptimRun, url = Par$urlDEOptimObject,
-                   destinationPath = Paths$outputPath,
-                   wholeSim = TRUE,
-                   userTags = "What:retrieveDEOptim")
-      if (is(out, "simList")) {
-        sim$originalSim <- out
-        sim$DE <- sim$originalSim$DE
-        sim$fireSense_SpreadFitted <- sim$originalSim$fireSense_SpreadFitted
-        sim$parsKnown <- sim$fireSense_SpreadFitted$meanCoef
-        rm(list = "originalSim", envir = envir(sim))
-      } else {
-        sim$fireSense_SpreadFitted <- out
-      }
-    },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
       colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
@@ -548,32 +509,6 @@ spreadFitPrep <- function(sim) {
   mod$covsX1000[annualDataNames] <- lapply(mod$covsX1000[annualDataNames], function(x) x[keepYears])
 
   return(sim)
-}
-
-#' Load a saved DEoptim object or simList
-#'
-#' @param url character; a local file path or a url for `prepInputs()`. Read as `.rds`, then `.qs2`
-#'   (local), or the reverse (url).
-#' @param destinationPath character; download directory for `prepInputs()`.
-#' @param wholeSim not used.
-#' @return the loaded object, or a `try-error`.
-loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
-  # Check to see if it is a local file first
-  if (file.exists(url)) {
-    sim2 <- try(Cache(readRDS, url))
-    if (is(sim2, "try-error")) {
-      sim2 <- try(Cache(qs2::qs_read, url))
-    }
-  } else {
-    sim2 <- try(Cache(prepInputs, url = url,
-                      destinationPath = destinationPath,
-                      fun = "qs2::qs_read"))
-    if (is(sim2, "try-error"))
-      sim2 <- try(Cache(prepInputs, url = url,
-                        destinationPath = destinationPath,
-                        fun = "base::readRDS"))
-  }
-  sim2
 }
 
 #' Minimum and maximum of each covariate, for rescaling

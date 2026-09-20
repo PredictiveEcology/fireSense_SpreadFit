@@ -38,7 +38,6 @@ test_that("outputs are the expected names and classes", {
     outputs[order(names(outputs))],
     c(covMinMax_spread          = "data.table",
       DE                        = "data.table",
-      fireSense_SpreadFitted    = "fireSense_SpreadFit",
       fsSpreadFit_hists         = "ggplot",
       lociList                  = "list",
       studyAreaWithSpreadParams = "sf")
@@ -49,16 +48,15 @@ test_that("parameters are the expected names", {
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   expect_identical(
     sort(md$parameters$paramName),
-    sort(c(".c", ".plots", ".plotSize", ".runInitialTime", ".runInterval",
-           ".saveInitialTime", ".saveInterval", ".useCache", "cacheId_DE",
-           "cloudFolderID_DE", "cores", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
+    sort(c(".c", ".plots", ".plotSize", ".runInitialTime",
+           ".useCache", "cores", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
-           "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded", "NP",
-           "objFunCoresInternal", "objfunFireReps", "onlyLoadDEOptim", "rep",
+           "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
+           "objFunCoresInternal", "objfunFireReps", "rep",
            "refitExisting", "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
            "spreadFitGoogleDriveFolder", "stopIfNoPreRunFit", "strategy", "trace",
-           "upper", "upperAndLowerVal", "urlDEOptimObject", "useCache_DE",
-           "useCloud_DE", "verbose", "visualizeDEoptim"))
+           "upper", "upperAndLowerVal", "useCache_DE",
+           "verbose", "visualizeDEoptim"))
   )
 })
 
