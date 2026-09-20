@@ -1,3 +1,28 @@
+#' Evaluate the spread objective function without DEoptim
+#'
+#' In "debug" mode, runs `fireSenseUtils::.objfunSpreadFit()` once per parameter set, with plots.
+#' Otherwise calibrates the SNLL threshold: evaluates `iterThresh` random parameter sets, each with a
+#' random candidate threshold, in forked processes, and returns `pickThreshold()` of the results.
+#'
+#' @param iterThresh integer; number of random parameter sets (and candidate thresholds).
+#' @param lower,upper numeric; bounds the random parameter sets are drawn between.
+#' @param fireSense_spreadFormula character; passed to `FS_formula`.
+#' @param flammableRTM `SpatRaster`; passed to `landscape`.
+#' @param annualDTx1000,nonAnnualDTx1000,fireBufferedListDT,historicalFires elements of the list made
+#'   by `fireSenseUtils::covsX1000AndSetDF()`.
+#' @param mutuallyExclusive named list of mutually exclusive covariates.
+#' @param doObjFunAssertions logical; passed to `doAssertions`.
+#' @param covMinMax `data.table` of covariate min and max, or NULL for no rescaling.
+#' @param objfunFireReps integer; passed to `Nreps`, the replicates per fire.
+#' @param maxFireSpread numeric; upper limit on mean spread probability.
+#' @param weighted logical; weight the SNLL by log fire size. Also used in the rough threshold estimate.
+#' @param tests character; objective function tests, e.g. "SNLL_FS", "adTest".
+#' @param formulaToFit character; the spread formula.
+#' @param pars optional numeric vector, or list of them, to evaluate instead of random sets.
+#' @param plot.it passed to `.objfunSpreadFit()` in "debug" mode.
+#' @param mode character; if it includes "debug", the debug branch runs.
+#' @param seed integer or NULL; `set.seed()` value. NULL draws one at random.
+#' @return the calibrated threshold (numeric, or NA if every trial failed); NULL in "debug" mode.
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
                                     mutuallyExclusive = list("youngAge" = "vegPC"),
@@ -49,7 +74,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
       a[[i]] <- .objfunSpreadFit(par = pars[[i]],
                                  thresh = thresholds[i],
-                                 FS_formula = fireSense_spreadFormula, #loci = loci,
+                                 FS_formula = fireSense_spreadFormula,
                                  landscape = flammableRTM,
                                  annualDTx1000 = annualDTx1000,
                                  nonAnnualDTx1000 = nonAnnualDTx1000,
@@ -86,11 +111,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       coresToUse <- thresholdForks(heapMB = heapMB, availMB = availMB, nPars = length(pars),
                                    detCores = detCores, activeThreads = activeThreads,
                                    mcCores = getOption("mc.cores"))
-      # future::plan("multicore", workers = coresToUse)
-      # on.exit(future::plan("sequential"))
       withr::local_options("mc.cores" = coresToUse)
-      # nCores <- length(pars) / (ceiling(length(pars) / parallel::detectCores())) # this will limit it to
-      # nCores <- ceiling(parallel::detectCores() / ceiling(parallel::detectCores() / pemisc::optimalClusterNum(10000)))
     }
     message("Using ", coresToUse, " cores",
             if (exists("heapMB", inherits = FALSE))
@@ -101,11 +122,10 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     st1 <- system.time({
       objSpreadFit <- mcmapply(mc.cores = coresToUse,
                     mc.preschedule = FALSE,
-      # a <- future.apply::future_mapply(future.scheduling = Inf, future.seed = TRUE, # mc.cores = min(c(nCores, length(pars), getOption("mc.cores"))),
                     par = pars, FUN = .objfunSpreadFit,
                     thresh = thresholds,
                     MoreArgs = list(
-                      FS_formula = fireSense_spreadFormula, #loci = loci,
+                      FS_formula = fireSense_spreadFormula,
                       landscape = flammableRTM,
                       annualDTx1000 = annualDTx1000,
                       nonAnnualDTx1000 = nonAnnualDTx1000,

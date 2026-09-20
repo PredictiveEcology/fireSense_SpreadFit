@@ -31,7 +31,7 @@ defineModule(sim, list(
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
-                    desc = "Should outputs be plotted?"),
+                    desc = "Plot types passed to `Plots()`, e.g. 'png' or 'screen'; NULL or NA for none."),
     defineParameter(".plotSize", "list", default = list(height = 1600, width = 2000),
                     desc = paste("List specifying height and width of plotting device (in pixels)",
                                  "used to plot DEoptim histograms when `visualizeDEoptim` is TRUE.")),
@@ -50,20 +50,17 @@ defineModule(sim, list(
                                  "with caching activated? This is generally intended for data-type",
                                  "modules, where stochasticity and time are not relevant.")),
     defineParameter("cacheId_DE", "character", default = NULL,
-                    desc = paste("An optional character string representing a `cacheId` to recover from the Cache. ",
-                                 "After `reproducible >= 2.0.10.9016`, this can be set to 'previous', meaning the Cache ",
-                                 "will get the previous item in the Cache that matches the `P(sim)$rep` (see that param)")),
+                    desc = "Not currently used."),
     defineParameter("cloudFolderID_DE", "character", default = NULL,
-                    desc = "Passed to `cloudFolderID` in the `Cache(DEoptim...)` call."),
+                    desc = "Not currently used."),
     defineParameter("cores", "integer", default = 1L,
-                    desc = paste("non-negative integer.",
-                                 "Defines the number of logical cores to be used for parallel computation.",
-                                 "The default value is 1, which disables parallel computing.")),
+                    desc = paste("Passed to `cores` in `fireSenseUtils::runDEoptim()`: a number of local cores, or a",
+                                 "character vector of machine names, one element per core wanted on that machine.")),
     defineParameter("DEoptimTests", "character", default = "SNLL_FS",
                     desc = paste("Currently either `'SNLL_FS'` or `'adTest'` or a length 2 character vector of both.",
-                                 "These are passed to `.objFunSpreadFit`")),
+                                 "Passed to `tests` in `fireSenseUtils::.objfunSpreadFit()`.")),
     defineParameter("doObjFunAssertions", "logical", default = TRUE,
-                    desc = "This is passed to `objFunSpreadProb`; TRUE will do some diagnostics but is slower; FALSE for operational runs"),
+                    desc = "Passed to `fireSenseUtils::.objfunSpreadFit()`; TRUE runs diagnostics but is slower; FALSE for operational runs"),
     defineParameter("initialpop", "numeric", default = NULL,
                     desc = paste("A numeric matrix of dimensions `NCOL = length(lower)`",
                                  "and `NROW = NP`. This will be passed into DEoptim",
@@ -72,9 +69,10 @@ defineModule(sim, list(
     defineParameter("iterDEoptim", "integer", default = 500L,
                     desc = paste("integer defining the maximum number of iterations allowed (DEoptim optimizer).")),
     defineParameter("iterStep", "integer", default = 25L,
-                    desc = "Passed to runDEoptim"),
+                    desc = paste("DEoptim runs its `iterDEoptim` iterations in blocks of this many; each block is",
+                                 "cached and, if `visualizeDEoptim` is a path, plotted.")),
     defineParameter("iterThresh", "integer", default = 96L,
-                    desc = "Number of iterations for automated threshold calibration."),
+                    desc = "Number of random parameter sets tried when calibrating `SNLL_FS_thresh`."),
     defineParameter("libPathDEoptim", "character", default = .libPaths()[1],
                     desc = paste("Absolute path specifying R package directory location to use when running DEotpim.",
                                  "NOTE: this path must be read/write accessible on ALL machines",
@@ -87,13 +85,12 @@ defineModule(sim, list(
                                  "and the statistical model parameters (named in the order they",
                                  "appear in the formula).")),
     defineParameter("maxFireSpread", "numeric", default = 0.28,
-                    desc = paste0("optional. Maximum fire spread average to be passed to the `.objFun`.",
+                    desc = paste0("optional. Maximum fire spread average to be passed to the `.objFun`. ",
                                   "This puts an upper limit on `spreadProb` during optimization.")),
     defineParameter("mode", "character", default = "fit",
-                    desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' will trigger running of",
-                                 "the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger",
-                                 "visualization after DEoptim. For 'visualize', DE object must be findable, either in sim,",
-                                 "on disk or a cloud URL. These last 2 can be specified with `urlDEOptimObject` param.")),
+                    desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' runs the objective",
+                                 "function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the",
+                                 "`debug` and `plot` events after the fit.")),
     defineParameter("mutuallyExclusiveCols", "list", list("youngAge" = c("class", "nonForest")), NA, NA,
                     desc = "a named list of mutually exclusive covariates - see `fireSenseUtils::makeMutuallyExclusive`"),
     defineParameter("NP", "integer", default = NULL,
@@ -118,8 +115,7 @@ defineModule(sim, list(
                                  "using `EnvStats::demp`, it should be at least 100 to get a",
                                  "smooth distribution for a likelihood.")),
     defineParameter("onlyLoadDEOptim", "logical", default = FALSE,
-                    desc = paste0("optional. If TRUE, the module will skip the fitting altogether ",
-                                  "and will only load the latest uploaded version of the `DEOptim` object")),
+                    desc = "Not currently used."),
     defineParameter("rep", "integer", 1L, NA, NA,
                     desc = paste("An optional integer indicating which replicate run this represents. ",
                                  "This is used to identify unique runs of `runDEoptim`, from a Cache perspective. ",
@@ -135,13 +131,10 @@ defineModule(sim, list(
                                  "have their own parameters; `NP` is the number of workers the cluster gets.")),
     defineParameter("rescaleAll", "logical", TRUE, NA, NA,
                     desc = "rescale covariates for `DEOptim`"),
-    # This was KNN drive URL
-    # defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/u/0/folders/1spxq7CnL4kNcJoUQlRek2CmBJ1InAmbP",
-    #                 NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
     defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/folders/1X9-mRjyLMNpgkP_cfqhbr_AQEPOsVCHf",
-                    NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
+                    NA, NA, "Google Drive folder url holding the shared fit ledger (`spreadFitFilename`)."),
     defineParameter("spreadFitFilename", "character", "fireSenseParams.rds",
-                    NA, NA, "A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object"),
+                    NA, NA, "File name of the shared fit ledger: an `sf` object with one row of fitted parameters per polygon."),
     defineParameter("strategy", "integer", default = 3L,
                     desc = "Passed to `DEoptim.control`"),
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
@@ -152,7 +145,7 @@ defineModule(sim, list(
                           "when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a",
                           "new objective -- so the stored row is stale and the polygon must be fitted again.")),
     defineParameter("stopIfNoPreRunFit", "logical", default = TRUE,
-                    desc = "This will cause this module to abort early if there is no preRunFit"),
+                    desc = "If TRUE, `init` stops with an error when this polygon would have to be fitted, instead of fitting it."),
     
     defineParameter("trace", "numeric", default = 1L,
                     desc = paste("non-negative integer. If > 0, tracing information on",
@@ -167,22 +160,21 @@ defineModule(sim, list(
     defineParameter("urlDEOptimObject", "character",
                     default = paste0("https://drive.google.com/file/d/",
                                      "1GYsEbiE60m7cmP2Hfe0WCG_ng9o-RPP9/view?usp=sharing"),
-                    desc = paste0("optional. If `onlyLoadDEOptim == TRUE`, you can pass the url to the  ",
-                                  "`DEOptim` object. The default is the object from the run on 11JUN20",
-                                  " from the `logistic2p`")),
+                    desc = paste0("url or local file of a saved `DEoptim` object or simList. Only read by the ",
+                                  "`retrieveDEOptim` event, which the module never schedules.")),
     defineParameter("useCache_DE", "logical", default = TRUE,
                     desc = "should `DEoptim` use `Cache`? to do multiple independent runs, use FALSE"),
     defineParameter("useCloud_DE", "logical", default = FALSE,
-                    desc = "Passed to `useCloud` in the `Cache(DEoptim...)` call"),
+                    desc = "Not currently used."),
     defineParameter("verbose", "numeric", default = 1,
                     desc = paste0("optional. With increasing number, more verbosity. Level 1 is ",
                                   "normal reproducible (e.g., Cache), level 2 includes objective function ",
                                   "e.g., print median of spreadProb during calculations")),
     defineParameter("visualizeDEoptim", "Path", default = asPath(figurePath(sim)),
-                    desc = paste("Passed to runDEoptim. This makes histographs at each iterStep and saves them ",
-                                 "to this path")),
+                    desc = paste("Directory where `runDEoptim` saves parameter plots after each `iterStep` block.",
+                                 "Reset to `figurePath(sim)` unless its last folder is the module name.")),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
-                    desc = "This will be given to the upper and -lower values if not supplied by user")
+                    desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied.")
   ),
   inputObjects = rbind(
     expectsInput(".runName", "character", "Some descriptive, short name for this fitting, e.g., ELF14.1"),
@@ -198,45 +190,56 @@ defineModule(sim, list(
                               "Defaults to `.runName` for backwards compatibility.")),
     expectsInput("fireBufferedListDT", "list",
                  desc = "list of data.tables with fire id, pixelID, and buffer status"),
-    # expectsInput("rasterToMatch", "SpatRaster",
-    #              desc = "RTM without ice/rocks/urban/water. Flammable map with 0 and 1."),
     expectsInput("fireSense_annualSpreadFitCovariates", "data.table",
                  desc = "table of climate and/or veg covariates, burn status, polyID, and pixelID"),
     expectsInput("fireSense_nonAnnualSpreadFitCovariates", "data.table",
                  desc = "table of veg covariates, burn status, polyID, and pixelID"),
-    # expectsInput("fireSense_spreadLogisticTermNames", "character",
-    #              desc = paste0("The term names for the logistic terms in the spread fit")),
     expectsInput("spreadFitAdditionalColNames", "character",
-                 desc = paste0("The column names used to attach the spreadFit object and several ancilliary objects")),
+                 desc = paste0("Names of the list-columns of the ledger row. Reset to ",
+                               "`fireSenseUtils::spreadFitAdditionalColNamesTxt` if different.")),
     expectsInput("fireSense_spreadFormula", "character",
-                 desc = paste0("a formula that contains the annual and non-annual covariates",
+                 desc = paste0("a formula that contains the annual and non-annual covariates ",
                                "e.g. `~ 0 + MDC + class2 + class3 + youngAge`.")),
     expectsInput("parsKnown", "numeric",
-                 desc = paste0("Optional vector of known parameters, e.g., from a previous `DEoptim` run.",
+                 desc = paste0("Optional vector of known parameters, e.g., from a previous `DEoptim` run. ",
                                "If this is supplied, then 'mode' will be automatically converted to 'debug'")),
     expectsInput("rasterToMatch", "SpatRaster",
                  desc = "template raster for study area"),
     expectsInput("spreadFirePoints", "sf",
-                 desc = "list of spatial points objects representing annual fire centroids"),
+                 desc = "list of `sf` points, one element per year, of fire ignition locations"),
     expectsInput("studyArea", "sf",
-                 desc = "Study area for the prediction. Defaults to NWT.",
+                 desc = "Polygon being fit; its geometry and crs go in the ledger row. Defaults to NWT.",
                  sourceURL = "https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU")
   ),
   outputObjects = rbind(
     createsOutput("covMinMax_spread", "data.table",
                   desc = "`data.table` of covariates min and max"),
-    createsOutput("DE", "data.table", desc = "`DEOptim` object"),
+    createsOutput("DE", "data.table",
+                  desc = "list of `DEoptim` objects, one per `iterStep` block, ordered by best objective value"),
     createsOutput("fireSense_SpreadFitted", "fireSense_SpreadFit",
-                  desc = "DEFUNCT -- A fitted model object of class fireSense_SpreadFit."),
+                  desc = "DEFUNCT -- only set by the `retrieveDEOptim` event, which the module never schedules."),
     createsOutput("studyAreaWithSpreadParams", "sf",
-                  desc = paste("This is the studyArea, but with 10 duplicated features, each",
-                               "with its own set of parameters from the 10 best DEoptim runs")),
+                  desc = paste("Rows of the shared fit ledger that intersect `studyArea`, including the row this",
+                               "fit writes: `studyArea` geometry, `polygonID`, and list-columns named by",
+                               "`spreadFitAdditionalColNames` (the 5 best parameter sets are in `params`).")),
     createsOutput("fsSpreadFit_hists", "ggplot",
                   desc = "histograms of each parameter used in `DEoptim` fitting."),
-    createsOutput("lociList", "list", desc = "list of fire locs")
+    createsOutput("lociList", "list",
+                  desc = "per-year `data.table`s of fire start cells and sizes, from `fireSenseUtils::makeLociList()`")
   )
 ))
 
+#' Event dispatcher for fireSense_SpreadFit
+#'
+#' `init` schedules `spreadFitPrepare`, and, unless the ledger already holds a fit for this polygon
+#' (or `refitExisting` is TRUE), `estimateThreshold` then `run` (or `debug` when `mode` has "debug").
+#'
+#' @param sim a `simList`.
+#' @param eventTime numeric; current simulation time.
+#' @param eventType character; one of `init`, `spreadFitPrepare`, `estimateThreshold`, `run`,
+#'   `debug`, `plot`, `retrieveDEOptim`.
+#' @param debug not used.
+#' @return the `simList`, invisibly.
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
   moduleName <- current(sim)$moduleName
   switch(
@@ -290,20 +293,9 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         covMinMax = sim$covMinMax_spread,
         formulaToFit = sim$fireSense_spreadFormula,
         objfunFireReps = P(sim)$objfunFireReps,
-        tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+        tests = P(sim)$DEoptimTests,
         mode = Par$mode,
         maxFireSpread = P(sim)$maxFireSpread) 
-      
-      # thresh <- runSpreadWithoutDEoptim(
-      #   iterThresh = P(sim)$iterThresh, P(sim)$lower, P(sim)$upper,
-      #   sim$fireSense_spreadFormula, sim$rasterToMatch,
-      #   mod$covsX1000$annualDTx1000, mod$covsX1000$nonAnnualDTx1000, mod$covsX1000$fireBufferedListDT,
-      #   mutuallyExclusive = P(sim)$mutuallyExclusiveCols,
-      #   doObjFunAssertions = P(sim)$doObjFunAssertions,
-      #   mod$covsX1000$historicalFires, sim$covMinMax_spread, P(sim)$objfunFireReps,
-      #   P(sim)$maxFireSpread, pars = sim$parsKnown, plot.it = P(sim)$.plots,
-      #   tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
-      #   mode = Par$mode)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
@@ -323,11 +315,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         }
         messageDF(best$bestCluster)
         fnName <- paste0("runDEoptim_", sim$.runName, "_", P(sim)$rep)
-        # if (isRstudioServer())
-        #   stop("Don't RUN DEOPTIM WITH RSTUDIO SERVER")
-
-
-        # stop("Ended just before the runDEoptim")
         if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
           params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
         }
@@ -354,7 +341,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                    formulaToFit = sim$fireSense_spreadFormula,
                                    covMinMax = sim$covMinMax_spread,
                                    objFunCoresInternal = P(sim)$objFunCoresInternal,
-                                   tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+                                   tests = P(sim)$DEoptimTests,
                                    maxFireSpread = P(sim)$maxFireSpread,
                                    Nreps = P(sim)$objfunFireReps,
                                    thresh = mod$thresh,
@@ -366,11 +353,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                    .plots = P(sim)$.plots,
                                    rep = P(sim)$rep,
                                    runName = sim$.runName),
-                        # cacheId = ci, #P(sim)$cacheId_DE,
                         .functionName = fnName,
                         .cacheExtra = fnName,
                         omitArgs = c(".verbose", "cores", "paths", "logPath"),
-                        useCache = P(sim)$useCache_DE#,
+                        useCache = P(sim)$useCache_DE
         )
         sim$DE <- DE
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
@@ -420,18 +406,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$studyAreaWithSpreadParams <- saHere |>
           dplyr::mutate(df)
         le <- function(x) {x}
-        if (FALSE) {
-          a <- googledrive::drive_ls(Par$spreadFitGoogleDriveFolder)
-          b <- a[a$name %in% Par$spreadFitFilename,]
-          tf <- tempfile(fileext = ".rds")
-          d <- googledrive::drive_download(b, path = tf)
-          e <- readRDS(tf)
-          g <- e[e$polygonID %in% sim$.runName,]
-          sf_obj <- st_as_sf(g, sf_column_name = "geometry")
-          e[e$polygonID == sim$.runName,] <- as.data.frame(sf_obj)
-          h <- terra::vect(sf_obj)
-          
-        }
         sim$studyAreaWithSpreadParams <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
                                                   targetFile = Par$spreadFitFilename,
                                                   domain = saHere,
@@ -459,23 +433,6 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         sim$fireSense_SpreadFitted <- out
       }
     },
-    # makefireSense_SpreadFitted = {
-    #
-    #   objFunValsAll <- unlist(lapply(sim$DE, function(x) x$optim$bestval))
-    #   ordered <- order(objFunValsAll)
-    #   outs <- rbindlist(lapply(sim$DE, function(x) data.frame(t(x$optim$bestmem))))
-    #   set(outs, NULL, "objFunVal", objFunValsAll)
-    #   set(outs, NULL, "iters",seq_len(length(sim$DE)))
-    #   outs <- outs[ordered, ]
-    #
-    #   Nkeep <- 10
-    #   sim$studyAreaWithSpreadParams <- sim$studyArea
-    #   for (i in 2:Nkeep) {
-    #     sim$studyAreaWithSpreadParams <- rbind(sim$studyAreaWithSpreadParams, sim$studyArea)
-    #   }
-    #   sim$studyAreaWithSpreadParams[, names(outs)] <- outs[seq_len(Nkeep),]
-    #
-    # },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
       colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
@@ -496,14 +453,15 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
   invisible(sim)
 }
 
-# Init <- function(sim){
-#   ## TODO: does this module need an init?
-#   return(sim)
-# }
-
+#' Prepare the inputs of the fit
+#'
+#' Fills `upper`/`lower` and `mutuallyExclusiveCols` when left at their defaults, checks inputs, and
+#' makes `sim$covMinMax_spread`, `sim$lociList` and `mod$covsX1000` (covariates as integers x 1000,
+#' restricted to years present in every annual list).
+#'
+#' @param sim a `simList`.
+#' @return the `simList`.
 spreadFitPrep <- function(sim) {
-  # moduleName <- current(sim)$moduleName
-
   # Mutually Exclusive Columns -- basically no class with biomass or land cover can also be in the
   #   youngAge class. Inside the optimization function, the covariates are set to zero if
   #   youngAge is 1
@@ -567,11 +525,6 @@ spreadFitPrep <- function(sim) {
     digNASFC <- .robustDigest(sim$fireSense_nonAnnualSpreadFitCovariates)
     histOuts <- histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
                          nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
-    
-    # needPlot <- list(digASFC) |> Cache(.functionName = "Plots_hists_AnnualSpreadCovs")
-    # if (isTRUE(attr(needPlot, ".Cache")$newCache))
-    # aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
-    # source("~/GitHub/SpaDES.core/R/Plots.R", local = environment())
     Plots(histOuts[["annual"]], filename = "Histograms of AnnualClimateLayers", useCache = "png")
     Plots(histOuts[["nonAnnual"]], filename = "Histograms of FuelLayers", useCache = "png") 
   }
@@ -597,6 +550,13 @@ spreadFitPrep <- function(sim) {
   return(sim)
 }
 
+#' Load a saved DEoptim object or simList
+#'
+#' @param url character; a local file path or a url for `prepInputs()`. Read as `.rds`, then `.qs2`
+#'   (local), or the reverse (url).
+#' @param destinationPath character; download directory for `prepInputs()`.
+#' @param wholeSim not used.
+#' @return the loaded object, or a `try-error`.
 loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
   # Check to see if it is a local file first
   if (file.exists(url)) {
@@ -616,6 +576,13 @@ loadPrevDEOptimRun <- function(url, destinationPath, wholeSim = TRUE) {
   sim2
 }
 
+#' Minimum and maximum of each covariate, for rescaling
+#'
+#' Non-annual columns whose maximum exceeds 1 are treated as biomass and share one range.
+#'
+#' @param annualList list of `data.table`s of annual covariates, one per year.
+#' @param nonAnnualList list of `data.table`s of non-annual covariates.
+#' @return `data.table` with 2 rows (min, max) and one column per covariate.
 deriveCovMinMax <- function(annualList, nonAnnualList) {
 
   nonAnnRescales <- rbindlist(nonAnnualList)
@@ -645,6 +612,11 @@ deriveCovMinMax <- function(annualList, nonAnnualList) {
   covMinMax
 }
 
+#' Histograms of the spread-fit covariates
+#'
+#' @param annualList list of `data.table`s of annual covariates, one per year; must have `CMDsm`.
+#' @param nonAnnualList list of `data.table`s of non-annual (log biomass) covariates.
+#' @return list of two `ggplot`s: `annual` (`CMDsm` by year) and `nonAnnual` (biomass by fuel and year).
 histOfCovariates <- function(annualList, nonAnnualList) {
   annualCols <- colnames(annualList[[1]])
   annualColsToPlot <- setdiff(annualCols, "pixelID")
@@ -673,15 +645,7 @@ histOfCovariates <- function(annualList, nonAnnualList) {
       facet_wrap(yr) + 
       ggplot2::theme_bw()
   }, envir = clean_env)
-  
-  
-  # annHists2 <- 
-  #   ggplot(ann) + geom_histogram(aes_string("CMDsm")) +
-  #     facet_wrap(yr) + #, ncol=ncols) +
-  #     ggplot2::theme_bw()
-  
-  # out <- ann[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
-  #   hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = yr]
+
   nonAnn <- rbindlist(nonAnnualList, idcol = yr, use.names = TRUE, fill = TRUE)
   set(nonAnn, NULL, "pixelID", NULL)
 
@@ -696,7 +660,6 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   whMin <- which(nonAnnDT[[v]] == min(nonAnnDT[[v]]))
   set(nonAnnDT, NULL, v, exp(nonAnnDT[[v]]))
   set(nonAnnDT, whMin, v, 1)
-  # set(nonAnnDT, NULL, v, 1)
 
   # 1. Create a clean environment
   clean_env <- new.env(parent = .GlobalEnv)
@@ -730,13 +693,6 @@ histOfCovariates <- function(annualList, nonAnnualList) {
       strip.text.y.left = element_text(angle = 0)  # readable vertical strips
     )}, envir = clean_env)
 
-    # ggplot(nonAnnDT) + geom_histogram(aes_string(x = v)) +
-    #   facet_wrap(c(Fue, yr), ncol=ncol(nonAnn) - 1) +
-    #   ggplot2::theme_bw()
-
-
-  # out <- nonAnn[, Map(dt = .SD, colname = names(.SD), function(dt, colname)
-  #   hist(dt, main = paste(.BY, " ", colname), xlab = "")), by = yr]
   list(annual = annHists, nonAnnual = nonAnnHists)
 }
 
@@ -758,6 +714,13 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   1L + as.integer(sum(bytes * seq_along(bytes) * 7919) %% 1e6)
 }
 
+#' Set `mod$thresh`, the SNLL fire-size threshold of the objective function
+#'
+#' Uses `SNLL_FS_thresh` if supplied; otherwise calibrates it with a cached
+#' `runSpreadWithoutDEoptim()` call.
+#'
+#' @param sim a `simList`, after `spreadFitPrep()`.
+#' @return the `simList`.
 estimateSNLLThresholdPostLargeFires <- function(sim) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
@@ -777,7 +740,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       covMinMax = sim$covMinMax_spread,
       formulaToFit = sim$fireSense_spreadFormula,
       objfunFireReps = P(sim)$objfunFireReps,
-      tests = P(sim)$DEoptimTests, # c("mad", "SNLL_FS")
+      tests = P(sim)$DEoptimTests,
       mode = Par$mode,
       ## Deterministic per ELF: the threshold feeds every DEoptim generation's cache key, so a
       ## re-drawn threshold discards the whole fit's cached generations (2026-09-16: 1236 -> 1416
@@ -790,7 +753,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       ##
       ## `mode` selects which branch of runSpreadWithoutDEoptim runs, and the branches
       ## return different types -- the fitting branch returns the numeric threshold
-      ## (R/runSpreadWithoutDEoptim.R:122), the debug branch ends in a `for` loop with
+      ## (R/runSpreadWithoutDEoptim.R), the debug branch ends in a `for` loop with
       ## no return and yields NULL. Omitting it let a debug-mode result be served to a
       ## fit-mode caller and the reverse, which is how `mod$thresh` came back as a
       ## character and the objective function died at `round(thresh, 0)`.
@@ -807,87 +770,16 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   return(sim)
 }
 
-# asFireSense_SpreadFitted <- function(DE, DEformulaChar, lower) {
-#   DE2 <- if (is(DE, "list")) {
-#     DE2 <- tail(DE, 1)[[1]]
-#   } else {
-#     DE
-#   }
-#
-#   # DE1 <- tail(DE, 1)[[1]]
-#     objFunValsAll <- unlist(lapply(DE, function(x) x$optim$bestval))
-#     ordered <- order(objFunValsAll)
-#     outs <- rbindlist(lapply(DE, function(x) data.frame(t(x$optim$bestmem))))
-#     set(outs, NULL, "objFunVal", objFunValsAll)
-#     set(outs, NULL, "iters",seq_len(length(DE)))
-#     outs <- outs[ordered, ]
-#
-#     # head(outs[ordered,])
-#
-#     # bestvals <- which.min(objFunValsAll)
-#     # DE1$optim$bestmem <- DE[[bestvals]]$optim$bestmem
-#     # DE1$optim$bestval <- DE[[bestvals]]$optim$bestval
-#     # DE1$optim$iter <- sum(unlist(lapply(DE, function(x) x$optim$iter)))
-#     # DE1$member$bestmemit <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
-#     # DE1$member$bestvalit <- rbindlist(lapply(DE, function(x) as.data.table(x$member$bestvalit)))[[1]]
-#   # DE1$member <- as.matrix(rbindlist(lapply(DE, function(x) as.data.table(x$member$bestmemit))))
-#
-#   # options(opts)
-#
-#   ## TODO: use native R pipe
-#   valAverage <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = median)
-#   valSD <- DE2 %>% `[[`("member") %>% `[[`("pop") %>% apply(MARGIN = 2, FUN = sd)
-#   valBest <- DE2 %>% `[[`("optim") %>% `[[`("bestmem")
-#   bestFit <- DE2$optim$bestval
-#   terms <- terms(as.formula(DEformulaChar, env = .GlobalEnv))
-#   # Identifying the number of parameters of the logistic function and names
-#   nParsLogistic <- length(lower) - length(attributes(terms)[["term.labels"]])
-#   if (nParsLogistic == 5) {
-#     nms <- sim$fireSense_spreadLogisticTermNames
-#     # nms <- c("inflectionPoint1", "inflectionPoint2",
-#     #          "maxAsymptote", "hillSlope1", "hillSlope2")
-#   } else if (nParsLogistic == 4) {
-#     nms <- sim$fireSense_spreadLogisticTermNames[1:4]
-#     # nms <- c("inflectionPoint1", "inflectionPoint2",
-#     #          "maxAsymptote", "hillSlope1")
-#   } else if (nParsLogistic == 3) {
-#     nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4, 1)]
-#     # nms <- c("maxAsymptote", "hillSlope1", "inflectionPoint1")
-#   } else if (nParsLogistic == 2) {
-#     nms <- sim$fireSense_spreadLogisticTermNames[c(3, 4)]
-#     # nms <- c("maxAsymptote", "hillSlope1")
-#   }
-#   # Giuseppe Cardillo (2020). Three parameters logistic regression -
-#   # There and back again (https://www.github.com/dnafinder/logistic3),
-#   # GitHub. Retrieved June 11, 2020.
-#
-#   fireSense_SpreadFitted <- list(
-#     formula = DEformulaChar,
-#     bestCoef = setNames(valBest,
-#                         nm = c(nms,
-#                                if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-#                                attr(terms, "term.labels")
-#                         )
-#     ),
-#     meanCoef = setNames(valAverage,
-#                         nm = c(nms,
-#                                if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-#                                attr(terms, "term.labels")
-#                         )
-#     ),
-#     sdCoef = setNames(valSD,
-#                       nm = c(nms,
-#                              if (attr(terms, "intercept") != 0) "Intercept" else NULL,
-#                              attr(terms, "term.labels")
-#                       )
-#     ),
-#     bestFit = bestFit
-#   )
-#
-#   class(fireSense_SpreadFitted) <- "fireSense_SpreadFit"
-#   fireSense_SpreadFitted
-# }
-
+#' Default `upper` or `lower` bounds for DEoptim
+#'
+#' Covariate coefficients get +/- `upperAndLower`, except annual covariates (lower bound 0) and
+#' `youngAge` (upper bound 0). The three logistic parameters get fixed bounds.
+#'
+#' @param fireSense_spreadFormula character; the spread formula.
+#' @param anyAnnualCovariates list of annual covariate `data.table`s; only column names are used.
+#' @param whichBound "upper" or "lower".
+#' @param upperAndLower numeric; absolute bound for covariate coefficients.
+#' @return named numeric vector: `maxAsymptote`, `hillSlope1`, `inflectionPoint1`, then formula terms.
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
                                  upperAndLower) {
 
@@ -917,6 +809,13 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   return(newParams)
 }
 
+#' Default inputs
+#'
+#' Supplies `studyArea`, `rasterToMatch`, `.ELFind` (from `.runName`) and
+#' `spreadFitAdditionalColNames` when absent; stops if `fireSense_spreadFormula` is absent.
+#'
+#' @param sim a `simList`.
+#' @return the `simList`, invisibly.
 .inputObjects <- function(sim) {
   dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
@@ -954,12 +853,6 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
     stop("fireSense_spreadFormula must be supplied.")
   }
 
-  # if (!suppliedElsewhere("fireSense_spreadLogisticTermNames")) {
-  #   sim$fireSense_spreadLogisticTermNames <- c("inflectionPoint1", "inflectionPoint2",
-  #                                              "maxAsymptote", "hillSlope1", "hillSlope2")
-  #
-  # }
-
   if (!suppliedElsewhere("spreadFitAdditionalColNames")) {
     sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNamesTxt
   }
@@ -967,13 +860,5 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   return(invisible(sim))
 }
 
-
-plotParamsBest <- function(paramsBest) {
-  gg <- melt(paramsBest, measure.vars = colnames(paramsBest)) |>
-    ggplot() + geom_histogram(aes_string("value")) + facet_wrap("variable", ncol=3)
-  gg$plot_env <- new.env(parent = emptyenv())
-  gg
-}
-
-
+## name of the young-age covariate
 youngAge <- fireSenseUtils::youngAgeTxt
