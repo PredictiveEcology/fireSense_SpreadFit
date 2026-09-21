@@ -49,7 +49,7 @@ test_that("parameters are the expected names", {
   expect_identical(
     sort(md$parameters$paramName),
     sort(c(".c", ".plots", ".plotSize", ".runInitialTime",
-           ".useCache", "cores", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
+           ".useCache", "cores", "covFixedRange", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
            "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
            "objFunCoresInternal", "objfunFireReps", "rep",

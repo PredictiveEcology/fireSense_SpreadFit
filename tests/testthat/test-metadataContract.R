@@ -22,6 +22,7 @@ test_that("parameter classes", {
       spreadFitFilename = "character", spreadFitGoogleDriveFolder = "character",
       stopIfNoPreRunFit = "logical", strategy = "integer", trace = "numeric", upper = "numeric",
       upperAndLowerVal = "numeric", upperAndLowerValFuel = "numeric", useCache_DE = "logical",
+      covFixedRange = "list",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
 })
@@ -60,6 +61,7 @@ test_that("numeric defaults", {
   expect_identical(def$maxFireSpread, 0.28)
   expect_identical(def$upperAndLowerVal, 9)
   expect_identical(def$upperAndLowerValFuel, 60)
+  expect_identical(def$covFixedRange, list(CMDsm = c(0, 100)))
   expect_identical(def$.plotSize, list(height = 1600, width = 2000))
 })
 
