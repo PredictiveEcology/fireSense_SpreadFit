@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9004</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9005</span>
       </span>
     </div>
 
@@ -71,7 +71,7 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fireSense_SpreadFit Manual</h1>
-            <h3 data-toc-skip class="subtitle">v.1.0.6.9004</h3>
+            <h3 data-toc-skip class="subtitle">v.1.0.6.9005</h3>
             
             <h4 data-toc-skip class="date">Last updated: 2026-09-21</h4>
       
@@ -1003,6 +1003,26 @@ NA
 </td>
 <td style="text-align:left;">
 Directory where <code>runDEoptim</code> saves parameter plots after each <code>iterStep</code> block. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+covFixedRange
+</td>
+<td style="text-align:left;">
+list
+</td>
+<td style="text-align:left;">
+c(0, 100)
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+Named list of <code>c(min, max)</code>: covariates rescaled with this FIXED range and not with the range of this polygon’s data. <code>CMDsm = c(0, 100)</code> makes the covariate CMDsm / 100 in every polygon. With the data’s range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. <code>fireSense_SpreadPredict</code> rescales with the stored <code>covMinMax_spread</code>, so it follows.
 </td>
 </tr>
 <tr>

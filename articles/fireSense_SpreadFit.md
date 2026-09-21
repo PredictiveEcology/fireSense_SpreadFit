@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9004"
+subtitle: "v.1.0.6.9005"
 date: "Last updated: 2026-09-21"
 output:
   bookdown::html_document2:
@@ -436,6 +436,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> covFixedRange </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;"> c(0, 100) </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>

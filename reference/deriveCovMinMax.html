@@ -18,7 +18,7 @@ the data's, so that rescaling is biomass / 1e4 in every polygon and in every pre
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9004</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9005</span>
       </span>
     </div>
 
@@ -59,7 +59,7 @@ the data's, so that rescaling is <code>biomass / 1e4</code> in every polygon and
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">deriveCovMinMax</span><span class="op">(</span><span class="va">annualList</span>, <span class="va">nonAnnualList</span>, <span class="va">fuelCols</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">deriveCovMinMax</span><span class="op">(</span><span class="va">annualList</span>, <span class="va">nonAnnualList</span>, <span class="va">fuelCols</span>, fixedRange <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -76,6 +76,10 @@ the data's, so that rescaling is <code>biomass / 1e4</code> in every polygon and
 
 <dt id="arg-fuelcols">fuelCols<a class="anchor" aria-label="anchor" href="#arg-fuelcols"></a></dt>
 <dd><p>names of the fuel biomass columns, from <code><a href="fuelColumns.html">fuelColumns()</a></code>.</p></dd>
+
+
+<dt id="arg-fixedrange">fixedRange<a class="anchor" aria-label="anchor" href="#arg-fixedrange"></a></dt>
+<dd><p>named list of <code>c(min, max)</code> that replace the data's range for those covariates.</p></dd>
 
 </dl></div>
     <div id="value">
