@@ -1,0 +1,88 @@
+## Parameter classes and defaults. test-metadata.R pins the names of parameters, inputs and outputs and
+## the classes of inputs and outputs; this pins what a user's script relies on when it does NOT set a
+## parameter. A changed default changes every run that leaves it alone.
+
+md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
+p <- md$parameters
+cls <- stats::setNames(vapply(p$paramClass, paste, character(1), collapse = "|"), p$paramName)
+def <- stats::setNames(p$default, p$paramName)
+
+test_that("parameter classes", {
+  expect_identical(
+    cls[sort(names(cls), method = "radix")],
+    (function(x) x[sort(names(x), method = "radix")])(c(.c = "numeric", .plots = "character|logical", .plotSize = "list", .runInitialTime = "numeric",
+      .useCache = "logical|character",
+      cores = "integer", DEoptimControl = "list", DEoptimTests = "character",
+      doObjFunAssertions = "logical", initialpop = "numeric", iterDEoptim = "integer",
+      iterStep = "integer", iterThresh = "integer", libPathDEoptim = "character", lower = "numeric",
+      maxFireSpread = "numeric", mode = "character", mutuallyExclusiveCols = "list",
+      nCoresNeeded = "integer", objFunCoresInternal = "integer",
+      objfunFireReps = "integer", refitExisting = "logical",
+      rep = "integer", rescaleAll = "logical", SNLL_FS_thresh = "integer",
+      spreadFitFilename = "character", spreadFitGoogleDriveFolder = "character",
+      stopIfNoPreRunFit = "logical", strategy = "integer", trace = "numeric", upper = "numeric",
+      upperAndLowerVal = "numeric", useCache_DE = "logical",
+      verbose = "numeric", visualizeDEoptim = "Path"))
+  )
+})
+
+test_that("the defunct DEoptim-retrieval parameters and output are gone", {
+  for (nm in c("cacheId_DE", "cloudFolderID_DE", "useCloud_DE", "onlyLoadDEOptim", "NP",
+               ".runInterval", ".saveInitialTime", ".saveInterval", "urlDEOptimObject"))
+    expect_false(nm %in% p$paramName, label = nm)
+  expect_false("fireSense_SpreadFitted" %in% md$outputObjects$objectName)
+})
+
+test_that("defaults that decide whether and how a fit runs", {
+  expect_identical(def$stopIfNoPreRunFit, TRUE)
+  expect_identical(def$refitExisting, FALSE)
+  expect_identical(def$mode, "fit")
+  expect_identical(def$DEoptimTests, "SNLL_FS")
+  expect_identical(def$rescaleAll, TRUE)
+  expect_identical(def$doObjFunAssertions, TRUE)
+  expect_identical(def$useCache_DE, TRUE)
+  expect_identical(def$.useCache, "init")
+  expect_identical(def$mutuallyExclusiveCols, list(youngAge = c("class", "nonForest")))
+})
+
+test_that("numeric defaults", {
+  expect_identical(def$iterDEoptim, 500L)
+  expect_identical(def$iterStep, 25L)
+  expect_identical(def$iterThresh, 96L)
+  expect_identical(def$objfunFireReps, 100L)
+  expect_identical(def$objFunCoresInternal, 1L)
+  expect_identical(def$cores, 1L)
+  expect_identical(def$strategy, 3L)
+  expect_identical(def$rep, 1L)
+  expect_identical(def$trace, 1L)
+  expect_identical(def$verbose, 1)
+  expect_identical(def$.c, 0.5)
+  expect_identical(def$maxFireSpread, 0.28)
+  expect_identical(def$upperAndLowerVal, 9)
+  expect_identical(def$.plotSize, list(height = 1600, width = 2000))
+})
+
+test_that("defaults that are 'not set'", {
+  for (nm in c(".plots", "initialpop", "nCoresNeeded", "SNLL_FS_thresh"))
+    expect_null(def[[nm]], label = nm)
+  for (nm in c("lower", "upper"))
+    expect_identical(def[[nm]], NA, label = nm)
+  expect_identical(def$DEoptimControl, list())
+})
+
+test_that("the ledger's location", {
+  expect_identical(def$spreadFitFilename, "fireSenseParams.rds")
+  expect_identical(def$spreadFitGoogleDriveFolder,
+                   "https://drive.google.com/drive/folders/1X9-mRjyLMNpgkP_cfqhbr_AQEPOsVCHf")
+})
+
+test_that("the ledger's list-columns, which prediction reads by name", {
+  expect_identical(fireSenseUtils::spreadFitAdditionalColNamesTxt,
+                   c("numIterations", "objFunVal", "params", "sppEquiv", "nonForestedLCCGroups",
+                     "missingLCCgroup", "covMinMax_spread"))
+})
+
+test_that("only studyArea has a sourceURL", {
+  io <- md$inputObjects
+  expect_identical(io$objectName[!is.na(io$sourceURL)], "studyArea")
+})
