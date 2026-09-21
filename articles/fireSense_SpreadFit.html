@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9003</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9004</span>
       </span>
     </div>
 
@@ -71,7 +71,7 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fireSense_SpreadFit Manual</h1>
-            <h3 data-toc-skip class="subtitle">v.1.0.6.9003</h3>
+            <h3 data-toc-skip class="subtitle">v.1.0.6.9004</h3>
             
             <h4 data-toc-skip class="date">Last updated: 2026-09-21</h4>
       
@@ -1023,6 +1023,26 @@ NA
 </td>
 <td style="text-align:left;">
 Bound given to each covariate coefficient (<code>upper</code> = this, <code>lower</code> = minus this) when <code>upper</code> or <code>lower</code> is not supplied.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+upperAndLowerValFuel
+</td>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+60
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9 the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07 once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits.
 </td>
 </tr>
 </tbody>

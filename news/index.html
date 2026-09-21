@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9003</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9004</span>
       </span>
     </div>
 
@@ -51,6 +51,17 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
+<div class="section level3">
+<h3 id="fuel-covariates-development-version">Fuel covariates<a class="anchor" aria-label="anchor" href="#fuel-covariates-development-version"></a></h3>
+<ul><li>Fuel biomass is fitted on the linear scale, divided by a fixed 1e4. It arrives from <code>fireSense_dataPrepFit</code> logged (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/logMinB.html" class="external-link">fireSenseUtils::logMinB()</a></code>); <code>spreadFitPrepare</code> undoes that with <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fuelLogToLinear.html" class="external-link">fireSenseUtils::fuelLogToLinear()</a></code> on a copy, and the supplied covariates are not changed. On the log scale the treed pixels of ELF 5.3.2 fell in 16% of the covariate range and 45% of pixels sat on the floor, so the fuel coefficients estimated little more than treed against treeless. Needs fireSenseUtils &gt;= 0.2.3.9029.</li>
+<li>
+<code>covMinMax_spread</code> gives every fuel column <code>c(0, 1e4)</code> (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fuelLinearRange.html" class="external-link">fireSenseUtils::fuelLinearRange</a></code>) and no longer the data’s shared range. <code>fireSense_SpreadPredict</code> recognises a linear fit by that range, so parameters fitted earlier, on the log scale, still predict as they did.</li>
+<li>New parameter <code>upperAndLowerValFuel</code> (default 60): the default bound of the fuel coefficients. With 9, as for every other covariate, the fuel coefficient sat on its bound.</li>
+<li>In 36 model-selection fits over six ELFs, one column per fuel class, as here, was best or within 0.5% of the best in every ELF; collapsing fuel to a total cost 9.6% in the most mixed ELF (three replicate runs each, p = 0.007).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="1.0.6" id="firesense_spreadfit-106">fireSense_SpreadFit 1.0.6<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-106"></a></h2>
 <p>First release from <code>development</code> since <code>master</code> was last updated (2023-09-06). Full history: <a href="https://github.com/PredictiveEcology/fireSense_SpreadFit/compare/cfc4cd7" class="external-link uri">https://github.com/PredictiveEcology/fireSense_SpreadFit/compare/cfc4cd7</a>…v1.0.6</p>

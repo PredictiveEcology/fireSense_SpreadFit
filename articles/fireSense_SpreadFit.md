@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9003"
+subtitle: "v.1.0.6.9004"
 date: "Last updated: 2026-09-21"
 output:
   bookdown::html_document2:
@@ -444,6 +444,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> upperAndLowerValFuel </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 60 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9 the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07 once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits. </td>
   </tr>
 </tbody>
 </table>
