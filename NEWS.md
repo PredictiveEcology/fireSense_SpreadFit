@@ -1,5 +1,9 @@
 # fireSense_SpreadFit (development version)
 
+## Climate covariate
+
+- New parameter `covFixedRange` (default `list(CMDsm = c(0, 100))`): covariates rescaled with a fixed range, not the range of the polygon's data. CMDsm is now CMDsm / 100 everywhere. With the data's range, 1 meant a CMDsm of 104 in ELF 5.3.2 and 297 in ELF 13.1, so the coefficient meant something different in each polygon, and one that never gets dry stretched its small range over [0, 1]. Pooled over six ELFs on the absolute scale, fire size is flat below a CMDsm of about 125 and about twice as large above 150; no single polygon's own scale shows that. `covFixedRange = list()` restores the old behaviour. An NA in the data still reaches the NA check.
+
 ## Fuel covariates
 
 - Fuel biomass is fitted on the linear scale, divided by a fixed 1e4. It arrives from `fireSense_dataPrepFit` logged (`fireSenseUtils::logMinB()`); `spreadFitPrepare` undoes that with `fireSenseUtils::fuelLogToLinear()` on a copy, and the supplied covariates are not changed. On the log scale the treed pixels of ELF 5.3.2 fell in 16% of the covariate range and 45% of pixels sat on the floor, so the fuel coefficients estimated little more than treed against treeless. Needs fireSenseUtils >= 0.2.3.9029.

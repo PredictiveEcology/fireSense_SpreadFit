@@ -54,10 +54,15 @@ test_that("the default mutuallyExclusiveCols gains every non-annual covariate; a
 
 test_that("covMinMax_spread: fixed range for fuel, own range for cover and annual covariates", {
   sim <- prepared()
-  ## fuel is biomass / 1e4 whatever the data hold (class1 reaches 22601); nf 0-0.8; CMDsm 10-40 over both years
+  ## fuel is biomass / 1e4 whatever the data hold (class1 reaches 22601); nf 0-0.8; CMDsm is CMDsm / 100 by default
+  ## (covFixedRange), not the 10-40 these data span
   expect_identical(as.list(sim$covMinMax_spread),
                    list(class1 = c(0, 1e4), class2 = c(0, 1e4), nf = c(0, 0.8),
-                        CMDsm = c(10, 40), youngAge = c(0, 1)))
+                        CMDsm = c(0, 100), youngAge = c(0, 1)))
+})
+
+test_that("covFixedRange = list() goes back to the data's range for CMDsm", {
+  expect_identical(prepared(list(covFixedRange = list()))$covMinMax_spread$CMDsm, c(10, 40))
 })
 
 test_that("rescaleAll = FALSE leaves covMinMax_spread unset", {

@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9004"),
+  version = list(fireSense_SpreadFit = "1.0.6.9005"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -152,6 +152,13 @@ defineModule(sim, list(
     defineParameter("visualizeDEoptim", "Path", default = asPath(figurePath(sim)),
                     desc = paste("Directory where `runDEoptim` saves parameter plots after each `iterStep` block.",
                                  "Reset to `figurePath(sim)` unless its last folder is the module name.")),
+    defineParameter("covFixedRange", "list", default = list(CMDsm = c(0, 100)),
+                    desc = paste("Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the",
+                                 "range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every",
+                                 "polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another,",
+                                 "so the coefficient could not be compared across polygons, and a polygon that never gets",
+                                 "dry stretched its small range over [0, 1]. Names not among the covariates are ignored.",
+                                 "`fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows.")),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
                     desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied."),
     defineParameter("upperAndLowerValFuel", "numeric", default = 60,
@@ -493,7 +500,7 @@ spreadFitPrep <- function(sim) {
   if (P(sim)$rescaleAll) {
     sim$covMinMax_spread <- deriveCovMinMax(
       annualList = sim$fireSense_annualSpreadFitCovariates,
-      nonAnnualList = nonAnnualLinear, fuelCols = fuelCols
+      nonAnnualList = nonAnnualLinear, fuelCols = fuelCols, fixedRange = Par$covFixedRange
     )
     if (any(is.na(sim$covMinMax_spread))) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
@@ -553,8 +560,9 @@ fuelColumns <- function(nonAnnualList) {
 #' @param annualList list of `data.table`s of annual covariates, one per year.
 #' @param nonAnnualList list of `data.table`s of non-annual covariates, fuel biomass on the LINEAR scale.
 #' @param fuelCols names of the fuel biomass columns, from [fuelColumns()].
+#' @param fixedRange named list of `c(min, max)` that replace the data's range for those covariates.
 #' @return `data.table` with 2 rows (min, max) and one column per covariate.
-deriveCovMinMax <- function(annualList, nonAnnualList, fuelCols) {
+deriveCovMinMax <- function(annualList, nonAnnualList, fuelCols, fixedRange = list()) {
 
   nonAnnRescales <- rbindlist(nonAnnualList)
   vals1 <- setdiff(colnames(nonAnnRescales), "pixelID")
@@ -580,6 +588,12 @@ deriveCovMinMax <- function(annualList, nonAnnualList, fuelCols) {
   vals2 <- setdiff(colnames(annRescales), c("buffer", "pixelID", "ids"))
   covMinMax2 <- annRescales[, lapply(.SD, range), .SDcols = vals2]
   covMinMax <- cbind(covMinMax1, covMinMax2)
+  ## a fixed range is the same in every polygon and every predicted year; the data's range is neither
+  for (cn in intersect(names(fixedRange), names(covMinMax))) {
+    stopifnot(length(fixedRange[[cn]]) == 2L, is.numeric(fixedRange[[cn]]), fixedRange[[cn]][2] > fixedRange[[cn]][1])
+    ## an NA in the data must still reach spreadFitPrep()'s check, so a range that is NA is left NA
+    if (!anyNA(covMinMax[[cn]])) set(covMinMax, NULL, cn, as.numeric(fixedRange[[cn]]))
+  }
   covMinMax
 }
 

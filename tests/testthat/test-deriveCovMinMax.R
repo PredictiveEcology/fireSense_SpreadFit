@@ -58,6 +58,27 @@ test_that("an annual column missing from some years is filled, and an NA reaches
   expect_true(all(is.na(out$extra)))
 })
 
+## fixedRange: a covariate rescaled the same way in every polygon
+test_that("a fixed range replaces the data's range, for the covariates named and no others", {
+  nonAnnual <- list(a = dt(pixelID = 1:2, nf = c(0, 0.5)))
+  wet <- list(year2001 = dt(pixelID = 1:2, CMDsm = c(0, 104), youngAge = c(0, 1)))
+  dry <- list(year2001 = dt(pixelID = 1:2, CMDsm = c(35, 297), youngAge = c(0, 1)))
+  fx <- list(CMDsm = c(0, 100), notACovariate = c(0, 5))
+  a <- deriveCovMinMax(wet, nonAnnual, fuelCols = character(), fixedRange = fx)
+  b <- deriveCovMinMax(dry, nonAnnual, fuelCols = character(), fixedRange = fx)
+  expect_identical(a$CMDsm, c(0, 100)); expect_identical(b$CMDsm, c(0, 100))   # same in both polygons
+  expect_identical(a$youngAge, c(0, 1)); expect_identical(a$nf, c(0, 0.5))     # others keep their own
+  expect_identical(names(a), c("nf", "CMDsm", "youngAge"))                     # nothing added
+  ## without it, the two polygons rescale CMDsm differently
+  expect_identical(deriveCovMinMax(dry, nonAnnual, fuelCols = character())$CMDsm, c(35, 297))
+})
+
+test_that("a fixed range that is not c(min, max) with max > min is refused", {
+  ann <- list(year2001 = dt(pixelID = 1:2, CMDsm = c(1, 2))); na <- list(a = dt(pixelID = 1:2, nf = c(0, 0.5)))
+  expect_error(deriveCovMinMax(ann, na, character(), fixedRange = list(CMDsm = c(100, 0))))
+  expect_error(deriveCovMinMax(ann, na, character(), fixedRange = list(CMDsm = 100)))
+})
+
 ## fuelColumns(): which non-annual columns are fuel biomass, judged on the log scale they arrive on.
 test_that("fuelColumns(): a maximum above 1 marks fuel; indicators and proportions are not fuel", {
   nonAnnual <- list(a = dt(pixelID = 1:2, class1 = c(3.605, 9.2), nf = c(0, 0.8), youngAge = c(0, 1)),
