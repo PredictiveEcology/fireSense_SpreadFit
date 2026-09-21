@@ -29,8 +29,15 @@ test_that("runDEoptim() receives the covariates as integers x 1000, in parameter
                           youngAge = c(0L, 1000L, 0L, 0L, 0L, 1000L)))
   expect_identical(class(a$annualDTx1000$year2001), "data.frame")   # not a data.table
   expect_type(a$annualDTx1000$year2001$CMDsm, "integer")
-  expect_identical(a$nonAnnualDTx1000$year2001_year2002$class1,
-                   c(500L, 1000L, 2000L, 3000L, 4000L, 5200L, 1000L, 2000L, 3000L))
+  ## fuel reaches the fit as LINEAR biomass x 1000, not as the log it was supplied on: 0 on the
+  ## logMinB() floor is exactly 0, and 22601 is 22601000
+  expect_equal(a$nonAnnualDTx1000$year2001_year2002$class1,
+               c(0, 300, 1000, 5000, 7803, 22601, 300, 1000, 5000) * 1000, tolerance = 1e-9)
+  expect_equal(a$nonAnnualDTx1000$year2001_year2002$class2,
+               c(40, 0, 2000, 0, 12000, 0, 500, 0, 9000) * 1000, tolerance = 1e-9)
+  expect_type(a$nonAnnualDTx1000$year2001_year2002$class1, "integer")
+  expect_identical(a$nonAnnualDTx1000$year2001_year2002$nf,                # not fuel: unchanged
+                   c(0L, 100L, 200L, 300L, 400L, 500L, 600L, 700L, 800L))
   expect_identical(a$nonAnnualDTx1000$year2001_year2002$pixelID,           # pixelID is not scaled
                    c(2L, 3L, 4L, 55L, 56L, 57L, 88L, 89L, 90L))
   expect_equal(a$fireBufferedListDT$year2002,

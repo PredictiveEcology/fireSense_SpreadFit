@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9003"),
+  version = list(fireSense_SpreadFit = "1.0.6.9004"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.41)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9022)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9029)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -153,7 +153,12 @@ defineModule(sim, list(
                     desc = paste("Directory where `runDEoptim` saves parameter plots after each `iterStep` block.",
                                  "Reset to `figurePath(sim)` unless its last folder is the module name.")),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
-                    desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied.")
+                    desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied."),
+    defineParameter("upperAndLowerValFuel", "numeric", default = 60,
+                    desc = paste("As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their",
+                                 "coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9",
+                                 "the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07",
+                                 "once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits."))
   ),
   inputObjects = rbind(
     expectsInput(".runName", "character", "Some descriptive, short name for this fitting, e.g., ELF14.1"),
@@ -443,20 +448,34 @@ spreadFitPrep <- function(sim) {
 
   }
 
+  ## Fuel biomass arrives from fireSense_dataPrepFit on the log scale (fireSenseUtils::logMinB). The
+  ## spread model takes it on the LINEAR scale, divided by a fixed 1e4 -- see
+  ## fireSenseUtils::fuelLogToLinear() for why, and why the log is undone here and not at its source.
+  ## The input is left as it is; everything below that feeds the fit uses this copy.
+  ## fireSense_SpreadPredict applies the same function, recognising a linear fit by covMinMax_spread.
+  fuelCols <- fuelColumns(sim$fireSense_nonAnnualSpreadFitCovariates)
+  nonAnnualLinear <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, function(dt) {
+    dt <- data.table::copy(dt)
+    for (cn in intersect(fuelCols, names(dt))) set(dt, NULL, cn, fireSenseUtils::fuelLogToLinear(dt[[cn]]))
+    dt
+  })
+
   # veg coefficients should probably have bounds of 4
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
   # MDC should have a lower limit of zero - drought shouldn't increase spread probability
   if (is.null(P(sim)$upper) || any(is.na(P(sim)$upper))) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates,
-                                         whichBound = "upper", upperAndLower = Par$upperAndLowerVal)
+                                         whichBound = "upper", upperAndLower = Par$upperAndLowerVal,
+                                         fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel)
   }
 
   if (is.null(P(sim)$lower) || any(is.na(P(sim)$lower))) {
     ## TODO - figure out the 2-4 piece logistic defaults :S
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
                                           sim$fireSense_annualSpreadFitCovariates,
-                                          whichBound = "lower", upperAndLower = Par$upperAndLowerVal)
+                                          whichBound = "lower", upperAndLower = Par$upperAndLowerVal,
+                                          fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel)
   }
   ## sanity check parameters + inputs
   #cores can be NA for interactive debugging
@@ -474,7 +493,7 @@ spreadFitPrep <- function(sim) {
   if (P(sim)$rescaleAll) {
     sim$covMinMax_spread <- deriveCovMinMax(
       annualList = sim$fireSense_annualSpreadFitCovariates,
-      nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates
+      nonAnnualList = nonAnnualLinear, fuelCols = fuelCols
     )
     if (any(is.na(sim$covMinMax_spread))) {
       stop("covMinMax_spread contains NA values. Check upstream for introduction of NAs.")
@@ -485,7 +504,7 @@ spreadFitPrep <- function(sim) {
     digASFC <- .robustDigest(sim$fireSense_annualSpreadFitCovariates)
     digNASFC <- .robustDigest(sim$fireSense_nonAnnualSpreadFitCovariates)
     histOuts <- histOfCovariates(annualList = sim$fireSense_annualSpreadFitCovariates,
-                         nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates)
+                         nonAnnualList = nonAnnualLinear)
     Plots(histOuts[["annual"]], filename = "Histograms of AnnualClimateLayers", useCache = "png")
     Plots(histOuts[["nonAnnual"]], filename = "Histograms of FuelLayers", useCache = "png") 
   }
@@ -497,7 +516,7 @@ spreadFitPrep <- function(sim) {
   keepNames <- intersect(names(sim$fireSense_annualSpreadFitCovariates), names(sim$fireBufferedListDT))
   mod$covsX1000 <- covsX1000AndSetDF(
     annualList = sim$fireSense_annualSpreadFitCovariates[keepNames],
-    nonAnnualList = sim$fireSense_nonAnnualSpreadFitCovariates,
+    nonAnnualList = nonAnnualLinear,
     fireBufferedList = sim$fireBufferedListDT[keepNames],
     fireLociList = sim$lociList,
     paramOrder = P(sim)$upper)
@@ -511,14 +530,31 @@ spreadFitPrep <- function(sim) {
   return(sim)
 }
 
+#' Names of the fuel biomass columns among the non-annual covariates
+#'
+#' As they arrive from `fireSense_dataPrepFit`, fuel biomass columns are on the
+#' `fireSenseUtils::logMinB()` scale, whose floor is 3.6; every other non-annual covariate is an
+#' indicator or a proportion, at most 1. So a maximum above 1 marks a fuel column, which is the rule
+#' `deriveCovMinMax()` always used to find them.
+#'
+#' @param nonAnnualList list of `data.table`s of non-annual covariates, as supplied to the module.
+#' @return character vector of column names.
+fuelColumns <- function(nonAnnualList) {
+  dt <- rbindlist(nonAnnualList)
+  cols <- setdiff(colnames(dt), "pixelID")
+  cols[vapply(cols, function(cn) max(dt[[cn]], na.rm = TRUE) > 1, logical(1))]
+}
+
 #' Minimum and maximum of each covariate, for rescaling
 #'
-#' Non-annual columns whose maximum exceeds 1 are treated as biomass and share one range.
+#' Fuel biomass columns all get `fireSenseUtils::fuelLinearRange`, `c(0, 1e4)`: a fixed range, not
+#' the data's, so that rescaling is `biomass / 1e4` in every polygon and in every predicted year.
 #'
 #' @param annualList list of `data.table`s of annual covariates, one per year.
-#' @param nonAnnualList list of `data.table`s of non-annual covariates.
+#' @param nonAnnualList list of `data.table`s of non-annual covariates, fuel biomass on the LINEAR scale.
+#' @param fuelCols names of the fuel biomass columns, from [fuelColumns()].
 #' @return `data.table` with 2 rows (min, max) and one column per covariate.
-deriveCovMinMax <- function(annualList, nonAnnualList) {
+deriveCovMinMax <- function(annualList, nonAnnualList, fuelCols) {
 
   nonAnnRescales <- rbindlist(nonAnnualList)
   vals1 <- setdiff(colnames(nonAnnRescales), "pixelID")
@@ -528,8 +564,8 @@ deriveCovMinMax <- function(annualList, nonAnnualList) {
   # assuming those were the fuel classes and respective maximum observed biomass
   minMax <- nonAnnRescales[, lapply(.SD, range), .SDcols = vals1]
   names(minMax) <- vals1
-  biomassCols <- names(minMax)[minMax[2, ] %>>% 1]
-  sharedRange <- range(minMax[, .SD, .SDcols = biomassCols])
+  biomassCols <- intersect(vals1, fuelCols)
+  sharedRange <- fireSenseUtils::fuelLinearRange
 
   biomassMax <- minMax[, lapply(.SD,FUN = function(x){return(sharedRange)}), .SDcols = biomassCols]
 
@@ -716,7 +752,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 #' @param upperAndLower numeric; absolute bound for covariate coefficients.
 #' @return named numeric vector: `maxAsymptote`, `hillSlope1`, `inflectionPoint1`, then formula terms.
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
-                                 upperAndLower) {
+                                 upperAndLower, fuelTerms = character(), upperAndLowerFuel = upperAndLower) {
 
   stopifnot(whichBound %in% c("upper", "lower"))
 
@@ -728,6 +764,8 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
     newParams <- rep(-(upperAndLower), termLength)
   }
   newParams <- as.vector(newParams)
+  ## fuel biomass is biomass / 1e4, not [0, 1], so its coefficients need a wider box
+  newParams[formulaTerms %in% fuelTerms] <- if (whichBound == "upper") upperAndLowerFuel else -upperAndLowerFuel
   whAnnual <- formulaTerms %in% colnames(anyAnnualCovariates[[1]])
   whYA <- formulaTerms[whAnnual] %in% youngAge
   newParams[whAnnual] <- ifelse(whichBound == "upper", upperAndLower, 0)

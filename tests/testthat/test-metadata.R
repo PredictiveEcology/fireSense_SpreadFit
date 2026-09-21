@@ -55,7 +55,7 @@ test_that("parameters are the expected names", {
            "objFunCoresInternal", "objfunFireReps", "rep",
            "refitExisting", "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
            "spreadFitGoogleDriveFolder", "stopIfNoPreRunFit", "strategy", "trace",
-           "upper", "upperAndLowerVal", "useCache_DE",
+           "upper", "upperAndLowerVal", "upperAndLowerValFuel", "useCache_DE",
            "verbose", "visualizeDEoptim"))
   )
 })

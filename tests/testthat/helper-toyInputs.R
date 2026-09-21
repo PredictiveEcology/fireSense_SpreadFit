@@ -60,8 +60,9 @@ toyObjects <- function() {
     fireSense_nonAnnualSpreadFitCovariates = list(
       year2001_year2002 = data.table::data.table(
         pixelID = c(2L, 3L, 4L, 55L, 56L, 57L, 88L, 89L, 90L),
-        class1 = c(0.5, 1, 2, 3, 4, 5.2, 1, 2, 3),          # biomass-like: max > 1
-        class2 = c(1, 1.5, 2, 2.5, 3, 1, 2, 3, 1),          # biomass-like: max > 1
+        ## fuel biomass as fireSense_dataPrepFit supplies it: fireSenseUtils::logMinB(), so 0 is on the floor
+        class1 = fireSenseUtils::logMinB(c(0, 300, 1000, 5000, 7803, 22601, 300, 1000, 5000)),
+        class2 = fireSenseUtils::logMinB(c(40, 0, 2000, 0, 12000, 0, 500, 0, 9000)),
         nf = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8))), # cover-like: max <= 1
     fireSense_spreadFormula = "~ 0 + CMDsm + youngAge + class1 + class2 + nf"
   )

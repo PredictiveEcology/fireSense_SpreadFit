@@ -11,14 +11,22 @@ P1 <- function(sim) SpaDES.core::params(sim)[[moduleName]]
 test_that("default bounds are built from the formula and the annual covariates", {
   p <- P1(prepared())
   expect_identical(p$upper, c(maxAsymptote = 0.276, hillSlope1 = 2, inflectionPoint1 = 4,
-                              CMDsm = 9, youngAge = 0, class1 = 9, class2 = 9, nf = 9))
+                              CMDsm = 9, youngAge = 0, class1 = 60, class2 = 60, nf = 9))
   expect_identical(p$lower, c(maxAsymptote = 0.25, hillSlope1 = 0.2, inflectionPoint1 = 0.1,
-                              CMDsm = 0, youngAge = -9, class1 = -9, class2 = -9, nf = -9))
+                              CMDsm = 0, youngAge = -9, class1 = -60, class2 = -60, nf = -9))
+})
+
+test_that("upperAndLowerValFuel sets the fuel bounds, and only those", {
+  ## fuel is biomass / 1e4, not [0, 1]: a +-9 box bound the fuel coefficient in the model-selection fits
+  p <- P1(prepared(list(upperAndLowerValFuel = 25)))
+  expect_identical(unname(p$upper[c("class1", "class2", "nf", "CMDsm")]), c(25, 25, 9, 9))
+  expect_identical(unname(p$lower[c("class1", "class2", "nf", "youngAge")]), c(-25, -25, -9, -9))
 })
 
 test_that("upperAndLowerVal sets the size of the default bounds", {
   p <- P1(prepared(list(upperAndLowerVal = 4)))
-  expect_identical(unname(p$upper[c("CMDsm", "class1")]), c(4, 4))
+  expect_identical(unname(p$upper[c("CMDsm", "nf")]), c(4, 4))
+  expect_identical(unname(p$upper["class1"]), 60)   # fuel has its own parameter
   expect_identical(unname(p$lower[c("youngAge", "nf")]), c(-4, -4))
 })
 
@@ -27,7 +35,7 @@ test_that("supplied bounds are kept; only the missing one is filled", {
           CMDsm = 1, youngAge = 0, class1 = 2, class2 = 3, nf = 4)
   p <- P1(prepared(list(upper = up)))
   expect_identical(p$upper, up)
-  expect_identical(unname(p$lower["class1"]), -9)
+  expect_identical(unname(p$lower[c("class1", "nf")]), c(-60, -9))
 })
 
 test_that("bounds whose names differ in order are refused", {
@@ -44,11 +52,11 @@ test_that("the default mutuallyExclusiveCols gains every non-annual covariate; a
   expect_identical(P1(prepared(list(mutuallyExclusiveCols = custom)))$mutuallyExclusiveCols, custom)
 })
 
-test_that("covMinMax_spread: shared biomass range, own range for cover and annual covariates", {
+test_that("covMinMax_spread: fixed range for fuel, own range for cover and annual covariates", {
   sim <- prepared()
-  ## class1 0.5-5.2, class2 1-3 -> shared 0.5-5.2; nf 0-0.8; CMDsm 10-40 over both years
+  ## fuel is biomass / 1e4 whatever the data hold (class1 reaches 22601); nf 0-0.8; CMDsm 10-40 over both years
   expect_identical(as.list(sim$covMinMax_spread),
-                   list(class1 = c(0.5, 5.2), class2 = c(0.5, 5.2), nf = c(0, 0.8),
+                   list(class1 = c(0, 1e4), class2 = c(0, 1e4), nf = c(0, 0.8),
                         CMDsm = c(10, 40), youngAge = c(0, 1)))
 })
 
