@@ -396,7 +396,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
-      colnames(DEpop_df) <- names(sim$fireSense_SpreadFitted$bestCoef)
+      colnames(DEpop_df) <- names(P(sim)$lower) ## the names the `run` event gives these coefficients
       sim$fsSpreadFit_hists <- ggplot(tidyr::gather(DEpop_df), aes(value)) +
         geom_histogram(bins = 20) +
         facet_wrap(~key, scales = "free_x") +
