@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
 subtitle: "v.1.0.6.9003"
-date: "Last updated: 2026-09-19"
+date: "Last updated: 2026-09-21"
 output:
   bookdown::html_document2:
     toc: true
@@ -43,10 +43,29 @@ Fit statistical models that can be used to parameterize the fire spread componen
 This module implement a Pattern Oriented Modelling (POM) approach to derive spread probabilities from final fire sizes. <!-- TODO add citation for POM -->
 Spread probabilities can vary between pixels, and thus reflect local heterogeneity in environmental conditions.
 
+The fit is a differential evolution search (`DEoptim`, run by `fireSenseUtils::runDEoptim()` on a cluster built by the `clusters` package).
+Each candidate parameter set is scored by simulating the historical fires and comparing simulated with observed fire sizes (`fireSenseUtils::.objfunSpreadFit()`).
+The 5 best parameter sets, and the covariate ranges used to rescale the covariates, are written as one row per polygon to a shared "fit ledger" on Google Drive (`spreadFitFilename` in `spreadFitGoogleDriveFolder`), keyed by `.ELFind`.
+If the ledger already holds a row for the polygon, the module does nothing unless `refitExisting = TRUE`.
+By default (`stopIfNoPreRunFit = TRUE`) the module stops rather than start a fit; set it to `FALSE` to fit.
+
+#### `refitExisting`
+
+`refitExisting = TRUE` forces a fit for this polygon even when the ledger already holds a row for it.
+Use it when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a new objective
+function -- so the stored row is stale and the polygon must be fitted again.
+
+`refitExisting` **overrides** `stopIfNoPreRunFit`: with `refitExisting = TRUE`, `init` schedules the fit
+rather than stopping, whatever `stopIfNoPreRunFit` is set to. Setting `stopIfNoPreRunFit = FALSE` is only
+needed when the polygon has no ledger row.
+
+`refitExisting` is intended **for developers** who have access to **at least 40 cores**: it triggers a
+full DEoptim run (see `cores` and `nCoresNeeded`), which is not practical on a small machine.
+
 ### Module inputs and parameters
 
-Describe input data required by the module and how to obtain it (e.g., directly from online sources or supplied by other modules)
-If `sourceURL` is specified, `downloadData("fireSense_SpreadFit", "..")` may be sufficient.
+The covariate tables, fire buffers, fire points and formula are made by `fireSense_dataPrepFit`.
+`fireSense_spreadFormula` must be supplied; `.ELFind` defaults to `.runName`.
 
 Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module inputs.
 
@@ -94,19 +113,19 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
   <tr>
    <td style="text-align:left;"> spreadFitAdditionalColNames </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> The column names used to attach the spreadFit object and several ancilliary objects </td>
+   <td style="text-align:left;"> Names of the list-columns of the ledger row. Reset to `fireSenseUtils::spreadFitAdditionalColNamesTxt` if different. </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
    <td style="text-align:left;"> fireSense_spreadFormula </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> a formula that contains the annual and non-annual covariatese.g. `~ 0 + MDC + class2 + class3 + youngAge`. </td>
+   <td style="text-align:left;"> a formula that contains the annual and non-annual covariates e.g. `~ 0 + MDC + class2 + class3 + youngAge`. </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
    <td style="text-align:left;"> parsKnown </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> Optional vector of known parameters, e.g., from a previous `DEoptim` run.If this is supplied, then 'mode' will be automatically converted to 'debug' </td>
+   <td style="text-align:left;"> Optional vector of known parameters, e.g., from a previous `DEoptim` run. If this is supplied, then 'mode' will be automatically converted to 'debug' </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
@@ -118,13 +137,13 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
   <tr>
    <td style="text-align:left;"> spreadFirePoints </td>
    <td style="text-align:left;"> sf </td>
-   <td style="text-align:left;"> list of spatial points objects representing annual fire centroids </td>
+   <td style="text-align:left;"> list of `sf` points, one element per year, of fire ignition locations </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
    <td style="text-align:left;"> studyArea </td>
    <td style="text-align:left;"> sf </td>
-   <td style="text-align:left;"> Study area for the prediction. Defaults to NWT. </td>
+   <td style="text-align:left;"> Polygon being fit; its geometry and crs go in the ledger row. Defaults to NWT. </td>
    <td style="text-align:left;"> https://drive.google.com/open?id=1LUxoY2-pgkCmmNH5goagBp3IMpj6YrdU </td>
   </tr>
 </tbody>
@@ -152,7 +171,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;">  </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Should outputs be plotted? </td>
+   <td style="text-align:left;"> Plot types passed to `Plots()`, e.g. 'png' or 'screen'; NULL or NA for none. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .plotSize </td>
@@ -171,30 +190,6 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> when to start this module? By default, the start time of the simulation. </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> .runInterval </td>
-   <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. Interval between two runs of this module, expressed in units of simulation time. By default, NA, which means that this module only runs once per simulation. </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> .saveInitialTime </td>
-   <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. When to start saving output to a file. </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> .saveInterval </td>
-   <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. Interval between save events. </td>
-  </tr>
-  <tr>
    <td style="text-align:left;"> .useCache </td>
    <td style="text-align:left;"> logical,.... </td>
    <td style="text-align:left;"> init </td>
@@ -203,28 +198,12 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant. </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> cacheId_DE </td>
-   <td style="text-align:left;"> character </td>
-   <td style="text-align:left;">  </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> An optional character string representing a `cacheId` to recover from the Cache. After `reproducible &gt;= 2.0.10.9016`, this can be set to 'previous', meaning the Cache will get the previous item in the Cache that matches the `P(sim)$rep` (see that param) </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> cloudFolderID_DE </td>
-   <td style="text-align:left;"> character </td>
-   <td style="text-align:left;">  </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Passed to `cloudFolderID` in the `Cache(DEoptim...)` call. </td>
-  </tr>
-  <tr>
    <td style="text-align:left;"> cores </td>
    <td style="text-align:left;"> integer </td>
    <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> non-negative integer. Defines the number of logical cores to be used for parallel computation. The default value is 1, which disables parallel computing. </td>
+   <td style="text-align:left;"> Passed to `cores` in `fireSenseUtils::runDEoptim()`: a number of local cores, or a character vector of machine names, one element per core wanted on that machine. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> DEoptimTests </td>
@@ -232,7 +211,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> SNLL_FS </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Currently either `'SNLL_FS'` or `'adTest'` or a length 2 character vector of both. These are passed to `.objFunSpreadFit` </td>
+   <td style="text-align:left;"> Currently either `'SNLL_FS'` or `'adTest'` or a length 2 character vector of both. Passed to `tests` in `fireSenseUtils::.objfunSpreadFit()`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> doObjFunAssertions </td>
@@ -240,7 +219,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> This is passed to `objFunSpreadProb`; TRUE will do some diagnostics but is slower; FALSE for operational runs </td>
+   <td style="text-align:left;"> Passed to `fireSenseUtils::.objfunSpreadFit()`; TRUE runs diagnostics but is slower; FALSE for operational runs </td>
   </tr>
   <tr>
    <td style="text-align:left;"> initialpop </td>
@@ -264,7 +243,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 25 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Passed to runDEoptim </td>
+   <td style="text-align:left;"> DEoptim runs its `iterDEoptim` iterations in blocks of this many; each block is cached and, if `visualizeDEoptim` is a path, plotted. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> iterThresh </td>
@@ -272,7 +251,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 96 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Number of iterations for automated threshold calibration. </td>
+   <td style="text-align:left;"> Number of random parameter sets tried when calibrating `SNLL_FS_thresh`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
@@ -296,7 +275,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 0.28 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. Maximum fire spread average to be passed to the `.objFun`.This puts an upper limit on `spreadProb` during optimization. </td>
+   <td style="text-align:left;"> optional. Maximum fire spread average to be passed to the `.objFun`. This puts an upper limit on `spreadProb` during optimization. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> mode </td>
@@ -304,7 +283,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> fit </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Options: debug, fit, visualize. Can use multiples. 'debug' will trigger running of the objective function with visuals; 'fit' will trigger DEoptim; 'visualize' will trigger visualization after DEoptim. For 'visualize', DE object must be findable, either in sim, on disk or a cloud URL. These last 2 can be specified with `urlDEOptimObject` param. </td>
+   <td style="text-align:left;"> Options: debug, fit, visualize. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> mutuallyExclusiveCols </td>
@@ -313,14 +292,6 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> a named list of mutually exclusive covariates - see `fireSenseUtils::makeMutuallyExclusive` </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> NP </td>
-   <td style="text-align:left;"> integer </td>
-   <td style="text-align:left;">  </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Number of Populations. See `?DEoptim.control`. NOTE: this is DISCARDED -- `clusters:::.clusterNP()` sets NP to the number of workers the cluster was built with. Use `nCoresNeeded` to choose NP. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> nCoresNeeded </td>
@@ -345,14 +316,6 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> integer defining the number of replicates the objective function will attempt each fire. Since the default approach is using `EnvStats::demp`, it should be at least 100 to get a smooth distribution for a likelihood. </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> onlyLoadDEOptim </td>
-   <td style="text-align:left;"> logical </td>
-   <td style="text-align:left;"> FALSE </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. If TRUE, the module will skip the fitting altogether and will only load the latest uploaded version of the `DEOptim` object </td>
   </tr>
   <tr>
    <td style="text-align:left;"> rep </td>
@@ -392,7 +355,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> https://.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object </td>
+   <td style="text-align:left;"> Google Drive folder url holding the shared fit ledger (`spreadFitFilename`). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> spreadFitFilename </td>
@@ -400,7 +363,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> fireSens.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> A Googledrive folder url where a file with fireSense studyArea exists as an 'sf' class object </td>
+   <td style="text-align:left;"> File name of the shared fit ledger: an `sf` object with one row of fitted parameters per polygon. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> strategy </td>
@@ -424,7 +387,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> FALSE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Fit this polygon even when the ledger already holds parameters for it. A ledger row normally means the fit is done, and the run event skips it. Set this when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a new objective -- so the stored row is stale and the polygon must be fitted again. </td>
+   <td style="text-align:left;"> FOR DEVELOPERS ONLY: a re-fit is a full DEoptim run and is only practical with access to at least 40 cores. Fit this polygon even when the ledger already holds parameters for it. A ledger row normally means the fit is done, and the run event skips it. Set this when the fit's INPUTS have changed -- new land cover, new vegetation parameters, a new objective -- so the stored row is stale and the polygon must be fitted again. When TRUE it OVERRIDES `stopIfNoPreRunFit`: `init` schedules the fit instead of stopping. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> stopIfNoPreRunFit </td>
@@ -432,7 +395,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> This will cause this module to abort early if there is no preRunFit </td>
+   <td style="text-align:left;"> If TRUE, `init` stops with an error when this polygon would have to be fitted, instead of fitting it. Ignored when `refitExisting` is TRUE. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> trace </td>
@@ -451,28 +414,12 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> see `?DEoptim`. Upper limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (named in the order they appear in the formula). </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> urlDEOptimObject </td>
-   <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> https://.... </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> optional. If `onlyLoadDEOptim == TRUE`, you can pass the url to the `DEOptim` object. The default is the object from the run on 11JUN20 from the `logistic2p` </td>
-  </tr>
-  <tr>
    <td style="text-align:left;"> useCache_DE </td>
    <td style="text-align:left;"> logical </td>
    <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> should `DEoptim` use `Cache`? to do multiple independent runs, use FALSE </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> useCloud_DE </td>
-   <td style="text-align:left;"> logical </td>
-   <td style="text-align:left;"> FALSE </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Passed to `useCloud` in the `Cache(DEoptim...)` call </td>
   </tr>
   <tr>
    <td style="text-align:left;"> verbose </td>
@@ -488,7 +435,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> /tmp/Rtm.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Passed to runDEoptim. This makes histographs at each iterStep and saves them to this path </td>
+   <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>
@@ -496,30 +443,28 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 9 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> This will be given to the upper and -lower values if not supplied by user </td>
+   <td style="text-align:left;"> Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied. </td>
   </tr>
 </tbody>
 </table>
 
 ### Events
 
-<!-- TODO -->
-- Module initialization;
-- Prepare spread fit;
-- debug;
-- estimate threshold;
-- run spreadFit;
-- retrieve DEoptim;
-- make `makefireSense_SpreadFitted`;
-- plot;
+- `init`: schedules `spreadFitPrepare` and, if the polygon needs a fit, `estimateThreshold` then `run` (or `debug` when `mode` includes `"debug"`; `debug` and `plot` after `run` when it includes `"visualize"`);
+- `spreadFitPrepare`: sets default `lower`/`upper`, computes `covMinMax_spread` and `lociList`, converts covariates to integers (x 1000);
+- `estimateThreshold`: uses `SNLL_FS_thresh`, or calibrates it from `iterThresh` random parameter sets (cached, with a seed derived from `.ELFind`);
+- `run`: runs DEoptim (cached per `iterStep` block) and writes the polygon's row to the ledger;
+- `debug`: evaluates the objective function without DEoptim;
+- `plot`: histograms of the final population;
 
 ### Plotting
 
-Write what is plotted.
+With `.plots` set, histograms of the annual and non-annual covariates.
+During the fit, `runDEoptim()` saves parameter histograms and trace plots to `visualizeDEoptim` after each `iterStep` block.
 
 ### Saving
 
-Write what is saved.
+The fit's row in the cloud ledger, and the DEoptim cache entries. Nothing else is saved.
 
 ### Module outputs
 
@@ -543,17 +488,12 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> DE </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> `DEOptim` object </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> fireSense_SpreadFitted </td>
-   <td style="text-align:left;"> fireSense_SpreadFit </td>
-   <td style="text-align:left;"> DEFUNCT -- A fitted model object of class fireSense_SpreadFit. </td>
+   <td style="text-align:left;"> list of `DEoptim` objects, one per `iterStep` block, ordered by best objective value </td>
   </tr>
   <tr>
    <td style="text-align:left;"> studyAreaWithSpreadParams </td>
    <td style="text-align:left;"> sf </td>
-   <td style="text-align:left;"> This is the studyArea, but with 10 duplicated features, each with its own set of parameters from the 10 best DEoptim runs </td>
+   <td style="text-align:left;"> Rows of the shared fit ledger that intersect `studyArea`, including the row this fit writes: `studyArea` geometry, `polygonID`, and list-columns named by `spreadFitAdditionalColNames` (the 5 best parameter sets are in `params`). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> fsSpreadFit_hists </td>
@@ -563,15 +503,29 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> lociList </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> list of fire locs </td>
+   <td style="text-align:left;"> per-year `data.table`s of fire start cells and sizes, from `fireSenseUtils::makeLociList()` </td>
   </tr>
 </tbody>
 </table>
 
 ### Links to other modules
 
-<!-- TODO: add links to other modules -->
-This module can be used in association with `fireSense_SpreadPredict` to derive fire spread probabilities that are sensitive to environmental conditions.
+Inputs come from `fireSense_dataPrepFit`. `fireSense_SpreadPredict` uses `studyAreaWithSpreadParams` (the ledger rows) to predict spread probabilities.
+
+### Usage
+
+
+``` r
+## in a project that also runs fireSense_dataPrepFit
+params <- list(fireSense_SpreadFit = list(
+  stopIfNoPreRunFit = FALSE,          # allow a fit to start
+  cores = rep(c("hostA", "hostB"), each = 20), # host name repeated once per worker; or a number for localhost
+  nCoresNeeded = 40,                  # = DEoptim population size (NP)
+  iterDEoptim = 500, iterStep = 25,
+  mode = "fit"
+))
+objects <- list(.ELFind = "6.1.1")    # polygon id used as the ledger key
+```
 
 ### Getting help
 
