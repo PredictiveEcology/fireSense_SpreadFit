@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9003"
+subtitle: "v.1.0.6.9005"
 date: "Last updated: 2026-09-21"
 output:
   bookdown::html_document2:
@@ -436,12 +436,28 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> covFixedRange </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;"> c(0, 100) </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>
    <td style="text-align:left;"> numeric </td>
    <td style="text-align:left;"> 9 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> upperAndLowerValFuel </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 60 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9 the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07 once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits. </td>
   </tr>
 </tbody>
 </table>
