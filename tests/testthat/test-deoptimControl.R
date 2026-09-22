@@ -14,7 +14,7 @@ test_that("DEoptimControl is a list parameter, empty by default", {
 
 test_that("the fit passes DEoptimControl, strategy and .c to runDEoptim", {
   ## The call needs a full simList, so this checks the parsed call instead of running it.
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- moduleSource()
   calls <- list()
   walk <- function(x) {
     if (is.call(x)) {

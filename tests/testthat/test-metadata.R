@@ -40,6 +40,13 @@ test_that("outputs are the expected names and classes", {
       DE                        = "data.table",
       fsSpreadFit_hists         = "ggplot",
       lociList                  = "list",
+      spreadFitConvergence      = "data.table",
+      spreadFitHeldOut          = "list",
+      spreadFitIdentifiability  = "data.table",
+      spreadFitLinkSaturation   = "data.table",
+      spreadFitProfile          = "data.table",
+      spreadFitRescore          = "data.table",
+      spreadFitSizes            = "data.table",
       studyAreaWithSpreadParams = "sf")
   )
 })
@@ -51,8 +58,9 @@ test_that("parameters are the expected names", {
     sort(c(".c", ".plots", ".plotSize", ".runInitialTime",
            ".useCache", "cores", "covFixedRange", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
-           "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
-           "objFunCoresInternal", "objfunFireReps", "rep",
+           "link", "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
+           "objFunCoresInternal", "objfunFireReps", "rep", "adWeight", "profileReps",
+           "simulateMembers", "sizeLik", "sizeLikDf", "upperTailBounds", "weighted",
            "refitExisting", "rescaleAll", "SNLL_FS_thresh", "spreadFitFilename",
            "spreadFitGoogleDriveFolder", "stopIfNoPreRunFit", "strategy", "trace",
            "upper", "upperAndLowerVal", "upperAndLowerValFuel", "useCache_DE",

@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9005"),
+  version = list(fireSense_SpreadFit = "1.0.6.9006"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.41)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9035)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9039)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -75,10 +75,24 @@ defineModule(sim, list(
     defineParameter("maxFireSpread", "numeric", default = 0.28,
                     desc = paste0("optional. Maximum fire spread average to be passed to the `.objFun`. ",
                                   "This puts an upper limit on `spreadProb` during optimization.")),
+    defineParameter("link", "character", default = "logistic3p",
+                    desc = paste("The spread link. 'logistic3p', or 'logistic3pUpper': the same curve with",
+                                 "Stukel's upper tail, one more parameter `upperTail1` that changes only how the",
+                                 "curve approaches its ceiling (`fireSenseUtils::logistic3pUpper()`). Its default",
+                                 "bounds are `upperTailBounds`.")),
     defineParameter("mode", "character", default = "fit",
-                    desc = paste("Options: debug, fit, visualize. Can use multiples. 'debug' runs the objective",
-                                 "function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the",
-                                 "`debug` and `plot` events after the fit.")),
+                    desc = paste("Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the",
+                                 "objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize'",
+                                 "adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`,",
+                                 "two more fits, each on half the years, predicting the other half",
+                                 "(`sim$spreadFitHeldOut`). Validation never writes the ledger.")),
+    defineParameter("profileReps", "integer", default = 10L,
+                    desc = paste("After the fit, each covariate coefficient in turn is set to 0 and to 5 values",
+                                 "across the final population, the others held at the best member, and each point",
+                                 "is evaluated this many times (`fireSenseUtils::profileCoefficients()`). About",
+                                 "`6 * nCoefficients * profileReps` evaluations, on the fit's workers. It decides",
+                                 "which coefficients are identified in isolation (`sim$spreadFitIdentifiability`).",
+                                 "0 skips it.")),
     defineParameter("mutuallyExclusiveCols", "list", list("youngAge" = c("class", "nonForest")), NA, NA,
                     desc = "a named list of mutually exclusive covariates - see `fireSenseUtils::makeMutuallyExclusive`"),
     defineParameter("nCoresNeeded", "integer", default = NULL,
@@ -88,6 +102,22 @@ defineModule(sim, list(
                                  "parameter. A generation costs the slowest of NP evaluations and that barely",
                                  "falls as NP falls, so a smaller NP buys throughput by allowing more fits at",
                                  "once rather than by shortening generations (measured 2026-09-16).")),
+    defineParameter("simulateMembers", "integer", default = 10L,
+                    desc = paste("After the fit, this many best members simulate the observed fires without the",
+                                 "size cap, for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the",
+                                 "members each `crossValidate` fold predicts with. 0 skips it after the fit.")),
+    defineParameter("sizeLik", "character", default = "t",
+                    desc = paste("Likelihood of fire size in the objective, 'kde' or 't', passed to",
+                                 "`fireSenseUtils::runDEoptim()`. 't' with `weighted = FALSE` predicted held-out",
+                                 "years best in the 2026-09-21 cross-validation.")),
+    defineParameter("sizeLikDf", "numeric", default = 5,
+                    desc = "Degrees of freedom of the 't' size likelihood."),
+    defineParameter("weighted", "logical|character", default = FALSE,
+                    desc = paste("Weight of each fire in the size likelihood: FALSE (none), TRUE (log size) or",
+                                 "'sqrt'. Passed to `fireSenseUtils::runDEoptim()`.")),
+    defineParameter("adWeight", "character|numeric", default = "auto",
+                    desc = paste("Weight of the Anderson-Darling term against the size likelihood; 'auto' is",
+                                 "`fireSenseUtils::adWeightAuto()`.")),
     defineParameter("objFunCoresInternal", "integer", default = 1L,
                     desc = paste("Integer defining the number of cores to pass to `mcmapply(mc.cores = ...)`",
                                  "This will fork this many to do the years loop internally.",
@@ -159,6 +189,8 @@ defineModule(sim, list(
                                  "so the coefficient could not be compared across polygons, and a polygon that never gets",
                                  "dry stretched its small range over [0, 1]. Names not among the covariates are ignored.",
                                  "`fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows.")),
+    defineParameter("upperTailBounds", "numeric", default = c(-1, 1),
+                    desc = "Bounds of `upperTail1` when `link` is 'logistic3pUpper' and `lower`/`upper` are not supplied."),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
                     desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied."),
     defineParameter("upperAndLowerValFuel", "numeric", default = 60,
@@ -214,7 +246,28 @@ defineModule(sim, list(
     createsOutput("fsSpreadFit_hists", "ggplot",
                   desc = "histograms of each parameter used in `DEoptim` fitting."),
     createsOutput("lociList", "list",
-                  desc = "per-year `data.table`s of fire start cells and sizes, from `fireSenseUtils::makeLociList()`")
+                  desc = "per-year `data.table`s of fire start cells and sizes, from `fireSenseUtils::makeLociList()`"),
+    createsOutput("spreadFitConvergence", "data.table",
+                  desc = "The objective across the fit's generations (`fireSenseUtils::fitConvergence()`)."),
+    createsOutput("spreadFitRescore", "data.table",
+                  desc = paste("The final population, one row per member, with the mean and sd of its replicated",
+                               "re-scores (`reMean`, `reSD`). The ledger's parameter sets are the best of these.")),
+    createsOutput("spreadFitIdentifiability", "data.table",
+                  desc = paste("One row per covariate coefficient: how tightly the population pins it",
+                               "(`fireSenseUtils::coefIdentifiability()`) and, with `profileReps > 0`, whether",
+                               "dropping it worsens the fit; `identified` = identified in isolation",
+                               "(`fireSenseUtils::identifiedInIsolation()`).")),
+    createsOutput("spreadFitProfile", "data.table",
+                  desc = "The one-at-a-time profile around the best member (`fireSenseUtils::profileCoefficients()`)."),
+    createsOutput("spreadFitSizes", "data.table",
+                  desc = paste("Observed against simulated fire sizes of the fitted years, without the size cap",
+                               "(`fireSenseUtils::scoreFireSizes()`): bias, error, quantiles.")),
+    createsOutput("spreadFitLinkSaturation", "data.table",
+                  desc = paste("Per member, the share of pixel-years at the spread-probability ceiling and the",
+                               "quantiles of spread probability (`fireSenseUtils::linkSaturation()`).")),
+    createsOutput("spreadFitHeldOut", "list",
+                  desc = paste("mode 'validate' only: `sims`, the held-out years simulated from the fit to the",
+                               "other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`."))
   )
 ))
 
@@ -226,7 +279,7 @@ defineModule(sim, list(
 #' @param sim a `simList`.
 #' @param eventTime numeric; current simulation time.
 #' @param eventType character; one of `init`, `spreadFitPrepare`, `estimateThreshold`, `run`,
-#'   `debug`, `plot`.
+#'   `debug`, `plot`, `postFitDiagnostics` (after every fit), `crossValidate` (mode "validate").
 #' @param debug not used.
 #' @return the `simList`, invisibly.
 doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
@@ -257,12 +310,17 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
         } else {
           sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "run")
+          sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "postFitDiagnostics")
           if ("visualize" %in% P(sim)$mode) {
             sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "debug")
             sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "plot")
           }
         }
-      } 
+      } else if ("validate" %in% P(sim)$mode) {
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
+      }
+      if ("validate" %in% P(sim)$mode)
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "crossValidate")
     },
     spreadFitPrepare = {
       sim <- spreadFitPrep(sim) # makes the covariates into the x1000 integers
@@ -294,60 +352,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     run = {
       if (isTRUE(Par$refitExisting) || !hasPreRunFitForThisPolygon(sim)) {
 
-        termsInDEoptim(sim$fireSense_spreadFormula, mod$thresh, length(P(sim)$lower))
-        useCache <- (isFALSE(getOption("fireSense.runTests")))
-        if (!is.null(Par$cores) && !any(is.na(Par$cores)) && identical(sort(unique(Par$cores)), sort(Par$cores))) {
-          best <- list(cluster = Par$cores)
-        } else {
-
-          best <- list(cluster = Par$cores,
-                       bestCluster = as.data.table(table(Par$cores)))
-        }
-        messageDF(best$bestCluster)
-        fnName <- paste0("runDEoptim_", sim$.runName, "_", P(sim)$rep)
-        if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) { 
+        if (!identical(basename(Par$visualizeDEoptim), currentModule(sim))) {
           params(sim)[[currentModule(sim)]][["visualizeDEoptim"]] <- figurePath(sim)
         }
-        DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
-                                   annualDTx1000 = mod$covsX1000$annualDTx1000,
-                                   nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
-                                   fireBufferedListDT = mod$covsX1000$fireBufferedListDT,
-                                   historicalFires = mod$covsX1000$historicalFires,
-                                   itermax = P(sim)$iterDEoptim,
-                                   iterStep = P(sim)$iterStep,
-                                   ## the cluster's size is the population size; see the parameter's doc
-                                   nCoresNeeded = P(sim)$nCoresNeeded,
-                                   trace = P(sim)$trace,
-                                   initialpop = P(sim)$initialpop,
-                                   strategy = P(sim)$strategy,
-                                   cores = best$cluster,
-                                   doObjFunAssertions = P(sim)$doObjFunAssertions,
-                                   paths = getPaths(),
-                                   libPath = normPath(P(sim)$libPathDEoptim),
-                                   logPath = logPath(sim), ## TODO (#6): use tempdir()
-                                   lower = P(sim)$lower,
-                                   upper = P(sim)$upper,
-                                   mutuallyExclusive = P(sim)$mutuallyExclusiveCols, ## TODO: test
-                                   formulaToFit = sim$fireSense_spreadFormula,
-                                   covMinMax = sim$covMinMax_spread,
-                                   objFunCoresInternal = P(sim)$objFunCoresInternal,
-                                   tests = P(sim)$DEoptimTests,
-                                   maxFireSpread = P(sim)$maxFireSpread,
-                                   Nreps = P(sim)$objfunFireReps,
-                                   thresh = mod$thresh,
-                                   .c = P(sim)$.c,
-                                   DEoptimControl = P(sim)$DEoptimControl,
-                                   .verbose = P(sim)$verbose,
-                                   visualizeDEoptim = P(sim)$visualizeDEoptim,
-                                   .plotSize = P(sim)$.plotSize,
-                                   .plots = P(sim)$.plots,
-                                   rep = P(sim)$rep,
-                                   runName = sim$.runName),
-                        .functionName = fnName,
-                        .cacheExtra = fnName,
-                        omitArgs = c(".verbose", "cores", "paths", "logPath"),
-                        useCache = P(sim)$useCache_DE
-        )
+        DE <- fitSpread(sim, mod$covsX1000, mod$thresh, runName = sim$.runName)
+        mod$fitDE <- DE # sim$DE is reordered below, which drops the attributes postFitDiagnostics reads
         sim$DE <- DE
         objFunVal <- vapply(sim$DE, function(D) D$member$bestvalit, FUN.VALUE = numeric(1))
         ord <- order(objFunVal, decreasing = FALSE)
@@ -405,6 +414,12 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                   studyAreaFireSense = sim$studyAreaWithSpreadParams,
                                                   action = "update")
       }
+    },
+    postFitDiagnostics = {
+      sim <- makeFitDiagnostics(sim, mod$fitDE)
+    },
+    crossValidate = {
+      sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000, mod$thresh)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -474,7 +489,8 @@ spreadFitPrep <- function(sim) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates,
                                          whichBound = "upper", upperAndLower = Par$upperAndLowerVal,
-                                         fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel)
+                                         fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel,
+                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds)
   }
 
   if (is.null(P(sim)$lower) || any(is.na(P(sim)$lower))) {
@@ -482,7 +498,8 @@ spreadFitPrep <- function(sim) {
     P(sim)$lower <-  estimateSpreadParams(sim$fireSense_spreadFormula,
                                           sim$fireSense_annualSpreadFitCovariates,
                                           whichBound = "lower", upperAndLower = Par$upperAndLowerVal,
-                                          fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel)
+                                          fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel,
+                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds)
   }
   ## sanity check parameters + inputs
   #cores can be NA for interactive debugging
@@ -764,9 +781,13 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 #' @param anyAnnualCovariates list of annual covariate `data.table`s; only column names are used.
 #' @param whichBound "upper" or "lower".
 #' @param upperAndLower numeric; absolute bound for covariate coefficients.
-#' @return named numeric vector: `maxAsymptote`, `hillSlope1`, `inflectionPoint1`, then formula terms.
+#' @param upperTailBounds numeric; if not `NULL`, the bounds of `upperTail1`, which is added after
+#'   `inflectionPoint1` (link "logistic3pUpper").
+#' @return named numeric vector: `maxAsymptote`, `hillSlope1`, `inflectionPoint1`, `upperTail1` (with
+#'   `upperTailBounds`), then formula terms.
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
-                                 upperAndLower, fuelTerms = character(), upperAndLowerFuel = upperAndLower) {
+                                 upperAndLower, fuelTerms = character(), upperAndLowerFuel = upperAndLower,
+                                 upperTailBounds = NULL) {
 
   stopifnot(whichBound %in% c("upper", "lower"))
 
@@ -792,6 +813,10 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   } else {
     newParams <- c("maxAsymptote" = 0.25, "hillSlope1" = 0.2, "inflectionPoint1" = 0.1, newParams)
   }
+  ## the objective takes the logistic parameters by position, so upperTail1 must be the 4th
+  if (!is.null(upperTailBounds))
+    newParams <- append(newParams, c(upperTail1 = if (whichBound == "upper") max(upperTailBounds)
+                                                  else min(upperTailBounds)), after = 3L)
 
   return(newParams)
 }

@@ -23,6 +23,9 @@ test_that("parameter classes", {
       stopIfNoPreRunFit = "logical", strategy = "integer", trace = "numeric", upper = "numeric",
       upperAndLowerVal = "numeric", upperAndLowerValFuel = "numeric", useCache_DE = "logical",
       covFixedRange = "list",
+      link = "character", profileReps = "integer", simulateMembers = "integer",
+      sizeLik = "character", sizeLikDf = "numeric", weighted = "logical|character",
+      adWeight = "character|numeric", upperTailBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
 })
@@ -63,6 +66,19 @@ test_that("numeric defaults", {
   expect_identical(def$upperAndLowerValFuel, 60)
   expect_identical(def$covFixedRange, list(CMDsm = c(0, 100)))
   expect_identical(def$.plotSize, list(height = 1600, width = 2000))
+})
+
+test_that("defaults of the objective and of the post-fit diagnostics", {
+  ## the likelihood the 2026-09-21 cross-validation chose; the fits before this used "kde" with a
+  ## log(size) weight only because the module could not ask for anything else
+  expect_identical(def$sizeLik, "t")
+  expect_identical(def$sizeLikDf, 5)
+  expect_identical(def$weighted, FALSE)
+  expect_identical(def$adWeight, "auto")
+  expect_identical(def$link, "logistic3p")
+  expect_identical(def$upperTailBounds, c(-1, 1))
+  expect_identical(def$profileReps, 10L)
+  expect_identical(def$simulateMembers, 10L)
 })
 
 test_that("defaults that are 'not set'", {
