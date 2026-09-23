@@ -1,5 +1,15 @@
 # fireSense_SpreadFit (development version)
 
+## Objective and link
+
+- New parameters `sizeLik` (default "t"), `sizeLikDf`, `weighted` (default FALSE) and `adWeight` reach the objective in the fit and in the re-score. Fits used "kde" with a log(size) weight before, only because the module could not ask for anything else; "t" without a weight predicted held-out years best in the 2026-09-21 cross-validation. This changes every fit's cache key.
+- New parameter `link`: "logistic3pUpper" adds `upperTail1` (bounds `upperTailBounds`, default c(-1, 1)), which changes only how the spread probability approaches its ceiling (`fireSenseUtils::logistic3pUpper()`). The default stays "logistic3p".
+
+## Diagnostics after every fit
+
+- New event `postFitDiagnostics`, scheduled after `run`. It makes `spreadFitRescore`, `spreadFitIdentifiability` (which covariates are identified in isolation), `spreadFitProfile`, `spreadFitSizes` (observed against uncapped simulated fire sizes), `spreadFitLinkSaturation` and `spreadFitConvergence`. The costly parts run on the fit's workers inside `runDEoptim()`: `profileReps` (default 10) and `simulateMembers` (default 10).
+- `mode = "validate"` adds `crossValidate`: two fits, each on every other year, predicting the years it did not see (`spreadFitHeldOut`). It never writes the ledger.
+
 ## Climate covariate
 
 - New parameter `covFixedRange` (default `list(CMDsm = c(0, 100))`): covariates rescaled with a fixed range, not the range of the polygon's data. CMDsm is now CMDsm / 100 everywhere. With the data's range, 1 meant a CMDsm of 104 in ELF 5.3.2 and 297 in ELF 13.1, so the coefficient meant something different in each polygon, and one that never gets dry stretched its small range over [0, 1]. Pooled over six ELFs on the absolute scale, fire size is flat below a CMDsm of about 125 and about twice as large above 150; no single polygon's own scale shows that. `covFixedRange = list()` restores the old behaviour. An NA in the data still reaches the NA check.

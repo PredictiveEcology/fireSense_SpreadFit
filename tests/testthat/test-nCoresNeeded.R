@@ -19,7 +19,7 @@ test_that("the module declares an nCoresNeeded parameter", {
 
 test_that("the runDEoptim() call passes nCoresNeeded from the parameter", {
   ## Parsed, not run: the call needs a full simList.
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- moduleSource()
   calls <- list()
   walk <- function(x) {
     if (is.call(x)) {

@@ -1,6 +1,6 @@
 ## What `init` decides: fit, skip, or stop. Toy inputs; no event after `init` is run here.
 
-fitEvents <- c("spreadFitPrepare", "spreadFitPrepare", "estimateThreshold", "run")
+fitEvents <- c("spreadFitPrepare", "spreadFitPrepare", "estimateThreshold", "run", "postFitDiagnostics")
 noFitMsg <- "There is no pre-run SpreadFit \\(sim\\$studyAreaWithSpreadParams\\), but parameter `stopIfNoPreRunFit` is `TRUE`"
 
 initOnly <- function(params = list(), objects = list()) runEvents(toySim(params, objects), "init")
@@ -77,9 +77,18 @@ test_that("mode picks the events that follow the threshold", {
   prep <- c("spreadFitPrepare", "spreadFitPrepare", "estimateThreshold")
   p <- function(mode) list(stopIfNoPreRunFit = FALSE, mode = mode)
   expect_identical(queued(initOnly(p("debug"))), c(prep, "debug"))
-  expect_identical(queued(initOnly(p(c("fit", "visualize")))), c(prep, "run", "debug", "plot"))
+  expect_identical(queued(initOnly(p(c("fit", "visualize")))),
+                   c(prep, "run", "postFitDiagnostics", "debug", "plot"))
   ## 'debug' wins over 'visualize': no DEoptim run, so nothing to visualize
   expect_identical(queued(initOnly(p(c("debug", "visualize")))), c(prep, "debug"))
+})
+
+test_that("mode 'validate' adds crossValidate, after the fit or, with a ledger row, on its own", {
+  p <- list(stopIfNoPreRunFit = FALSE, mode = c("fit", "validate"))
+  expect_identical(queued(initOnly(p)), c(fitEvents, "crossValidate"))
+  objs <- list(studyAreaWithSpreadParams = toyLedger("9.9"))
+  ## the ledger's fit is not refitted, but validation needs the threshold
+  expect_identical(queued(initOnly(p, objs)), c("spreadFitPrepare", "estimateThreshold", "crossValidate"))
 })
 
 test_that("supplying parsKnown switches the module to debug mode", {
