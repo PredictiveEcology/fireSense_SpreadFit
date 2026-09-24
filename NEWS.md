@@ -1,5 +1,6 @@
 # fireSense_SpreadFit (development version)
 
+- New parameter `.studyAreaName` (default `NA`), the name PredictiveEcology modules use for the study area. This module does not use it yet.
 ## DEoptim defaults
 
 - New defaults, so a project need not set them: `strategy = 6` with `DEoptimControl = list(p = 0.1)`,

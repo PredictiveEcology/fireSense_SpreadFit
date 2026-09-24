@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9010"),
+  version = list(fireSense_SpreadFit = "1.0.6.9011"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -37,6 +37,8 @@ defineModule(sim, list(
                                  "used to plot DEoptim histograms when `visualizeDEoptim` is TRUE.")),
     defineParameter(".runInitialTime", "numeric", default = start(sim),
                     desc = "when to start this module? By default, the start time of the simulation."),
+    defineParameter(".studyAreaName", "character", NA, NA, NA,
+                    "Human-readable name for the study area used."),
     defineParameter(".useCache", c("logical", "character"), "init", NA, NA,
                     desc = paste("Should this entire module be run",
                                  "with caching activated? This is generally intended for data-type",
