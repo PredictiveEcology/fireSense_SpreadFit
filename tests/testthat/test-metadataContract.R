@@ -64,7 +64,7 @@ test_that("numeric defaults", {
   expect_identical(def$maxFireSpread, 0.28)
   expect_identical(def$upperAndLowerVal, 9)
   expect_identical(def$upperAndLowerValFuel, 60)
-  expect_identical(def$covFixedRange, list(CMDsm = c(0, 100)))
+  expect_identical(def$covFixedRange, list(CMDsm = c(0, 100), CMD = c(0, 100), CMDsp = c(0, 100), cumMDC = c(0, 100)))
   expect_identical(def$.plotSize, list(height = 1600, width = 2000))
 })
 
