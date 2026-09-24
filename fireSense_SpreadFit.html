@@ -3890,7 +3890,7 @@ spreadFitFilename
 character
 </td>
 <td style="text-align:left;">
-fireSens….
+latest
 </td>
 <td style="text-align:left;">
 NA
@@ -3899,7 +3899,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-File name of the shared fit ledger: an <code>sf</code> object with one row of fitted parameters per polygon.
+File name of the shared fit ledger: an <code>sf</code> object with one row of fitted parameters per polygon. <code>&quot;latest&quot;</code> (the default) writes to the file named for this fit’s fire years and model, <code>fireSenseUtils::spreadFitFilenameFor()</code>, e.g. <code>fireSenseParams_1985-2024_linearFuel.rds</code>; readers then find it with <code>fireSenseUtils::latestSpreadFits()</code>.
 </td>
 </tr>
 <tr>

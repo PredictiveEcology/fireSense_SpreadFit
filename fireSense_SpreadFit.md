@@ -422,10 +422,10 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> spreadFitFilename </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> fireSens.... </td>
+   <td style="text-align:left;"> latest </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> File name of the shared fit ledger: an `sf` object with one row of fitted parameters per polygon. </td>
+   <td style="text-align:left;"> File name of the shared fit ledger: an `sf` object with one row of fitted parameters per polygon. `"latest"` (the default) writes to the file named for this fit's fire years and model, `fireSenseUtils::spreadFitFilenameFor()`, e.g. `fireSenseParams_1985-2024_linearFuel.rds`; readers then find it with `fireSenseUtils::latestSpreadFits()`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> strategy </td>
