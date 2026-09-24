@@ -1,6 +1,13 @@
 # fireSense_SpreadFit (development version)
 
+## The fit ledger
+
+- `spreadFitFilename` now defaults to `"latest"`. A fit is written to the file named for its fire years and model,
+  `fireSenseUtils::spreadFitFilenameFor()` (e.g. `fireSenseParams_1985-2024_linearFuel.rds`; the years are
+  fireSense_dataPrepFit's `fireYears`, else those of the annual covariates), and readers find each polygon's most
+  recent fit with `fireSenseUtils::latestSpreadFits()`. A named file is used as before.
 - New parameter `.studyAreaName` (default `NA`), the name PredictiveEcology modules use for the study area. This module does not use it yet.
+
 ## DEoptim defaults
 
 - New defaults, so a project need not set them: `strategy = 6` with `DEoptimControl = list(p = 0.1)`,

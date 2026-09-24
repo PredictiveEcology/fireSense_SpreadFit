@@ -98,7 +98,7 @@ test_that("defaults that are 'not set'", {
 })
 
 test_that("the ledger's location", {
-  expect_identical(def$spreadFitFilename, "fireSenseParams.rds")
+  expect_identical(def$spreadFitFilename, "latest")
   expect_identical(def$spreadFitGoogleDriveFolder,
                    "https://drive.google.com/drive/folders/1X9-mRjyLMNpgkP_cfqhbr_AQEPOsVCHf")
 })

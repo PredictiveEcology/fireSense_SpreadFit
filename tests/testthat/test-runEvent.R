@@ -126,6 +126,14 @@ test_that("the ledger is written to the configured Drive folder and file, as an 
   expect_true(sf::st_equals(g$domain, toyStudyArea(), sparse = FALSE)[1, 1])
 })
 
+test_that("by default (\"latest\") the ledger file is named for the fit's fire years and model", {
+  g <- fitted()$rec$geoArgs
+  expect_identical(g$targetFile, "fireSenseParams_2001-2002_linearFuel.rds")   # the toy's covariate years
+  expect_identical(ledgerWriteFile("latest", 1985:2024, c("year2001", "year2002")),
+                   "fireSenseParams_1985-2024_linearFuel.rds")                # dataPrepFit's window wins
+  expect_identical(ledgerWriteFile("mine.rds", 1985:2024, "year2001"), "mine.rds")
+})
+
 test_that("sppEquiv and the land-cover groups in the simList are recorded in the row", {
   out <- fitted(objects = list(sppEquiv = data.frame(sp = c("a", "b")),
                                nonForestedLCCGroups = list(nf = 1:3), missingLCCgroup = "nf"))
