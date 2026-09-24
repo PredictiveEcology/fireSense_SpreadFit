@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9007"
+subtitle: "v.1.0.6.9008"
 date: "Last updated: 2026-09-24"
 output:
   bookdown::html_document2:
@@ -505,7 +505,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 0, 1 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Bounds of `yearSpreadSD`, the sd of a per-fire random effect on logit spread probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not supplied. It lets each fire burn hotter or cooler than the covariates say, which widens the simulated fire-size distribution. `NA` turns it off. </td>
+   <td style="text-align:left;"> Bounds of `yearSpreadSD`, the sd of a per-year random effect on logit spread probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not supplied. A seasonal departure: each year draws one eps, so all of a year's fires burn hotter or cooler together, which widens the simulated fire-size distribution. `NA` turns it off. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperTailBounds </td>
