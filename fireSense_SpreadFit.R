@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9008"),
+  version = list(fireSense_SpreadFit = "1.0.6.9009"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -25,7 +25,7 @@ defineModule(sim, list(
                   "ggplot2", "scales", "kSamples", "munsell",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
-                  "PredictiveEcology/clusters@main (>= 0.0.41)",
+                  "PredictiveEcology/clusters@main (>= 0.0.42)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
                   "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9041)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
@@ -135,7 +135,9 @@ defineModule(sim, list(
                                  "Cache will think that the second run ",
                                  "should recover the cache result, unless this `rep` is modified")),
     defineParameter(".c", "numeric", 0.5, NA, NA,
-                    desc = "the `c` argument passed to DEoptim.control"),
+                    desc = paste("the `c` argument passed to DEoptim.control. With `iterStep` > 1, clusters",
+                                 "(>= 0.0.42) runs DEoptim with `c = 0` instead: DEoptim's adaptation can make",
+                                 "every trial NaN when one call runs several generations.")),
     defineParameter("DEoptimControl", "list", list(), NA, NA,
                     desc = paste("Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`,",
                                  "passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be",
