@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9008</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9009</span>
       </span>
     </div>
 
@@ -53,6 +53,10 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
+<div class="section level3">
+<h3 id="deoptim-crossover-adaptation-development-version">DEoptim crossover adaptation<a class="anchor" aria-label="anchor" href="#deoptim-crossover-adaptation-development-version"></a></h3>
+<ul><li>Requires clusters &gt;= 0.0.42 (was 0.0.41). With <code>iterStep</code> &gt; 1, that version runs DEoptim with <code>c = 0</code>, because DEoptim’s F adaptation turns every trial vector into NaN once a call’s first generation has no successful trial. Without it, this module’s defaults (<code>iterStep = 25</code>, <code>.c = 0.5</code>) could crash a fit on every worker, so projects had to set <code>iterStep = 1</code>.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="per-year-random-effect-development-version">Per-year random effect<a class="anchor" aria-label="anchor" href="#per-year-random-effect-development-version"></a></h3>
 <ul><li>New parameter <code>yearSpreadSDBounds</code> (default <code>c(0, 1)</code>): the default bounds get <code>yearSpreadSD</code> last, and <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code> (&gt;= 0.2.3.9041) fits it as the sd of a per-year random effect on logit spread probability, a seasonal departure: each year draws one eps, so all of a year’s fires burn hotter or cooler together, which widens the simulated fire-size distribution. <code>NA</code> turns it off. If only one bound is supplied, the other includes <code>yearSpreadSD</code> only if the supplied one does. (Briefly <code>fireSpreadSDBounds</code>, per fire.) This changes every fit’s cache key.</li>

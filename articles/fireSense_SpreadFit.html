@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9008</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9009</span>
       </span>
     </div>
 
@@ -71,7 +71,7 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fireSense_SpreadFit Manual</h1>
-            <h3 data-toc-skip class="subtitle">v.1.0.6.9008</h3>
+            <h3 data-toc-skip class="subtitle">v.1.0.6.9009</h3>
             
             <h4 data-toc-skip class="date">Last updated: 2026-09-24</h4>
       
@@ -884,7 +884,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-the <code>c</code> argument passed to DEoptim.control
+the <code>c</code> argument passed to DEoptim.control. With <code>iterStep</code> &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with <code>c = 0</code> instead: DEoptim’s adaptation can make every trial NaN when one call runs several generations.
 </td>
 </tr>
 <tr>

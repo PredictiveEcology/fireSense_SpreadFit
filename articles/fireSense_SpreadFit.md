@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9008"
+subtitle: "v.1.0.6.9009"
 date: "Last updated: 2026-09-24"
 output:
   bookdown::html_document2:
@@ -387,7 +387,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 0.5 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> the `c` argument passed to DEoptim.control </td>
+   <td style="text-align:left;"> the `c` argument passed to DEoptim.control. With `iterStep` &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with `c = 0` instead: DEoptim's adaptation can make every trial NaN when one call runs several generations. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> DEoptimControl </td>
