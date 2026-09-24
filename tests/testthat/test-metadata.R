@@ -79,5 +79,7 @@ test_that("the required clusters has the fixes a fit on the fleet needs", {
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   clustersReq <- grep("/clusters@", unlist(md$reqdPkgs), value = TRUE)
   expect_length(clustersReq, 1L)
-  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.42")
+  ## clusters 0.0.46: DEoptimIterative2() stops a fit when the population median has stopped improving, so
+  ## `iterDEoptim` (5000) is a ceiling, not the run length.
+  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.46")
 })
