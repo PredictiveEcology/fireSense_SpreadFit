@@ -2994,7 +2994,7 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">fireSense_SpreadFit Manual</h1>
-<h3 class="subtitle">v.1.0.6.9008</h3>
+<h3 class="subtitle">v.1.0.6.9010</h3>
 <h4 class="date">Last updated: 2026-09-24</h4>
 
 </div>
@@ -3352,7 +3352,7 @@ DEoptimTests
 character
 </td>
 <td style="text-align:left;">
-SNLL_FS
+adTest, ….
 </td>
 <td style="text-align:left;">
 NA
@@ -3411,7 +3411,7 @@ iterDEoptim
 integer
 </td>
 <td style="text-align:left;">
-500
+5000
 </td>
 <td style="text-align:left;">
 NA
@@ -3420,7 +3420,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-integer defining the maximum number of iterations allowed (DEoptim optimizer).
+integer defining the maximum number of iterations allowed (DEoptim optimizer). A ceiling: clusters (&gt;= 0.0.46) stops the fit earlier, once the population’s median value has stopped improving.
 </td>
 </tr>
 <tr>
@@ -3750,7 +3750,7 @@ objfunFireReps
 integer
 </td>
 <td style="text-align:left;">
-100
+50
 </td>
 <td style="text-align:left;">
 NA
@@ -3759,7 +3759,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-integer defining the number of replicates the objective function will attempt each fire. Since the default approach is using <code>EnvStats::demp</code>, it should be at least 100 to get a smooth distribution for a likelihood.
+integer defining the number of replicates the objective function will attempt each fire.
 </td>
 </tr>
 <tr>
@@ -3790,7 +3790,7 @@ An optional integer indicating which replicate run this represents. This is used
 numeric
 </td>
 <td style="text-align:left;">
-0.5
+0
 </td>
 <td style="text-align:left;">
 NA
@@ -3799,7 +3799,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-the <code>c</code> argument passed to DEoptim.control
+the <code>c</code> argument passed to DEoptim.control. With <code>iterStep</code> &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with <code>c = 0</code> instead: DEoptim’s adaptation can make every trial NaN when one call runs several generations. With <code>iterStep = 1</code> the adaptation restarts every generation, so <code>c</code> has no effect either way.
 </td>
 </tr>
 <tr>
@@ -3810,6 +3810,7 @@ DEoptimControl
 list
 </td>
 <td style="text-align:left;">
+0.1
 </td>
 <td style="text-align:left;">
 NA
@@ -3818,7 +3819,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Further <code>DEoptim.control()</code> settings, e.g. <code>list(CR = 0.7, F = 0.6)</code>, passed through <code>fireSenseUtils::runDEoptim()</code> to DEoptim. Names must be <code>DEoptim.control()</code> arguments. <code>strategy</code>, <code>trace</code>, <code>initialpop</code> and <code>.c</code> have their own parameters; <code>NP</code> is the number of workers the cluster gets.
+Further <code>DEoptim.control()</code> settings, e.g. <code>list(CR = 0.7, F = 0.6)</code>, passed through <code>fireSenseUtils::runDEoptim()</code> to DEoptim. Names must be <code>DEoptim.control()</code> arguments. <code>strategy</code>, <code>trace</code>, <code>initialpop</code> and <code>.c</code> have their own parameters; <code>NP</code> is the number of workers the cluster gets. The default <code>p = 0.1</code> is for <code>strategy = 6</code>.
 </td>
 </tr>
 <tr>
@@ -3889,7 +3890,7 @@ strategy
 integer
 </td>
 <td style="text-align:left;">
-3
+6
 </td>
 <td style="text-align:left;">
 NA
@@ -3898,7 +3899,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Passed to <code>DEoptim.control</code>
+Passed to <code>DEoptim.control</code>. 6 (DE/current-to-p-best/1) with <code>p = 0.1</code> did best in a settings study (see NEWS).
 </td>
 </tr>
 <tr>

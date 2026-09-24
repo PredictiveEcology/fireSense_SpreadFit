@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9008"
+subtitle: "v.1.0.6.9010"
 date: "Last updated: 2026-09-24"
 output:
   bookdown::html_document2:
@@ -206,7 +206,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> DEoptimTests </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> SNLL_FS </td>
+   <td style="text-align:left;"> adTest, .... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Currently either `'SNLL_FS'` or `'adTest'` or a length 2 character vector of both. Passed to `tests` in `fireSenseUtils::.objfunSpreadFit()`. </td>
@@ -230,10 +230,10 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> iterDEoptim </td>
    <td style="text-align:left;"> integer </td>
-   <td style="text-align:left;"> 500 </td>
+   <td style="text-align:left;"> 5000 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> integer defining the maximum number of iterations allowed (DEoptim optimizer). </td>
+   <td style="text-align:left;"> integer defining the maximum number of iterations allowed (DEoptim optimizer). A ceiling: clusters (&gt;= 0.0.46) stops the fit earlier, once the population's median value has stopped improving. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> iterStep </td>
@@ -366,10 +366,10 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> objfunFireReps </td>
    <td style="text-align:left;"> integer </td>
-   <td style="text-align:left;"> 100 </td>
+   <td style="text-align:left;"> 50 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> integer defining the number of replicates the objective function will attempt each fire. Since the default approach is using `EnvStats::demp`, it should be at least 100 to get a smooth distribution for a likelihood. </td>
+   <td style="text-align:left;"> integer defining the number of replicates the objective function will attempt each fire. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> rep </td>
@@ -382,18 +382,18 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> .c </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 0.5 </td>
+   <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> the `c` argument passed to DEoptim.control </td>
+   <td style="text-align:left;"> the `c` argument passed to DEoptim.control. With `iterStep` &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with `c = 0` instead: DEoptim's adaptation can make every trial NaN when one call runs several generations. With `iterStep = 1` the adaptation restarts every generation, so `c` has no effect either way. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> DEoptimControl </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> 0.1 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`, passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be `DEoptim.control()` arguments. `strategy`, `trace`, `initialpop` and `.c` have their own parameters; `NP` is the number of workers the cluster gets. </td>
+   <td style="text-align:left;"> Further `DEoptim.control()` settings, e.g. `list(CR = 0.7, F = 0.6)`, passed through `fireSenseUtils::runDEoptim()` to DEoptim. Names must be `DEoptim.control()` arguments. `strategy`, `trace`, `initialpop` and `.c` have their own parameters; `NP` is the number of workers the cluster gets. The default `p = 0.1` is for `strategy = 6`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> rescaleAll </td>
@@ -422,10 +422,10 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> strategy </td>
    <td style="text-align:left;"> integer </td>
-   <td style="text-align:left;"> 3 </td>
+   <td style="text-align:left;"> 6 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Passed to `DEoptim.control` </td>
+   <td style="text-align:left;"> Passed to `DEoptim.control`. 6 (DE/current-to-p-best/1) with `p = 0.1` did best in a settings study (see NEWS). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> SNLL_FS_thresh </td>
