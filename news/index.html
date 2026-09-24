@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9010</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9011</span>
       </span>
     </div>
 
@@ -53,17 +53,13 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
-<div class="section level3">
-<h3 id="deoptim-defaults-development-version">DEoptim defaults<a class="anchor" aria-label="anchor" href="#deoptim-defaults-development-version"></a></h3>
-<ul><li>New defaults, so a project need not set them: <code>strategy = 6</code> with <code>DEoptimControl = list(p = 0.1)</code>, <code>.c = 0</code>, <code>iterDEoptim = 5000</code>, <code>objfunFireReps = 50</code> and <code>DEoptimTests = c("adTest", "SNLL_FS")</code>.</li>
-<li>The strategy comes from a settings study on ELF 13.1 (NP 110, 3 seeds per setting, 150 generations, 2026-09-15). Strategy 6 with p = 0.1 had the lowest median best value (3810, against 3829-3869 for strategies 1, 2, 3 and 6 with p = 0.2) and stayed best when each run’s best members were re-scored 10 times. This is provisional: one ELF, and fits far from converged. The study ran with <code>c = 0.1</code> in 5-generation DEoptim calls; <code>c</code> cannot take effect now (see <code>.c</code>), so the default is 0.</li>
-<li>
-<code>iterDEoptim</code> is a ceiling: clusters &gt;= 0.0.46 (now required) stops a fit once the population’s median value has stopped improving.</li>
-<li>
-<code>objfunFireReps = 50</code> and both tests are what production fits have used; no other combination was tested.</li>
-<li>These change the cache key of any fit that relied on the old defaults.</li>
-</ul></div>
-<div class="section level3">
+<ul><li><p>New parameter <code>.studyAreaName</code> (default <code>NA</code>), the name PredictiveEcology modules use for the study area. This module does not use it yet. ## DEoptim defaults</p></li>
+<li><p>New defaults, so a project need not set them: <code>strategy = 6</code> with <code>DEoptimControl = list(p = 0.1)</code>, <code>.c = 0</code>, <code>iterDEoptim = 5000</code>, <code>objfunFireReps = 50</code> and <code>DEoptimTests = c("adTest", "SNLL_FS")</code>.</p></li>
+<li><p>The strategy comes from a settings study on ELF 13.1 (NP 110, 3 seeds per setting, 150 generations, 2026-09-15). Strategy 6 with p = 0.1 had the lowest median best value (3810, against 3829-3869 for strategies 1, 2, 3 and 6 with p = 0.2) and stayed best when each run’s best members were re-scored 10 times. This is provisional: one ELF, and fits far from converged. The study ran with <code>c = 0.1</code> in 5-generation DEoptim calls; <code>c</code> cannot take effect now (see <code>.c</code>), so the default is 0.</p></li>
+<li><p><code>iterDEoptim</code> is a ceiling: clusters &gt;= 0.0.46 (now required) stops a fit once the population’s median value has stopped improving.</p></li>
+<li><p><code>objfunFireReps = 50</code> and both tests are what production fits have used; no other combination was tested.</p></li>
+<li><p>These change the cache key of any fit that relied on the old defaults.</p></li>
+</ul><div class="section level3">
 <h3 id="deoptim-crossover-adaptation-development-version">DEoptim crossover adaptation<a class="anchor" aria-label="anchor" href="#deoptim-crossover-adaptation-development-version"></a></h3>
 <ul><li>Requires clusters &gt;= 0.0.42 (was 0.0.41). With <code>iterStep</code> &gt; 1, that version runs DEoptim with <code>c = 0</code>, because DEoptim’s F adaptation turns every trial vector into NaN once a call’s first generation has no successful trial. Without it, this module’s defaults (<code>iterStep = 25</code>, <code>.c = 0.5</code>) could crash a fit on every worker, so projects had to set <code>iterStep = 1</code>.</li>
 </ul></div>
