@@ -1,5 +1,12 @@
 # fireSense_SpreadFit (development version)
 
+## DEoptim crossover adaptation
+
+- Requires clusters >= 0.0.42 (was 0.0.41). With `iterStep` > 1, that version runs DEoptim with `c = 0`, because
+  DEoptim's F adaptation turns every trial vector into NaN once a call's first generation has no successful trial.
+  Without it, this module's defaults (`iterStep = 25`, `.c = 0.5`) could crash a fit on every worker, so projects
+  had to set `iterStep = 1`.
+
 ## Per-year random effect
 
 - New parameter `yearSpreadSDBounds` (default `c(0, 1)`): the default bounds get `yearSpreadSD` last, and
