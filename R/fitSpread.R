@@ -12,9 +12,9 @@
 #' @param diagnostics logical; `FALSE` skips the profile and the simulations.
 #' @return the `runDEoptim()` result.
 fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
-  ## fireSpreadSD is not a logistic term (termsInDEoptim() counts every non-formula parameter as one)
+  ## yearSpreadSD is not a logistic term (termsInDEoptim() counts every non-formula parameter as one)
   termsInDEoptim(sim$fireSense_spreadFormula, thresh,
-                 length(P(sim)$lower) - ("fireSpreadSD" %in% names(P(sim)$lower)))
+                 length(P(sim)$lower) - ("yearSpreadSD" %in% names(P(sim)$lower)))
   if (!is.null(P(sim)$cores) && !any(is.na(P(sim)$cores)) &&
       identical(sort(unique(P(sim)$cores)), sort(P(sim)$cores))) {
     best <- list(cluster = P(sim)$cores)

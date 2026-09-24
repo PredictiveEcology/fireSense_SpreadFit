@@ -46,16 +46,16 @@ test_that("whichBound must be 'upper' or 'lower'", {
                "whichBound %in% c(\"upper\", \"lower\") is not TRUE", fixed = TRUE)
 })
 
-test_that("the per-fire random effect's sd is bounded last, after an upper-tail term", {
-  ## fireSenseUtils::runDEoptim() finds fireSpreadSD by name and requires it last; the objective takes
+test_that("the per-year random effect's sd is bounded last, after an upper-tail term", {
+  ## fireSenseUtils::runDEoptim() finds yearSpreadSD by name and requires it last; the objective takes
   ## the logistic parameters by position, so upperTail1 stays 4th
-  up <- estimateSpreadParams(form, annual, "upper", 9, upperTailBounds = c(-1, 1), fireSpreadSDBounds = c(0, 1))
-  lo <- estimateSpreadParams(form, annual, "lower", 9, upperTailBounds = c(-1, 1), fireSpreadSDBounds = c(0, 1))
+  up <- estimateSpreadParams(form, annual, "upper", 9, upperTailBounds = c(-1, 1), yearSpreadSDBounds = c(0, 1))
+  lo <- estimateSpreadParams(form, annual, "lower", 9, upperTailBounds = c(-1, 1), yearSpreadSDBounds = c(0, 1))
   expect_identical(names(up)[4], "upperTail1")
-  expect_identical(names(up)[length(up)], "fireSpreadSD")
-  expect_identical(unname(c(lo["fireSpreadSD"], up["fireSpreadSD"])), c(0, 1))
+  expect_identical(names(up)[length(up)], "yearSpreadSD")
+  expect_identical(unname(c(lo["yearSpreadSD"], up["yearSpreadSD"])), c(0, 1))
   expect_identical(names(up), names(lo))
-  ## off: no fireSpreadSD at all
-  expect_false("fireSpreadSD" %in% names(estimateSpreadParams(form, annual, "upper", 9)))
+  ## off: no yearSpreadSD at all
+  expect_false("yearSpreadSD" %in% names(estimateSpreadParams(form, annual, "upper", 9)))
 })
 

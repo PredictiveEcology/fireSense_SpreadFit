@@ -500,12 +500,12 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`, so an ELF that picks one of them gets the same fixed scale. </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> fireSpreadSDBounds </td>
+   <td style="text-align:left;"> yearSpreadSDBounds </td>
    <td style="text-align:left;"> numeric </td>
    <td style="text-align:left;"> 0, 1 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Bounds of `fireSpreadSD`, the sd of a per-fire random effect on logit spread probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not supplied. It lets each fire burn hotter or cooler than the covariates say, which widens the simulated fire-size distribution. `NA` turns it off. </td>
+   <td style="text-align:left;"> Bounds of `yearSpreadSD`, the sd of a per-fire random effect on logit spread probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not supplied. It lets each fire burn hotter or cooler than the covariates say, which widens the simulated fire-size distribution. `NA` turns it off. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperTailBounds </td>

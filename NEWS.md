@@ -1,12 +1,13 @@
 # fireSense_SpreadFit (development version)
 
-## Per-fire random effect
+## Per-year random effect
 
-- New parameter `fireSpreadSDBounds` (default `c(0, 1)`): the default bounds get `fireSpreadSD` last, and
-  `fireSenseUtils::runDEoptim()` (>= 0.2.3.9040) fits it as the sd of a per-fire random effect on logit spread
-  probability. Each fire can burn hotter or cooler than its covariates say, which widens the simulated fire-size
-  distribution. `NA` turns it off. If only one bound is supplied, the other includes `fireSpreadSD` only if the
-  supplied one does. This changes every fit's cache key.
+- New parameter `yearSpreadSDBounds` (default `c(0, 1)`): the default bounds get `yearSpreadSD` last, and
+  `fireSenseUtils::runDEoptim()` (>= 0.2.3.9041) fits it as the sd of a per-year random effect on logit spread
+  probability, a seasonal departure: each year draws one eps, so all of a year's fires burn hotter or cooler
+  together, which widens the simulated fire-size distribution. `NA` turns it off. If only one bound is supplied,
+  the other includes `yearSpreadSD` only if the supplied one does. (Briefly `fireSpreadSDBounds`, per fire.) This
+  changes every fit's cache key.
 - `covFixedRange` also fixes the scale of CMD, CMDsp and cumMDC (all / 100), the other climate candidates of
   fireSense_dataPrepFit's `spread = "auto"`, so their coefficients compare across ELFs as CMDsm's do.
 

@@ -25,7 +25,7 @@ test_that("parameter classes", {
       covFixedRange = "list",
       link = "character", profileReps = "integer", simulateMembers = "integer",
       sizeLik = "character", sizeLikDf = "numeric", weighted = "logical|character",
-      adWeight = "character|numeric", upperTailBounds = "numeric", fireSpreadSDBounds = "numeric",
+      adWeight = "character|numeric", upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
 })
@@ -77,7 +77,7 @@ test_that("defaults of the objective and of the post-fit diagnostics", {
   expect_identical(def$adWeight, "auto")
   expect_identical(def$link, "logistic3p")
   expect_identical(def$upperTailBounds, c(-1, 1))
-  expect_identical(def$fireSpreadSDBounds, c(0, 1))   # the per-fire random effect is on by default
+  expect_identical(def$yearSpreadSDBounds, c(0, 1))   # the per-year random effect is on by default
   expect_identical(def$profileReps, 10L)
   expect_identical(def$simulateMembers, 10L)
 })
