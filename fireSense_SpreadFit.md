@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9010"
+subtitle: "v.1.0.6.9011"
 date: "Last updated: 2026-09-24"
 output:
   bookdown::html_document2:
@@ -186,6 +186,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> when to start this module? By default, the start time of the simulation. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> .studyAreaName </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Human-readable name for the study area used. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .useCache </td>
