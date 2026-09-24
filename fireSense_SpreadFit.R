@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9008"),
+  version = list(fireSense_SpreadFit = "1.0.6.9009"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.41)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9041)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9043)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -145,8 +145,12 @@ defineModule(sim, list(
                     desc = "rescale covariates for `DEOptim`"),
     defineParameter("spreadFitGoogleDriveFolder", "character", "https://drive.google.com/drive/folders/1X9-mRjyLMNpgkP_cfqhbr_AQEPOsVCHf",
                     NA, NA, "Google Drive folder url holding the shared fit ledger (`spreadFitFilename`)."),
-    defineParameter("spreadFitFilename", "character", "fireSenseParams.rds",
-                    NA, NA, "File name of the shared fit ledger: an `sf` object with one row of fitted parameters per polygon."),
+    defineParameter("spreadFitFilename", "character", "latest",
+                    NA, NA, paste("File name of the shared fit ledger: an `sf` object with one row of fitted parameters",
+                                  "per polygon. `\"latest\"` (the default) writes to the file named for this fit's fire",
+                                  "years and model, `fireSenseUtils::spreadFitFilenameFor()`, e.g.",
+                                  "`fireSenseParams_1985-2024_linearFuel.rds`; readers then find it with",
+                                  "`fireSenseUtils::latestSpreadFits()`.")),
     defineParameter("strategy", "integer", default = 3L,
                     desc = "Passed to `DEoptim.control`"),
     defineParameter("SNLL_FS_thresh", "integer", default = NULL,
@@ -415,7 +419,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
           dplyr::mutate(df)
         le <- function(x) {x}
         sim$studyAreaWithSpreadParams <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
-                                                  targetFile = Par$spreadFitFilename,
+                                                  targetFile = ledgerWriteFile(
+                                                    Par$spreadFitFilename,
+                                                    P(sim, module = "fireSense_dataPrepFit")$fireYears,
+                                                    names(sim$fireSense_annualSpreadFitCovariates)),
                                                   domain = saHere,
                                                   destinationPath = inputPath(sim),
                                                   FUN = le(studyAreaFireSense),

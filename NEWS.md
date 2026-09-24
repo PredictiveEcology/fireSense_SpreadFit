@@ -1,5 +1,12 @@
 # fireSense_SpreadFit (development version)
 
+## The fit ledger
+
+- `spreadFitFilename` now defaults to `"latest"`. A fit is written to the file named for its fire years and model,
+  `fireSenseUtils::spreadFitFilenameFor()` (e.g. `fireSenseParams_1985-2024_linearFuel.rds`; the years are
+  fireSense_dataPrepFit's `fireYears`, else those of the annual covariates), and readers find each polygon's most
+  recent fit with `fireSenseUtils::latestSpreadFits()`. A named file is used as before.
+
 ## Per-year random effect
 
 - New parameter `yearSpreadSDBounds` (default `c(0, 1)`): the default bounds get `yearSpreadSD` last, and
