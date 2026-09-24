@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9005</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9007</span>
       </span>
     </div>
 
@@ -53,6 +53,23 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
+<div class="section level3">
+<h3 id="per-fire-random-effect-development-version">Per-fire random effect<a class="anchor" aria-label="anchor" href="#per-fire-random-effect-development-version"></a></h3>
+<ul><li>New parameter <code>fireSpreadSDBounds</code> (default <code>c(0, 1)</code>): the default bounds get <code>fireSpreadSD</code> last, and <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code> (&gt;= 0.2.3.9040) fits it as the sd of a per-fire random effect on logit spread probability. Each fire can burn hotter or cooler than its covariates say, which widens the simulated fire-size distribution. <code>NA</code> turns it off. If only one bound is supplied, the other includes <code>fireSpreadSD</code> only if the supplied one does. This changes every fit’s cache key.</li>
+<li>
+<code>covFixedRange</code> also fixes the scale of CMD, CMDsp and cumMDC (all / 100), the other climate candidates of fireSense_dataPrepFit’s <code>spread = "auto"</code>, so their coefficients compare across ELFs as CMDsm’s do.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="objective-and-link-development-version">Objective and link<a class="anchor" aria-label="anchor" href="#objective-and-link-development-version"></a></h3>
+<ul><li>New parameters <code>sizeLik</code> (default “t”), <code>sizeLikDf</code>, <code>weighted</code> (default FALSE) and <code>adWeight</code> reach the objective in the fit and in the re-score. Fits used “kde” with a log(size) weight before, only because the module could not ask for anything else; “t” without a weight predicted held-out years best in the 2026-09-21 cross-validation. This changes every fit’s cache key.</li>
+<li>New parameter <code>link</code>: “logistic3pUpper” adds <code>upperTail1</code> (bounds <code>upperTailBounds</code>, default c(-1, 1)), which changes only how the spread probability approaches its ceiling (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/logistic.html" class="external-link">fireSenseUtils::logistic3pUpper()</a></code>). The default stays “logistic3p”.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="diagnostics-after-every-fit-development-version">Diagnostics after every fit<a class="anchor" aria-label="anchor" href="#diagnostics-after-every-fit-development-version"></a></h3>
+<ul><li>New event <code>postFitDiagnostics</code>, scheduled after <code>run</code>. It makes <code>spreadFitRescore</code>, <code>spreadFitIdentifiability</code> (which covariates are identified in isolation), <code>spreadFitProfile</code>, <code>spreadFitSizes</code> (observed against uncapped simulated fire sizes), <code>spreadFitLinkSaturation</code> and <code>spreadFitConvergence</code>. The costly parts run on the fit’s workers inside <code>runDEoptim()</code>: <code>profileReps</code> (default 10) and <code>simulateMembers</code> (default 10).</li>
+<li>
+<code>mode = "validate"</code> adds <code>crossValidate</code>: two fits, each on every other year, predicting the years it did not see (<code>spreadFitHeldOut</code>). It never writes the ledger.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="climate-covariate-development-version">Climate covariate<a class="anchor" aria-label="anchor" href="#climate-covariate-development-version"></a></h3>
 <ul><li>New parameter <code>covFixedRange</code> (default <code>list(CMDsm = c(0, 100))</code>): covariates rescaled with a fixed range, not the range of the polygon’s data. CMDsm is now CMDsm / 100 everywhere. With the data’s range, 1 meant a CMDsm of 104 in ELF 5.3.2 and 297 in ELF 13.1, so the coefficient meant something different in each polygon, and one that never gets dry stretched its small range over [0, 1]. Pooled over six ELFs on the absolute scale, fire size is flat below a CMDsm of about 125 and about twice as large above 150; no single polygon’s own scale shows that. <code>covFixedRange = list()</code> restores the old behaviour. An NA in the data still reaches the NA check.</li>

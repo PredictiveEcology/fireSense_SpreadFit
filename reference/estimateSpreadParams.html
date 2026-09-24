@@ -18,7 +18,7 @@ youngAge (upper bound 0). The three logistic parameters get fixed bounds."><!-- 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9005</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9007</span>
       </span>
     </div>
 
@@ -65,7 +65,9 @@ youngAge (upper bound 0). The three logistic parameters get fixed bounds."><!-- 
 <span>  <span class="va">whichBound</span>,</span>
 <span>  <span class="va">upperAndLower</span>,</span>
 <span>  fuelTerms <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  upperAndLowerFuel <span class="op">=</span> <span class="va">upperAndLower</span></span>
+<span>  upperAndLowerFuel <span class="op">=</span> <span class="va">upperAndLower</span>,</span>
+<span>  upperTailBounds <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  fireSpreadSDBounds <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,10 +90,16 @@ youngAge (upper bound 0). The three logistic parameters get fixed bounds."><!-- 
 <dt id="arg-upperandlower">upperAndLower<a class="anchor" aria-label="anchor" href="#arg-upperandlower"></a></dt>
 <dd><p>numeric; absolute bound for covariate coefficients.</p></dd>
 
+
+<dt id="arg-uppertailbounds">upperTailBounds<a class="anchor" aria-label="anchor" href="#arg-uppertailbounds"></a></dt>
+<dd><p>numeric; if not <code>NULL</code>, the bounds of <code>upperTail1</code>, which is added after
+<code>inflectionPoint1</code> (link "logistic3pUpper").</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>named numeric vector: <code>maxAsymptote</code>, <code>hillSlope1</code>, <code>inflectionPoint1</code>, then formula terms.</p>
+    <p>named numeric vector: <code>maxAsymptote</code>, <code>hillSlope1</code>, <code>inflectionPoint1</code>, <code>upperTail1</code> (with
+<code>upperTailBounds</code>), then formula terms.</p>
     </div>
 
   </div>
