@@ -55,7 +55,7 @@ test_that("parameters are the expected names", {
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   expect_identical(
     sort(md$parameters$paramName),
-    sort(c(".c", ".plots", ".plotSize", ".runInitialTime",
+    sort(c(".c", ".plots", ".plotSize", ".runInitialTime", ".studyAreaName",
            ".useCache", "cores", "covFixedRange", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "initialpop", "iterDEoptim", "iterStep", "iterThresh", "libPathDEoptim",
            "link", "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
@@ -73,8 +73,13 @@ test_that("the required clusters has the fixes a fit on the fleet needs", {
   ## stalled for hours), works without reproducible attached or ~/.ssh/config, picks tunnel ports below the
   ## ephemeral range (a 110-worker build hung), and runs iterStep generations per DEoptim call. With a lower
   ## floor, Require keeps an installed clusters that has none of these (the fleet had 0.0.31).
+  ## clusters 0.0.42: with iterStep > 1, DEoptimIterative2() runs DEoptim with c = 0. With c > 0, DEoptim's
+  ## F adaptation turns every trial vector into NaN once a call's first generation has no success, so this
+  ## module's own defaults (iterStep = 25, .c = 0.5) crashed a fit on every worker without it.
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   clustersReq <- grep("/clusters@", unlist(md$reqdPkgs), value = TRUE)
   expect_length(clustersReq, 1L)
-  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.41")
+  ## clusters 0.0.46: DEoptimIterative2() stops a fit when the population median has stopped improving, so
+  ## `iterDEoptim` (5000) is a ceiling, not the run length.
+  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.46")
 })

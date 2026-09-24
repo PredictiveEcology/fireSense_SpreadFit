@@ -73,7 +73,7 @@ test_that("runDEoptim() receives the parameters, bounds, threshold and formula",
                                      "CMDsm", "youngAge", "class1", "class2", "nf", "yearSpreadSD"))
   expect_identical(a$mutuallyExclusive, list(youngAge = c("class", "nonForest", "class1", "class2", "nf")))
   expect_identical(a$covMinMax, out$sim$covMinMax_spread)
-  expect_identical(a$tests, "SNLL_FS")
+  expect_identical(a$tests, c("adTest", "SNLL_FS"))
   expect_identical(a$maxFireSpread, 0.28)
 })
 
@@ -179,7 +179,7 @@ test_that("refitExisting fits and writes although the ledger has this polygon", 
                 list(studyAreaWithSpreadParams = toyLedger("9.9")))
   mockFitAndLedger(sim, rec)
   sim <- suppressMessages(SpaDES.core::spades(sim))
-  expect_identical(rec$deArgs$itermax, 500L)
+  expect_identical(rec$deArgs$itermax, 5000L)
   expect_identical(rec$geoArgs$studyAreaFireSense$polygonID, "9.9")
   expect_equal(sim$studyAreaWithSpreadParams$params[[1]]$maxAsymptote, c(7, 6, 5, 4, 3))
 })

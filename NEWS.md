@@ -6,6 +6,28 @@
   `fireSenseUtils::spreadFitFilenameFor()` (e.g. `fireSenseParams_1985-2024_linearFuel.rds`; the years are
   fireSense_dataPrepFit's `fireYears`, else those of the annual covariates), and readers find each polygon's most
   recent fit with `fireSenseUtils::latestSpreadFits()`. A named file is used as before.
+- New parameter `.studyAreaName` (default `NA`), the name PredictiveEcology modules use for the study area. This module does not use it yet.
+
+## DEoptim defaults
+
+- New defaults, so a project need not set them: `strategy = 6` with `DEoptimControl = list(p = 0.1)`,
+  `.c = 0`, `iterDEoptim = 5000`, `objfunFireReps = 50` and `DEoptimTests = c("adTest", "SNLL_FS")`.
+- The strategy comes from a settings study on ELF 13.1 (NP 110, 3 seeds per setting, 150 generations, 2026-09-15).
+  Strategy 6 with p = 0.1 had the lowest median best value (3810, against 3829-3869 for strategies 1, 2, 3 and 6
+  with p = 0.2) and stayed best when each run's best members were re-scored 10 times. This is provisional: one
+  ELF, and fits far from converged. The study ran with `c = 0.1` in 5-generation DEoptim calls; `c` cannot take
+  effect now (see `.c`), so the default is 0.
+- `iterDEoptim` is a ceiling: clusters >= 0.0.46 (now required) stops a fit once the population's median value
+  has stopped improving.
+- `objfunFireReps = 50` and both tests are what production fits have used; no other combination was tested.
+- These change the cache key of any fit that relied on the old defaults.
+
+## DEoptim crossover adaptation
+
+- Requires clusters >= 0.0.42 (was 0.0.41). With `iterStep` > 1, that version runs DEoptim with `c = 0`, because
+  DEoptim's F adaptation turns every trial vector into NaN once a call's first generation has no successful trial.
+  Without it, this module's defaults (`iterStep = 25`, `.c = 0.5`) could crash a fit on every worker, so projects
+  had to set `iterStep = 1`.
 
 ## Per-year random effect
 
