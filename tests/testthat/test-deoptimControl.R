@@ -3,13 +3,13 @@
 ## reach DEoptim at all; `DEoptimControl` carries any other DEoptim.control() setting (CR, F, p,
 ## reltol, ...) through fireSenseUtils::runDEoptim() to clusters::clusterSetup().
 
-test_that("DEoptimControl is a list parameter, empty by default", {
+test_that("DEoptimControl is a list parameter; by default it sets only p, for strategy 6", {
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   p <- md$parameters
   i <- which(p$paramName == "DEoptimControl")
   expect_length(i, 1L)
   expect_identical(p$paramClass[[i]], "list")
-  expect_identical(p$default[[i]], list())
+  expect_identical(p$default[[i]], list(p = 0.1))
 })
 
 test_that("the fit passes DEoptimControl, strategy and .c to runDEoptim", {

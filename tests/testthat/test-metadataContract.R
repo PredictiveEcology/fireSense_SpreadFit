@@ -37,11 +37,23 @@ test_that("the defunct DEoptim-retrieval parameters and output are gone", {
   expect_false("fireSense_SpreadFitted" %in% md$outputObjects$objectName)
 })
 
+test_that("DEoptim defaults are the tuning study's best and a production fit's settings", {
+  ## Tuning study (ELF 13.1, NP 110, 150 generations, 3 seeds each, 2026-09-15): strategy 6 with p = 0.1 had the
+  ## lowest median best value and stayed lowest after re-scoring the best members 10 times. Provisional.
+  expect_identical(def$strategy, 6L)
+  ## c = 0: with iterStep > 1, clusters (>= 0.0.42) runs DEoptim with c = 0 whatever .c says, and with
+  ## iterStep = 1 the adaptation restarts every generation, so c > 0 would describe a run that never happens
+  expect_identical(def$.c, 0)
+  ## a ceiling: clusters (>= 0.0.46) stops a fit once its population median stops improving
+  expect_identical(def$iterDEoptim, 5000L)
+  expect_identical(def$objfunFireReps, 50L)
+})
+
 test_that("defaults that decide whether and how a fit runs", {
   expect_identical(def$stopIfNoPreRunFit, TRUE)
   expect_identical(def$refitExisting, FALSE)
   expect_identical(def$mode, "fit")
-  expect_identical(def$DEoptimTests, "SNLL_FS")
+  expect_identical(def$DEoptimTests, c("adTest", "SNLL_FS"))
   expect_identical(def$rescaleAll, TRUE)
   expect_identical(def$doObjFunAssertions, TRUE)
   expect_identical(def$useCache_DE, TRUE)
@@ -50,17 +62,13 @@ test_that("defaults that decide whether and how a fit runs", {
 })
 
 test_that("numeric defaults", {
-  expect_identical(def$iterDEoptim, 500L)
   expect_identical(def$iterStep, 25L)
   expect_identical(def$iterThresh, 96L)
-  expect_identical(def$objfunFireReps, 100L)
   expect_identical(def$objFunCoresInternal, 1L)
   expect_identical(def$cores, 1L)
-  expect_identical(def$strategy, 3L)
   expect_identical(def$rep, 1L)
   expect_identical(def$trace, 1L)
   expect_identical(def$verbose, 1)
-  expect_identical(def$.c, 0.5)
   expect_identical(def$maxFireSpread, 0.28)
   expect_identical(def$upperAndLowerVal, 9)
   expect_identical(def$upperAndLowerValFuel, 60)
@@ -87,7 +95,6 @@ test_that("defaults that are 'not set'", {
     expect_null(def[[nm]], label = nm)
   for (nm in c("lower", "upper"))
     expect_identical(def[[nm]], NA, label = nm)
-  expect_identical(def$DEoptimControl, list())
 })
 
 test_that("the ledger's location", {
