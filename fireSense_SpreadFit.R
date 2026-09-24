@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9006"),
+  version = list(fireSense_SpreadFit = "1.0.6.9007"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.41)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9039)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9040)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -182,13 +182,21 @@ defineModule(sim, list(
     defineParameter("visualizeDEoptim", "Path", default = asPath(figurePath(sim)),
                     desc = paste("Directory where `runDEoptim` saves parameter plots after each `iterStep` block.",
                                  "Reset to `figurePath(sim)` unless its last folder is the module name.")),
-    defineParameter("covFixedRange", "list", default = list(CMDsm = c(0, 100)),
+    defineParameter("covFixedRange", "list", default = list(CMDsm = c(0, 100), CMD = c(0, 100), CMDsp = c(0, 100),
+                                                            cumMDC = c(0, 100)),
                     desc = paste("Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the",
                                  "range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every",
                                  "polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another,",
                                  "so the coefficient could not be compared across polygons, and a polygon that never gets",
                                  "dry stretched its small range over [0, 1]. Names not among the covariates are ignored.",
-                                 "`fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows.")),
+                                 "`fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and",
+                                 "cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`,",
+                                 "so an ELF that picks one of them gets the same fixed scale.")),
+    defineParameter("fireSpreadSDBounds", "numeric", default = c(0, 1),
+                    desc = paste("Bounds of `fireSpreadSD`, the sd of a per-fire random effect on logit spread",
+                                 "probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not",
+                                 "supplied. It lets each fire burn hotter or cooler than the covariates say, which",
+                                 "widens the simulated fire-size distribution. `NA` turns it off.")),
     defineParameter("upperTailBounds", "numeric", default = c(-1, 1),
                     desc = "Bounds of `upperTail1` when `link` is 'logistic3pUpper' and `lower`/`upper` are not supplied."),
     defineParameter("upperAndLowerVal", "numeric", default = 9,
@@ -485,12 +493,20 @@ spreadFitPrep <- function(sim) {
   # veg coefficients should probably have bounds of 4
   # however youngAge should have an upper limit of zero to prevent self-propagating fires
   # MDC should have a lower limit of zero - drought shouldn't increase spread probability
+  ## fireSpreadSD (the per-fire random effect) is in the default bounds unless turned off; when one bound
+  ## is supplied, the one filled in includes it only if the supplied one does, so the two stay aligned
+  fsdBounds <- if (!anyNA(Par$fireSpreadSDBounds)) Par$fireSpreadSDBounds
+  upperMissing <- is.null(P(sim)$upper) || any(is.na(P(sim)$upper))
+  lowerMissing <- is.null(P(sim)$lower) || any(is.na(P(sim)$lower))
+  if (upperMissing && !lowerMissing && !"fireSpreadSD" %in% names(P(sim)$lower)) fsdBounds <- NULL
+  if (lowerMissing && !upperMissing && !"fireSpreadSD" %in% names(P(sim)$upper)) fsdBounds <- NULL
   if (is.null(P(sim)$upper) || any(is.na(P(sim)$upper))) {
     P(sim)$upper <- estimateSpreadParams(sim$fireSense_spreadFormula,
                                          sim$fireSense_annualSpreadFitCovariates,
                                          whichBound = "upper", upperAndLower = Par$upperAndLowerVal,
                                          fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel,
-                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds)
+                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds,
+                                         fireSpreadSDBounds = fsdBounds)
   }
 
   if (is.null(P(sim)$lower) || any(is.na(P(sim)$lower))) {
@@ -499,7 +515,8 @@ spreadFitPrep <- function(sim) {
                                           sim$fireSense_annualSpreadFitCovariates,
                                           whichBound = "lower", upperAndLower = Par$upperAndLowerVal,
                                           fuelTerms = fuelCols, upperAndLowerFuel = Par$upperAndLowerValFuel,
-                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds)
+                                         upperTailBounds = if (identical(Par$link, "logistic3pUpper")) Par$upperTailBounds,
+                                         fireSpreadSDBounds = fsdBounds)
   }
   ## sanity check parameters + inputs
   #cores can be NA for interactive debugging
@@ -787,7 +804,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 #'   `upperTailBounds`), then formula terms.
 estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, whichBound,
                                  upperAndLower, fuelTerms = character(), upperAndLowerFuel = upperAndLower,
-                                 upperTailBounds = NULL) {
+                                 upperTailBounds = NULL, fireSpreadSDBounds = NULL) {
 
   stopifnot(whichBound %in% c("upper", "lower"))
 
@@ -817,6 +834,10 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   if (!is.null(upperTailBounds))
     newParams <- append(newParams, c(upperTail1 = if (whichBound == "upper") max(upperTailBounds)
                                                   else min(upperTailBounds)), after = 3L)
+  ## the per-fire random effect's sd; the objective finds it by name and requires it LAST
+  if (!is.null(fireSpreadSDBounds))
+    newParams <- c(newParams, fireSpreadSD = if (whichBound == "upper") max(fireSpreadSDBounds)
+                                             else min(fireSpreadSDBounds))
 
   return(newParams)
 }

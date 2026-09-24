@@ -25,7 +25,7 @@ test_that("parameter classes", {
       covFixedRange = "list",
       link = "character", profileReps = "integer", simulateMembers = "integer",
       sizeLik = "character", sizeLikDf = "numeric", weighted = "logical|character",
-      adWeight = "character|numeric", upperTailBounds = "numeric",
+      adWeight = "character|numeric", upperTailBounds = "numeric", fireSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
 })
@@ -64,7 +64,7 @@ test_that("numeric defaults", {
   expect_identical(def$maxFireSpread, 0.28)
   expect_identical(def$upperAndLowerVal, 9)
   expect_identical(def$upperAndLowerValFuel, 60)
-  expect_identical(def$covFixedRange, list(CMDsm = c(0, 100)))
+  expect_identical(def$covFixedRange, list(CMDsm = c(0, 100), CMD = c(0, 100), CMDsp = c(0, 100), cumMDC = c(0, 100)))
   expect_identical(def$.plotSize, list(height = 1600, width = 2000))
 })
 
@@ -77,6 +77,7 @@ test_that("defaults of the objective and of the post-fit diagnostics", {
   expect_identical(def$adWeight, "auto")
   expect_identical(def$link, "logistic3p")
   expect_identical(def$upperTailBounds, c(-1, 1))
+  expect_identical(def$fireSpreadSDBounds, c(0, 1))   # the per-fire random effect is on by default
   expect_identical(def$profileReps, 10L)
   expect_identical(def$simulateMembers, 10L)
 })

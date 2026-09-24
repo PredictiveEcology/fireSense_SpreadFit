@@ -1,5 +1,15 @@
 # fireSense_SpreadFit (development version)
 
+## Per-fire random effect
+
+- New parameter `fireSpreadSDBounds` (default `c(0, 1)`): the default bounds get `fireSpreadSD` last, and
+  `fireSenseUtils::runDEoptim()` (>= 0.2.3.9040) fits it as the sd of a per-fire random effect on logit spread
+  probability. Each fire can burn hotter or cooler than its covariates say, which widens the simulated fire-size
+  distribution. `NA` turns it off. If only one bound is supplied, the other includes `fireSpreadSD` only if the
+  supplied one does. This changes every fit's cache key.
+- `covFixedRange` also fixes the scale of CMD, CMDsp and cumMDC (all / 100), the other climate candidates of
+  fireSense_dataPrepFit's `spread = "auto"`, so their coefficients compare across ELFs as CMDsm's do.
+
 ## Objective and link
 
 - New parameters `sizeLik` (default "t"), `sizeLikDf`, `weighted` (default FALSE) and `adWeight` reach the objective in the fit and in the re-score. Fits used "kde" with a log(size) weight before, only because the module could not ask for anything else; "t" without a weight predicted held-out years best in the 2026-09-21 cross-validation. This changes every fit's cache key.

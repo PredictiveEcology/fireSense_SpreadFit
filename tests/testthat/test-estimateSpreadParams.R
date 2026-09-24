@@ -45,3 +45,17 @@ test_that("whichBound must be 'upper' or 'lower'", {
   expect_error(estimateSpreadParams(form, annual, whichBound = "both", upperAndLower = 9),
                "whichBound %in% c(\"upper\", \"lower\") is not TRUE", fixed = TRUE)
 })
+
+test_that("the per-fire random effect's sd is bounded last, after an upper-tail term", {
+  ## fireSenseUtils::runDEoptim() finds fireSpreadSD by name and requires it last; the objective takes
+  ## the logistic parameters by position, so upperTail1 stays 4th
+  up <- estimateSpreadParams(form, annual, "upper", 9, upperTailBounds = c(-1, 1), fireSpreadSDBounds = c(0, 1))
+  lo <- estimateSpreadParams(form, annual, "lower", 9, upperTailBounds = c(-1, 1), fireSpreadSDBounds = c(0, 1))
+  expect_identical(names(up)[4], "upperTail1")
+  expect_identical(names(up)[length(up)], "fireSpreadSD")
+  expect_identical(unname(c(lo["fireSpreadSD"], up["fireSpreadSD"])), c(0, 1))
+  expect_identical(names(up), names(lo))
+  ## off: no fireSpreadSD at all
+  expect_false("fireSpreadSD" %in% names(estimateSpreadParams(form, annual, "upper", 9)))
+})
+

@@ -11,9 +11,9 @@ P1 <- function(sim) SpaDES.core::params(sim)[[moduleName]]
 test_that("default bounds are built from the formula and the annual covariates", {
   p <- P1(prepared())
   expect_identical(p$upper, c(maxAsymptote = 0.276, hillSlope1 = 2, inflectionPoint1 = 4,
-                              CMDsm = 9, youngAge = 0, class1 = 60, class2 = 60, nf = 9))
+                              CMDsm = 9, youngAge = 0, class1 = 60, class2 = 60, nf = 9, fireSpreadSD = 1))
   expect_identical(p$lower, c(maxAsymptote = 0.25, hillSlope1 = 0.2, inflectionPoint1 = 0.1,
-                              CMDsm = 0, youngAge = -9, class1 = -60, class2 = -60, nf = -9))
+                              CMDsm = 0, youngAge = -9, class1 = -60, class2 = -60, nf = -9, fireSpreadSD = 0))
 })
 
 test_that("upperAndLowerValFuel sets the fuel bounds, and only those", {
@@ -36,6 +36,16 @@ test_that("supplied bounds are kept; only the missing one is filled", {
   p <- P1(prepared(list(upper = up)))
   expect_identical(p$upper, up)
   expect_identical(unname(p$lower[c("class1", "nf")]), c(-60, -9))
+  ## the supplied upper has no fireSpreadSD, so the filled-in lower has none either
+  expect_identical(names(p$lower), names(up))
+})
+
+test_that("fireSpreadSD is in both bounds, last, unless turned off", {
+  p <- P1(prepared())
+  expect_identical(names(p$upper)[length(p$upper)], "fireSpreadSD")
+  expect_identical(unname(c(p$lower["fireSpreadSD"], p$upper["fireSpreadSD"])), c(0, 1))
+  off <- P1(prepared(list(fireSpreadSDBounds = NA)))
+  expect_false("fireSpreadSD" %in% c(names(off$upper), names(off$lower)))
 })
 
 test_that("bounds whose names differ in order are refused", {
