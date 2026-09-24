@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9005"
-date: "Last updated: 2026-09-21"
+subtitle: "v.1.0.6.9007"
+date: "Last updated: 2026-09-24"
 output:
   bookdown::html_document2:
     toc: true
@@ -276,12 +276,28 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> optional. Maximum fire spread average to be passed to the `.objFun`. This puts an upper limit on `spreadProb` during optimization. </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> link </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> logistic3p </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> The spread link. 'logistic3p', or 'logistic3pUpper': the same curve with Stukel's upper tail, one more parameter `upperTail1` that changes only how the curve approaches its ceiling (`fireSenseUtils::logistic3pUpper()`). Its default bounds are `upperTailBounds`. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> mode </td>
    <td style="text-align:left;"> character </td>
    <td style="text-align:left;"> fit </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Options: debug, fit, visualize. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit. </td>
+   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> profileReps </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> 10 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> After the fit, each covariate coefficient in turn is set to 0 and to 5 values across the final population, the others held at the best member, and each point is evaluated this many times (`fireSenseUtils::profileCoefficients()`). About `6 nCoefficients profileReps` evaluations, on the fit's workers. It decides which coefficients are identified in isolation (`sim$spreadFitIdentifiability`). 0 skips it. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> mutuallyExclusiveCols </td>
@@ -298,6 +314,46 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> How many workers to request for the DEoptim cluster. This IS the population size: `clusters::clusterSetup()` sets NP to the workers it builds. `NULL` leaves `fireSenseUtils::runDEoptim()`'s default of 10 per estimated parameter. A generation costs the slowest of NP evaluations and that barely falls as NP falls, so a smaller NP buys throughput by allowing more fits at once rather than by shortening generations (measured 2026-09-16). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> simulateMembers </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> 10 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> After the fit, this many best members simulate the observed fires without the size cap, for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the members each `crossValidate` fold predicts with. 0 skips it after the fit. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> sizeLik </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> t </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Likelihood of fire size in the objective, 'kde' or 't', passed to `fireSenseUtils::runDEoptim()`. 't' with `weighted = FALSE` predicted held-out years best in the 2026-09-21 cross-validation. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> sizeLikDf </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 5 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Degrees of freedom of the 't' size likelihood. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> weighted </td>
+   <td style="text-align:left;"> logical&amp;#124;.... </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Weight of each fire in the size likelihood: FALSE (none), TRUE (log size) or 'sqrt'. Passed to `fireSenseUtils::runDEoptim()`. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> adWeight </td>
+   <td style="text-align:left;"> characte.... </td>
+   <td style="text-align:left;"> auto </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Weight of the Anderson-Darling term against the size likelihood; 'auto' is `fireSenseUtils::adWeightAuto()`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> objFunCoresInternal </td>
@@ -438,10 +494,26 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> covFixedRange </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> c(0, 100) </td>
+   <td style="text-align:left;"> c(0, 100.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. </td>
+   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`, so an ELF that picks one of them gets the same fixed scale. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> fireSpreadSDBounds </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 0, 1 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Bounds of `fireSpreadSD`, the sd of a per-fire random effect on logit spread probability (`fireSenseUtils::.objfunSpreadFit()`), when `lower`/`upper` are not supplied. It lets each fire burn hotter or cooler than the covariates say, which widens the simulated fire-size distribution. `NA` turns it off. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> upperTailBounds </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> -1, 1 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Bounds of `upperTail1` when `link` is 'logistic3pUpper' and `lower`/`upper` are not supplied. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>
@@ -518,6 +590,41 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
    <td style="text-align:left;"> lociList </td>
    <td style="text-align:left;"> list </td>
    <td style="text-align:left;"> per-year `data.table`s of fire start cells and sizes, from `fireSenseUtils::makeLociList()` </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitConvergence </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> The objective across the fit's generations (`fireSenseUtils::fitConvergence()`). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitRescore </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> The final population, one row per member, with the mean and sd of its replicated re-scores (`reMean`, `reSD`). The ledger's parameter sets are the best of these. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitIdentifiability </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> One row per covariate coefficient: how tightly the population pins it (`fireSenseUtils::coefIdentifiability()`) and, with `profileReps &gt; 0`, whether dropping it worsens the fit; `identified` = identified in isolation (`fireSenseUtils::identifiedInIsolation()`). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitProfile </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> The one-at-a-time profile around the best member (`fireSenseUtils::profileCoefficients()`). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitSizes </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> Observed against simulated fire sizes of the fitted years, without the size cap (`fireSenseUtils::scoreFireSizes()`): bias, error, quantiles. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitLinkSaturation </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> Per member, the share of pixel-years at the spread-probability ceiling and the quantiles of spread probability (`fireSenseUtils::linkSaturation()`). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> spreadFitHeldOut </td>
+   <td style="text-align:left;"> list </td>
+   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. </td>
   </tr>
 </tbody>
 </table>
