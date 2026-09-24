@@ -59,7 +59,8 @@ test_that("postFitDiagnostics makes the re-score, identifiability, sizes, satura
   ## identifiability: every covariate; the toy population holds them all at 0, so none is pinned,
   ## and none is identified even where dropping it matters (CMDsm)
   id <- sim$spreadFitIdentifiability
-  expect_identical(id$coef, c("CMDsm", "youngAge", "class1", "class2", "nf"))
+  ## fireSpreadSD too: "dropping" it sets the random effect's sd to 0, i.e. asks whether the effect matters
+  expect_identical(id$coef, c("CMDsm", "youngAge", "class1", "class2", "nf", "fireSpreadSD"))
   expect_equal(id[coef == "CMDsm"]$dropMatters, TRUE)
   expect_equal(id[coef == "class1"]$dropMatters, FALSE)
   expect_false(any(id$identified))
