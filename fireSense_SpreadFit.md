@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9011"
-date: "Last updated: 2026-09-24"
+subtitle: "v.1.0.6.9012"
+date: "Last updated: 2026-09-25"
 output:
   bookdown::html_document2:
     toc: true
@@ -338,6 +338,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Likelihood of fire size in the objective, 'kde' or 't', passed to `fireSenseUtils::runDEoptim()`. 't' with `weighted = FALSE` predicted held-out years best in the 2026-09-21 cross-validation. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> escapeSizeHa </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 50 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Size (ha) a fire must reach to count as escaped. The spread model is fitted to escaped fires only, and each simulated fire burns this area first, whatever its spread probability, then spreads normally. `NULL` or `NA` gives the old fit (any fire over 1 pixel). Passed to `fireSenseUtils::runDEoptim()`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> sizeLikDf </td>
