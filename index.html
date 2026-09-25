@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9011</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9012</span>
       </span>
     </div>
 
@@ -950,7 +950,7 @@ spreadFitFilename
 character
 </td>
 <td style="text-align:left;">
-fireSens….
+latest
 </td>
 <td style="text-align:left;">
 NA
@@ -959,7 +959,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-File name of the shared fit ledger: an <code>sf</code> object with one row of fitted parameters per polygon.
+File name of the shared fit ledger: an <code>sf</code> object with one row of fitted parameters per polygon. <code>"latest"</code> (the default) writes to the file named for this fit’s fire years and model, <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/spreadFitLedger.html" class="external-link">fireSenseUtils::spreadFitFilenameFor()</a></code>, e.g. <code>fireSenseParams_1985-2024_linearFuel.rds</code>; readers then find it with <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/spreadFitLedger.html" class="external-link">fireSenseUtils::latestSpreadFits()</a></code>.
 </td>
 </tr>
 <tr>

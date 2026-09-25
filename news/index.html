@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9011</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9012</span>
       </span>
     </div>
 
@@ -53,7 +53,8 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
-<div class="section level3">
+<ul><li>New parameter <code>escapeSizeHa</code> (default 50): the spread model is fitted to escaped fires only, fires that reached that size, and each simulated fire burns that area first before spreading normally. Before, any fire over 1 pixel counted, and many simulated fires never left their first pixel. It reaches the fit (<code>runDEoptim()</code>) and the threshold calibration (<code><a href="../reference/runSpreadWithoutDEoptim.html">runSpreadWithoutDEoptim()</a></code>), so both evaluate the same objective. <code>NULL</code>/<code>NA</code> gives the old fit. Needs fireSenseUtils &gt;= 0.2.3.9044. Version 1.0.6.9012.</li>
+</ul><div class="section level3">
 <h3 id="the-fit-ledger-development-version">The fit ledger<a class="anchor" aria-label="anchor" href="#the-fit-ledger-development-version"></a></h3>
 <ul><li>
 <code>spreadFitFilename</code> now defaults to <code>"latest"</code>. A fit is written to the file named for its fire years and model, <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/spreadFitLedger.html" class="external-link">fireSenseUtils::spreadFitFilenameFor()</a></code> (e.g. <code>fireSenseParams_1985-2024_linearFuel.rds</code>; the years are fireSense_dataPrepFit’s <code>fireYears</code>, else those of the annual covariates), and readers find each polygon’s most recent fit with <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/spreadFitLedger.html" class="external-link">fireSenseUtils::latestSpreadFits()</a></code>. A named file is used as before.</li>
