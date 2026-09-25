@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9012"
+subtitle: "v.1.0.6.9013"
 date: "Last updated: 2026-09-25"
 output:
   bookdown::html_document2:
@@ -347,7 +347,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 50 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Size (ha) a fire must reach to count as escaped. The spread model is fitted to escaped fires only, and each simulated fire burns this area first, whatever its spread probability, then spreads normally. `NULL` or `NA` gives the old fit (any fire over 1 pixel). Passed to `fireSenseUtils::runDEoptim()`. </td>
+   <td style="text-align:left;"> Size (ha) a fire must reach to count as escaped. The spread model is fitted to escaped fires only, and each simulated fire first grows to this size with its own spread probabilities (its burning cells stay active until it gets there), then spreads normally. `NULL` or `NA` gives the old fit (any fire over 1 pixel). Passed to `fireSenseUtils::runDEoptim()`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> sizeLikDf </td>
@@ -372,6 +372,38 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Weight of the Anderson-Darling term against the size likelihood; 'auto' is `fireSenseUtils::adWeightAuto()`. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> yearAreaWeight </td>
+   <td style="text-align:left;"> numeric&amp;#124;.... </td>
+   <td style="text-align:left;"> auto </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Weight of the annual-area term in the objective: each fit year's observed area burned is scored against that year's simulated totals (one per replicate) with the size likelihood. 0 leaves it out; 'auto' (default) is (number of fitted fires) / (number of fit years), so the year view and the per-fire view weigh the same. Passed to `fireSenseUtils::runDEoptim()`. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> areaDistWeight </td>
+   <td style="text-align:left;"> numeric&amp;#124;.... </td>
+   <td style="text-align:left;"> auto </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Weight of the area-weighted size-distribution term: simulated and observed fires compared by the share of area burned that fires up to each size make up (`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`). </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> jumpTries </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 20 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> With `escapeSizeHa`: how many attempts a simulated fire that is still below the escape size, with no burnable neighbour left, may make to jump to burnable land nearby (`SpaDES.tools::spreadCpp()`). Default 20; 0 is off. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> jumpMeanDist </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 3 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Mean jump distance (pixels) for `jumpTries`; distances are exponential, truncated to 1.5-20 pixels. No effect while `jumpTries` is 0. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> objFunCoresInternal </td>

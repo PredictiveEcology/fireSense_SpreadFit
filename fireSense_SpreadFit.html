@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9012</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9013</span>
       </span>
     </div>
 
@@ -638,6 +638,24 @@ NA
 </td>
 <td style="text-align:left;">
 Likelihood of fire size in the objective, ‘kde’ or ‘t’, passed to <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code>. ‘t’ with <code>weighted = FALSE</code> predicted held-out years best in the 2026-09-21 cross-validation.
+</td>
+</tr><tr><td style="text-align:left;">
+escapeSizeHa
+</td>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+50
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+Size (ha) a fire must reach to count as escaped. The spread model is fitted to escaped fires only, and each simulated fire burns this area first, whatever its spread probability, then spreads normally. <code>NULL</code> or <code>NA</code> gives the old fit (any fire over 1 pixel). Passed to <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code>.
 </td>
 </tr><tr><td style="text-align:left;">
 sizeLikDf

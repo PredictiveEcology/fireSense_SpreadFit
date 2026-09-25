@@ -19,7 +19,7 @@ random candidate threshold, in forked processes, and returns pickThreshold() of 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9012</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9013</span>
       </span>
     </div>
 
@@ -83,7 +83,15 @@ random candidate threshold, in forked processes, and returns <code><a href="pick
 <span>  plot.it <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  mode <span class="op">=</span> <span class="st">"fit"</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  escapeSizeHa <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  escapeSizeHa <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sizeLik <span class="op">=</span> <span class="st">"kde"</span>,</span>
+<span>  sizeLikDf <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  adWeight <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  link <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  jumpTries <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  jumpMeanDist <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  yearAreaWeight <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  areaDistWeight <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -162,6 +170,12 @@ by <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/covsX1000AndSetDF.html"
 
 <dt id="arg-escapesizeha">escapeSizeHa<a class="anchor" aria-label="anchor" href="#arg-escapesizeha"></a></dt>
 <dd><p>passed to <code>.objfunSpreadFit()</code>: fit escaped fires only (NULL: any fire over 1 pixel).</p></dd>
+
+
+<dt id="arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight">sizeLik, sizeLikDf, adWeight, link, jumpTries, jumpMeanDist, yearAreaWeight, areaDistWeight<a class="anchor" aria-label="anchor" href="#arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight"></a></dt>
+<dd><p>passed to
+<code>.objfunSpreadFit()</code>, so the threshold is calibrated on the objective the fit uses. The defaults are
+that function's.</p></dd>
 
 </dl></div>
     <div id="value">
