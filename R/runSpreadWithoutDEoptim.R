@@ -22,6 +22,7 @@
 #' @param plot.it passed to `.objfunSpreadFit()` in "debug" mode.
 #' @param mode character; if it includes "debug", the debug branch runs.
 #' @param seed integer or NULL; `set.seed()` value. NULL draws one at random.
+#' @param escapeSizeHa passed to `.objfunSpreadFit()`: fit escaped fires only (NULL: any fire over 1 pixel).
 #' @return the calibrated threshold (numeric, or NA if every trial failed); NULL in "debug" mode.
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
@@ -31,7 +32,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     weighted = TRUE, tests = c("snll_fs", "adtest"),
                                     formulaToFit,
                                     pars = NULL, plot.it = TRUE, mode = "fit",
-                                    seed = NULL) {
+                                    seed = NULL, escapeSizeHa = NULL) {
   ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
   ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
   ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
@@ -44,7 +45,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
 
-  hfs <- rbindlist(historicalFires)[size > 1]
+  ## the fires the objective fits: over 1 pixel, or escaped ones (escapeSizeHa) when set
+  minPx <- if (is.null(escapeSizeHa)) 2L else fireSenseUtils::escapeSizePixels(escapeSizeHa, flammableRTM)
+  hfs <- rbindlist(historicalFires)[size >= minPx]
   hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
   setorderv(hfsSizes, "AAB", order = -1L)
   # next is rough estimate of an SNLL value that should be "decent"
@@ -89,6 +92,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  maxFireSpread = maxFireSpread,
                                  verbose = TRUE,
                                  weighted = weighted,
+                                 escapeSizeHa = escapeSizeHa,
                                  plot.it = plot.it
       )
     }
@@ -138,7 +142,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       covMinMax = covMinMax,
                       Nreps = objfunFireReps,
                       maxFireSpread = maxFireSpread,
-                      weighted = weighted,
+                      weighted = weighted, escapeSizeHa = escapeSizeHa,
                       verbose = TRUE, plot.it = FALSE)
       )
     })

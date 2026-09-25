@@ -64,6 +64,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    weighted = P(sim)$weighted,
                    adWeight = P(sim)$adWeight,
                    link = spreadLink(P(sim)$link),
+                   escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
                    profileReps = if (diagnostics) P(sim)$profileReps else 0L,
                    simulateMembers = if (diagnostics) P(sim)$simulateMembers else 0L),
         .functionName = fnName,
@@ -75,6 +76,9 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
 
 ## The `link` the objective is given: NULL is its default, logistic3p
 spreadLink <- function(link) if (identical(link, "logistic3pUpper")) link
+
+## `escapeSizeHa` as the objective takes it: NULL (the old fit) for NULL or NA
+escapeSizeHaOrNULL <- function(x) if (length(x) && !is.na(x)) x
 
 #' Turn the fit's re-score, profile and simulations into `sim` objects
 #'

@@ -1,5 +1,11 @@
 # fireSense_SpreadFit (development version)
 
+- New parameter `escapeSizeHa` (default 50): the spread model is fitted to escaped fires only, fires that
+  reached that size, and each simulated fire burns that area first before spreading normally. Before, any fire
+  over 1 pixel counted, and many simulated fires never left their first pixel. It reaches the fit
+  (`runDEoptim()`) and the threshold calibration (`runSpreadWithoutDEoptim()`), so both evaluate the same
+  objective. `NULL`/`NA` gives the old fit. Needs fireSenseUtils >= 0.2.3.9044. Version 1.0.6.9012.
+
 ## The fit ledger
 
 - `spreadFitFilename` now defaults to `"latest"`. A fit is written to the file named for its fire years and model,
