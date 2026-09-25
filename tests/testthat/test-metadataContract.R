@@ -24,7 +24,7 @@ test_that("parameter classes", {
       upperAndLowerVal = "numeric", upperAndLowerValFuel = "numeric", useCache_DE = "logical",
       covFixedRange = "list",
       link = "character", profileReps = "integer", simulateMembers = "integer",
-      sizeLik = "character", sizeLikDf = "numeric", weighted = "logical|character",
+      sizeLik = "character", sizeLikDf = "numeric", escapeSizeHa = "numeric", weighted = "logical|character",
       adWeight = "character|numeric", upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )

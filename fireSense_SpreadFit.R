@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9011"),
+  version = list(fireSense_SpreadFit = "1.0.6.9012"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.46)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9043)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9044)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -114,6 +114,11 @@ defineModule(sim, list(
                     desc = paste("Likelihood of fire size in the objective, 'kde' or 't', passed to",
                                  "`fireSenseUtils::runDEoptim()`. 't' with `weighted = FALSE` predicted held-out",
                                  "years best in the 2026-09-21 cross-validation.")),
+    defineParameter("escapeSizeHa", "numeric", default = 50,
+                    desc = paste("Size (ha) a fire must reach to count as escaped. The spread model is fitted to",
+                                 "escaped fires only, and each simulated fire burns this area first, whatever its",
+                                 "spread probability, then spreads normally. `NULL` or `NA` gives the old fit",
+                                 "(any fire over 1 pixel). Passed to `fireSenseUtils::runDEoptim()`.")),
     defineParameter("sizeLikDf", "numeric", default = 5,
                     desc = "Degrees of freedom of the 't' size likelihood."),
     defineParameter("weighted", "logical|character", default = FALSE,
@@ -363,6 +368,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         objfunFireReps = P(sim)$objfunFireReps,
         tests = P(sim)$DEoptimTests,
         mode = Par$mode,
+        escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
         maxFireSpread = P(sim)$maxFireSpread) 
     },
     estimateThreshold = {
@@ -781,6 +787,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       ## cost ~17 h). `seed` is an argument, so it is in this Cache key too -- which is what
       ## test-thresholdCacheKey.R asks for: nothing that changes the result is omitted.
       seed = .elfSeed(sim$.ELFind),
+      escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
