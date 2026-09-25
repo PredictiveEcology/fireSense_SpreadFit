@@ -25,7 +25,9 @@ test_that("parameter classes", {
       covFixedRange = "list",
       link = "character", profileReps = "integer", simulateMembers = "integer",
       sizeLik = "character", sizeLikDf = "numeric", escapeSizeHa = "numeric", weighted = "logical|character",
-      adWeight = "character|numeric", upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
+      adWeight = "character|numeric", yearAreaWeight = "numeric|character",
+      areaDistWeight = "numeric|character", jumpTries = "numeric", jumpMeanDist = "numeric",
+      upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
 })
@@ -83,6 +85,11 @@ test_that("defaults of the objective and of the post-fit diagnostics", {
   expect_identical(def$sizeLikDf, 5)
   expect_identical(def$weighted, FALSE)
   expect_identical(def$adWeight, "auto")
+  ## the annual-area and area-distribution terms and jumping are off unless asked for
+  expect_identical(def$yearAreaWeight, 0)
+  expect_identical(def$areaDistWeight, 0)
+  expect_identical(def$jumpTries, 0)
+  expect_identical(def$jumpMeanDist, 3)
   expect_identical(def$link, "logistic3p")
   expect_identical(def$upperTailBounds, c(-1, 1))
   expect_identical(def$yearSpreadSDBounds, c(0, 1))   # the per-year random effect is on by default

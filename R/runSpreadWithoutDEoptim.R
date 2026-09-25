@@ -23,6 +23,9 @@
 #' @param mode character; if it includes "debug", the debug branch runs.
 #' @param seed integer or NULL; `set.seed()` value. NULL draws one at random.
 #' @param escapeSizeHa passed to `.objfunSpreadFit()`: fit escaped fires only (NULL: any fire over 1 pixel).
+#' @param sizeLik,sizeLikDf,adWeight,link,jumpTries,jumpMeanDist,yearAreaWeight,areaDistWeight passed to
+#'   `.objfunSpreadFit()`, so the threshold is calibrated on the objective the fit uses. The defaults are
+#'   that function's.
 #' @return the calibrated threshold (numeric, or NA if every trial failed); NULL in "debug" mode.
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
@@ -32,7 +35,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     weighted = TRUE, tests = c("snll_fs", "adtest"),
                                     formulaToFit,
                                     pars = NULL, plot.it = TRUE, mode = "fit",
-                                    seed = NULL, escapeSizeHa = NULL) {
+                                    seed = NULL, escapeSizeHa = NULL,
+                                    sizeLik = "kde", sizeLikDf = 5, adWeight = "auto", link = NULL,
+                                    jumpTries = 0, jumpMeanDist = 0, yearAreaWeight = 0, areaDistWeight = 0) {
   ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
   ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
   ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
@@ -54,7 +59,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
   largestYear <- hfsSizes$date[1]
   largestFireInLargestYear <- max(hfs[grep(largestYear, hfs$date)]$size)
   decentEstimateThreshold <- NROW(hfs[date %in% hfsSizes$date[1:2]]) *
-    (log(largestFireInLargestYear) ^ weighted)
+    (log(largestFireInLargestYear) ^ isTRUE(weighted)) # `weighted` may be FALSE, TRUE or "sqrt"
 
   if (is.null(pars)) {
     ## do NOT re-draw here: that discarded the seed set above, which is what made the threshold
@@ -93,6 +98,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  verbose = TRUE,
                                  weighted = weighted,
                                  escapeSizeHa = escapeSizeHa,
+                                 sizeLik = sizeLik, sizeLikDf = sizeLikDf, adWeight = adWeight, link = link,
+                                 jumpTries = jumpTries, jumpMeanDist = jumpMeanDist,
+                                 yearAreaWeight = yearAreaWeight, areaDistWeight = areaDistWeight,
                                  plot.it = plot.it
       )
     }
@@ -143,6 +151,9 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       Nreps = objfunFireReps,
                       maxFireSpread = maxFireSpread,
                       weighted = weighted, escapeSizeHa = escapeSizeHa,
+                      sizeLik = sizeLik, sizeLikDf = sizeLikDf, adWeight = adWeight, link = link,
+                      jumpTries = jumpTries, jumpMeanDist = jumpMeanDist,
+                      yearAreaWeight = yearAreaWeight, areaDistWeight = areaDistWeight,
                       verbose = TRUE, plot.it = FALSE)
       )
     })
