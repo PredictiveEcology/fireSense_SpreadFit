@@ -1,9 +1,10 @@
 # fireSense_SpreadFit (development version)
 
-- New parameters for fireSenseUtils >= 0.2.3.9045's objective options, all off by default: `yearAreaWeight`
-  (annual area burned scored against each year's simulated totals), `areaDistWeight` (area-weighted
-  size distribution), and `jumpTries`/`jumpMeanDist` (a fire stuck below the escape size may jump to
-  nearby burnable land). They reach the fit and both threshold calibrations.
+- New parameters for fireSenseUtils >= 0.2.3.9045's objective options, ON by default: `yearAreaWeight = "auto"`
+  (annual area burned scored against each year's simulated totals), `areaDistWeight = "auto"` (area-weighted
+  size distribution), and `jumpTries = 20`/`jumpMeanDist = 3` (a fire stuck below the escape size may jump to
+  nearby burnable land). They reach the fit and both threshold calibrations. This changes the objective, and
+  so the cache key, of every fit; set the weights and `jumpTries` to 0 for the previous objective.
 - The threshold calibration now uses the fit's objective settings: `weighted`, `sizeLik`, `sizeLikDf`,
   `adWeight` and `link` were not passed, so it ran with `weighted = TRUE` and the "kde" likelihood whatever
   the fit used. Calibrated thresholds change, and so does the `estimateThreshold` cache key.
