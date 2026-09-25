@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9012"),
+  version = list(fireSense_SpreadFit = "1.0.6.9013"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.46)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9044)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9045)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -116,9 +116,10 @@ defineModule(sim, list(
                                  "years best in the 2026-09-21 cross-validation.")),
     defineParameter("escapeSizeHa", "numeric", default = 50,
                     desc = paste("Size (ha) a fire must reach to count as escaped. The spread model is fitted to",
-                                 "escaped fires only, and each simulated fire burns this area first, whatever its",
-                                 "spread probability, then spreads normally. `NULL` or `NA` gives the old fit",
-                                 "(any fire over 1 pixel). Passed to `fireSenseUtils::runDEoptim()`.")),
+                                 "escaped fires only, and each simulated fire first grows to this size with its",
+                                 "own spread probabilities (its burning cells stay active until it gets there),",
+                                 "then spreads normally. `NULL` or `NA` gives the old fit (any fire over 1",
+                                 "pixel). Passed to `fireSenseUtils::runDEoptim()`.")),
     defineParameter("sizeLikDf", "numeric", default = 5,
                     desc = "Degrees of freedom of the 't' size likelihood."),
     defineParameter("weighted", "logical|character", default = FALSE,
@@ -127,6 +128,24 @@ defineModule(sim, list(
     defineParameter("adWeight", "character|numeric", default = "auto",
                     desc = paste("Weight of the Anderson-Darling term against the size likelihood; 'auto' is",
                                  "`fireSenseUtils::adWeightAuto()`.")),
+    defineParameter("yearAreaWeight", "numeric|character", default = "auto",
+                    desc = paste("Weight of the annual-area term in the objective: each fit year's observed area",
+                                 "burned is scored against that year's simulated totals (one per replicate) with",
+                                 "the size likelihood. 0 leaves it out; 'auto' (default) is (number of fitted",
+                                 "fires) / (number of fit years), so the year view and the per-fire view weigh",
+                                 "the same. Passed to `fireSenseUtils::runDEoptim()`.")),
+    defineParameter("areaDistWeight", "numeric|character", default = "auto",
+                    desc = paste("Weight of the area-weighted size-distribution term: simulated and observed fires",
+                                 "compared by the share of area burned that fires up to each size make up",
+                                 "(`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses",
+                                 "the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`).")),
+    defineParameter("jumpTries", "numeric", default = 20,
+                    desc = paste("With `escapeSizeHa`: how many attempts a simulated fire that is still below the",
+                                 "escape size, with no burnable neighbour left, may make to jump to burnable land",
+                                 "nearby (`SpaDES.tools::spreadCpp()`). Default 20; 0 is off.")),
+    defineParameter("jumpMeanDist", "numeric", default = 3,
+                    desc = paste("Mean jump distance (pixels) for `jumpTries`; distances are exponential,",
+                                 "truncated to 1.5-20 pixels. No effect while `jumpTries` is 0.")),
     defineParameter("objFunCoresInternal", "integer", default = 1L,
                     desc = paste("Integer defining the number of cores to pass to `mcmapply(mc.cores = ...)`",
                                  "This will fork this many to do the years loop internally.",
@@ -369,6 +388,10 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         tests = P(sim)$DEoptimTests,
         mode = Par$mode,
         escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
+        weighted = P(sim)$weighted, sizeLik = P(sim)$sizeLik, sizeLikDf = P(sim)$sizeLikDf,
+        adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
+        jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
+        yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
         maxFireSpread = P(sim)$maxFireSpread) 
     },
     estimateThreshold = {
@@ -788,6 +811,11 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       ## test-thresholdCacheKey.R asks for: nothing that changes the result is omitted.
       seed = .elfSeed(sim$.ELFind),
       escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
+      ## the same objective as the fit (R/fitSpread.R), or the threshold is calibrated on another one
+      weighted = P(sim)$weighted, sizeLik = P(sim)$sizeLik, sizeLikDf = P(sim)$sizeLikDf,
+      adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
+      jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
+      yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
