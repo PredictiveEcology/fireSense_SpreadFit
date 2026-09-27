@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9013"
-date: "Last updated: 2026-09-25"
+subtitle: "v.1.0.6.9017"
+date: "Last updated: 2026-09-27"
 output:
   bookdown::html_document2:
     toc: true
@@ -262,7 +262,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> /home/ru.... </td>
+   <td style="text-align:left;"> /tmp/cla.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Absolute path specifying R package directory location to use when running DEotpim. NOTE: this path must be read/write accessible on ALL machines used for fitting (identified in cores). Therefore, it's best use a directory in your user's `~` directory. If the directory does not exist at this path, will attempt to create it. </td>
@@ -297,7 +297,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> fit </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger. </td>
+   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write `sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops after `crossValidate` and the simList is discarded. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> profileReps </td>
@@ -534,7 +534,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> visualizeDEoptim </td>
    <td style="text-align:left;"> Path </td>
-   <td style="text-align:left;"> /tmp/Rtm.... </td>
+   <td style="text-align:left;"> /mnt/fas.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
@@ -566,18 +566,18 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> upperAndLowerVal </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 9 </td>
+   <td style="text-align:left;"> 50 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied. </td>
+   <td style="text-align:left;"> Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied. Bounds should be wide enough that they do not influence the fitted value; only the sign of drought-index and `youngAge` terms is constrained (see `estimateSpreadParams()`). A held-out experiment (7 ELFs x 2 folds) found estimates up to 25.7 and youngAge medians down to -23.0 with the previous default of 9. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> upperAndLowerValFuel </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 60 </td>
+   <td style="text-align:left;"> 100 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9 the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07 once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits. </td>
+   <td style="text-align:left;"> As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]. The same held-out experiment found fuel estimates up to 54.5 (29 of 82 above 25) with the previous default of 60. </td>
   </tr>
 </tbody>
 </table>
@@ -672,7 +672,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> spreadFitHeldOut </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. </td>
+   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")`. </td>
   </tr>
 </tbody>
 </table>
