@@ -262,7 +262,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
    <td style="text-align:left;"> character </td>
-   <td style="text-align:left;"> /tmp/cla.... </td>
+   <td style="text-align:left;"> /home/ru.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Absolute path specifying R package directory location to use when running DEotpim. NOTE: this path must be read/write accessible on ALL machines used for fitting (identified in cores). Therefore, it's best use a directory in your user's `~` directory. If the directory does not exist at this path, will attempt to create it. </td>
@@ -534,7 +534,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> visualizeDEoptim </td>
    <td style="text-align:left;"> Path </td>
-   <td style="text-align:left;"> /mnt/fas.... </td>
+   <td style="text-align:left;"> /tmp/Rtm.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
