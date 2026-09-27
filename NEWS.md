@@ -1,5 +1,10 @@
 # fireSense_SpreadFit (development version)
 
+- `runSpreadWithoutDEoptim()` drew its threshold-calibration parameter sets unnamed, so
+  `fireSenseUtils:::.objfunSpreadFit` (which tells a trailing `yearSpreadSD` bound apart from a
+  logistic parameter only by name) miscounted the logistic parameters and every trial errored;
+  `mod$thresh` came back `NA`. Drawn (and unnamed user-supplied) parameter sets are now named with
+  `names(lower)`. Version 1.0.6.9014.
 - `histOfCovariates()` plotted a hard-coded `CMDsm` column regardless of which annual climate
   covariate the ELF actually used, so any ELF with a different column (e.g. `CMD`, `CMD_sp`,
   `cumMDC`-derived columns) failed inside `spreadFitPrepare` with "object 'CMDsm' not found" as
