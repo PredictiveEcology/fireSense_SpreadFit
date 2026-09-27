@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9016"
+subtitle: "v.1.0.6.9017"
 date: "Last updated: 2026-09-27"
 output:
   bookdown::html_document2:
@@ -297,7 +297,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> fit </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger. </td>
+   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write `sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops after `crossValidate` and the simList is discarded. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> profileReps </td>
@@ -672,7 +672,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> spreadFitHeldOut </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. </td>
+   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")`. </td>
   </tr>
 </tbody>
 </table>

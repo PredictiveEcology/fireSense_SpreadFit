@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9016"),
+  version = list(fireSense_SpreadFit = "1.0.6.9017"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -89,7 +89,9 @@ defineModule(sim, list(
                                  "objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize'",
                                  "adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`,",
                                  "two more fits, each on half the years, predicting the other half",
-                                 "(`sim$spreadFitHeldOut`). Validation never writes the ledger.")),
+                                 "(`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write",
+                                 "`sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops",
+                                 "after `crossValidate` and the simList is discarded.")),
     defineParameter("profileReps", "integer", default = 10L,
                     desc = paste("After the fit, each covariate coefficient in turn is set to 0 and to 5 values",
                                  "across the final population, the others held at the best member, and each point",
@@ -314,7 +316,9 @@ defineModule(sim, list(
                                "quantiles of spread probability (`fireSenseUtils::linkSaturation()`).")),
     createsOutput("spreadFitHeldOut", "list",
                   desc = paste("mode 'validate' only: `sims`, the held-out years simulated from the fit to the",
-                               "other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`."))
+                               "other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`.",
+                               "Also written to",
+                               "`file.path(outputPath(sim), currentModule(sim), \"spreadFitHeldOut_<.runName>.rds\")`."))
   )
 ))
 
@@ -475,6 +479,11 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     crossValidate = {
       sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000, mod$thresh)
+      heldOutPath <- file.path(outputPath(sim), currentModule(sim),
+                               paste0("spreadFitHeldOut_", sim$.runName, ".rds"))
+      checkPath(dirname(heldOutPath), create = TRUE)
+      saveRDS(sim$spreadFitHeldOut, heldOutPath)
+      message("fireSense_SpreadFit: wrote held-out validation to ", heldOutPath)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
