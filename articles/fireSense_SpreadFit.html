@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9014</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9017</span>
       </span>
     </div>
 
@@ -71,7 +71,7 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fireSense_SpreadFit Manual</h1>
-            <h3 data-toc-skip class="subtitle">v.1.0.6.9014</h3>
+            <h3 data-toc-skip class="subtitle">v.1.0.6.9017</h3>
             
             <h4 data-toc-skip class="date">Last updated: 2026-09-27</h4>
       
@@ -665,7 +665,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Options: debug, fit, visualize, validate. Can use multiples. ‘debug’ runs the objective function with visuals instead of DEoptim; ‘fit’ runs DEoptim; ‘visualize’ adds the <code>debug</code> and <code>plot</code> events after the fit; ‘validate’ adds <code>crossValidate</code>, two more fits, each on half the years, predicting the other half (<code>sim$spreadFitHeldOut</code>). Validation never writes the ledger.
+Options: debug, fit, visualize, validate. Can use multiples. ‘debug’ runs the objective function with visuals instead of DEoptim; ‘fit’ runs DEoptim; ‘visualize’ adds the <code>debug</code> and <code>plot</code> events after the fit; ‘validate’ adds <code>crossValidate</code>, two more fits, each on half the years, predicting the other half (<code>sim$spreadFitHeldOut</code>). Validation never writes the ledger, but does write <code>sim$spreadFitHeldOut</code> to <code>outputPath(sim)</code>, since a batch run typically stops after <code>crossValidate</code> and the simList is discarded.
 </td>
 </tr>
 <tr>
@@ -1334,7 +1334,7 @@ upperAndLowerVal
 numeric
 </td>
 <td style="text-align:left;">
-9
+50
 </td>
 <td style="text-align:left;">
 NA
@@ -1343,7 +1343,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Bound given to each covariate coefficient (<code>upper</code> = this, <code>lower</code> = minus this) when <code>upper</code> or <code>lower</code> is not supplied.
+Bound given to each covariate coefficient (<code>upper</code> = this, <code>lower</code> = minus this) when <code>upper</code> or <code>lower</code> is not supplied. Bounds should be wide enough that they do not influence the fitted value; only the sign of drought-index and <code>youngAge</code> terms is constrained (see <code><a href="../reference/estimateSpreadParams.html">estimateSpreadParams()</a></code>). A held-out experiment (7 ELFs x 2 folds) found estimates up to 25.7 and youngAge medians down to -23.0 with the previous default of 9.
 </td>
 </tr>
 <tr>
@@ -1354,7 +1354,7 @@ upperAndLowerValFuel
 numeric
 </td>
 <td style="text-align:left;">
-60
+100
 </td>
 <td style="text-align:left;">
 NA
@@ -1363,7 +1363,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9 the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07 once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits.
+As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biomass / 1e4, so their coefficients are larger than those of covariates rescaled to [0, 1]. The same held-out experiment found fuel estimates up to 54.5 (29 of 82 above 25) with the previous default of 60.
 </td>
 </tr>
 </tbody>
@@ -1547,7 +1547,7 @@ spreadFitHeldOut
 list
 </td>
 <td style="text-align:left;">
-mode ‘validate’ only: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fitDiagnostics.html" class="external-link">fireSenseUtils::scoreFireSizes()</a></code>.
+mode ‘validate’ only: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fitDiagnostics.html" class="external-link">fireSenseUtils::scoreFireSizes()</a></code>. Also written to <code>file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds")</code>.
 </td>
 </tr>
 </tbody>
