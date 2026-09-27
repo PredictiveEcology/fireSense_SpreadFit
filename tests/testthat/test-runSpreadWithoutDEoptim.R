@@ -58,7 +58,7 @@ test_that("the seed fixes the draws: values from origin/development at 6461e8d, 
   rec$calls <- NULL
   callIt("debug", seed = 42L)
   expect_identical(rec$calls, first)
-  expect_equal(first[[1]]$par, c(0.914806043496355, 19.3707541329786))
+  expect_equal(first[[1]]$par, c(a = 0.914806043496355, b = 19.3707541329786))
   expect_identical(vapply(first, `[[`, integer(1), "thresh"), c(17L, 15L, 24L, 7L))
   rec$calls <- NULL
   callIt("debug", seed = 43L)
@@ -70,8 +70,28 @@ test_that("supplied `pars` are evaluated as given, with a threshold that never b
   local_mocked_bindings(.objfunSpreadFit = recorder(rec))
   callIt("debug", pars = c(0.5, 15))
   expect_length(rec$calls, 1L)
-  expect_identical(rec$calls[[1]]$par, c(0.5, 15))
+  ## named with `names(lower)`: unnamed and the same length, so the objective function can tell
+  ## apart a trailing yearSpreadSD from a logistic parameter (see the naming test below)
+  expect_identical(rec$calls[[1]]$par, c(a = 0.5, b = 15))
   expect_identical(rec$calls[[1]]$thresh, 1e8)
+})
+
+test_that("drawn parameter sets are named, so a trailing yearSpreadSD bound is recognised", {
+  ## R/runSpreadWithoutDEoptim.R used to draw `pars` with `runif()`, unnamed. Since yearSpreadSD
+  ## became a default trailing bound, fireSenseUtils:::.objfunSpreadFit tells it apart from a
+  ## logistic parameter only via names(par), so an unnamed draw made every trial error with
+  ## "logistic with 4 parameters not tested yet" and the threshold came back NA.
+  lowerYSD <- c(lower, yearSpreadSD = 0)
+  upperYSD <- c(upper, yearSpreadSD = 1)
+  rec <- new.env()
+  local_mocked_bindings(.objfunSpreadFit = recorder(rec))
+  suppressMessages(utils::capture.output(
+    runSpreadWithoutDEoptim(
+      iterThresh = 4L, lower = lowerYSD, upper = upperYSD, fireSense_spreadFormula = "~ 0 + a + b",
+      flammableRTM = "theLandscape", annualDTx1000 = list(), nonAnnualDTx1000 = list(),
+      fireBufferedListDT = list(), historicalFires = fires, covMinMax = NULL, objfunFireReps = 7L,
+      maxFireSpread = 0.28, tests = "SNLL_FS", formulaToFit = "~ 0 + a + b", mode = "debug", seed = 42L)))
+  expect_identical(names(rec$calls[[1]]$par), c("a", "b", "yearSpreadSD"))
 })
 
 test_that("fit mode returns the smallest candidate threshold whose trial did not bail", {

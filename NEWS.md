@@ -1,5 +1,27 @@
 # fireSense_SpreadFit (development version)
 
+- The `crossValidate` event (fireSense_SpreadFit.R:476-477 pre-fix) put mode "validate"'s result in
+  `sim$spreadFitHeldOut` but never wrote it to disk. Batch runs stop after `crossValidate`
+  (`events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`), so the simList is
+  discarded and the held-out validation was lost. `crossValidate` now also writes
+  `sim$spreadFitHeldOut` to `file.path(outputPath(sim), currentModule(sim),
+  "spreadFitHeldOut_<.runName>.rds")`. Version 1.0.6.9017.
+- `estimateSpreadParams()` (fireSense_SpreadFit.R:886-889 pre-fix) set the sign of a covariate's
+  DEoptim bound by whether its name appeared in the annual covariates table, so a non-drought
+  annual covariate (e.g. `PPT_sm`) was wrongly floored at 0 like a drought index, and the default
+  bounds (`upperAndLowerVal = 9`, `upperAndLowerValFuel = 60`) were narrow enough to bind: a
+  held-out experiment (7 ELFs x 2 folds) found climate estimates up to 25.7, youngAge top-10
+  medians down to -23.0, fuel estimates up to 54.5 (29 of 82 above 25), and non-forest classes
+  reaching +-9. Sign is now decided by term name: drought-index terms (`CMD` or `MDC` anywhere in
+  the name) get a lower bound of 0, `youngAge` gets an upper bound of 0, and every other term,
+  including any other annual covariate, is symmetric. `upperAndLowerVal` defaults to 50 and
+  `upperAndLowerValFuel` to 100, wide enough that they constrain sign, not magnitude. Version
+  1.0.6.9016.
+- `runSpreadWithoutDEoptim()` drew its threshold-calibration parameter sets unnamed, so
+  `fireSenseUtils:::.objfunSpreadFit` (which tells a trailing `yearSpreadSD` bound apart from a
+  logistic parameter only by name) miscounted the logistic parameters and every trial errored;
+  `mod$thresh` came back `NA`. Drawn (and unnamed user-supplied) parameter sets are now named with
+  `names(lower)`. Version 1.0.6.9015.
 - `histOfCovariates()` plotted a hard-coded `CMDsm` column regardless of which annual climate
   covariate the ELF actually used, so any ELF with a different column (e.g. `CMD`, `CMD_sp`,
   `cumMDC`-derived columns) failed inside `spreadFitPrepare` with "object 'CMDsm' not found" as

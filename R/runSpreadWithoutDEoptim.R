@@ -74,6 +74,13 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     thresholds <- 1e8
   }
   if (!is(pars, "list")) pars <- list(pars)
+  ## .objfunSpreadFit (fireSenseUtils) tells yearSpreadSD apart from a logistic parameter only by
+  ## name (it is always the trailing element of lower/upper); name unnamed sets that match `lower`'s
+  ## length, whether drawn above or supplied via `pars`, or every trial with yearSpreadSD errors.
+  pars <- lapply(pars, function(p) {
+    if (is.null(names(p)) && length(p) == length(lower)) names(p) <- names(lower)
+    p
+  })
 
 
   if ("debug" %in% mode) {
