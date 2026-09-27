@@ -11,22 +11,22 @@ P1 <- function(sim) SpaDES.core::params(sim)[[moduleName]]
 test_that("default bounds are built from the formula and the annual covariates", {
   p <- P1(prepared())
   expect_identical(p$upper, c(maxAsymptote = 0.276, hillSlope1 = 2, inflectionPoint1 = 4,
-                              CMDsm = 9, youngAge = 0, class1 = 60, class2 = 60, nf = 9, yearSpreadSD = 1))
+                              CMDsm = 50, youngAge = 0, class1 = 100, class2 = 100, nf = 50, yearSpreadSD = 1))
   expect_identical(p$lower, c(maxAsymptote = 0.25, hillSlope1 = 0.2, inflectionPoint1 = 0.1,
-                              CMDsm = 0, youngAge = -9, class1 = -60, class2 = -60, nf = -9, yearSpreadSD = 0))
+                              CMDsm = 0, youngAge = -50, class1 = -100, class2 = -100, nf = -50, yearSpreadSD = 0))
 })
 
 test_that("upperAndLowerValFuel sets the fuel bounds, and only those", {
-  ## fuel is biomass / 1e4, not [0, 1]: a +-9 box bound the fuel coefficient in the model-selection fits
+  ## fuel is biomass / 1e4, not [0, 1]: bounds should be wide enough not to bind, not narrow
   p <- P1(prepared(list(upperAndLowerValFuel = 25)))
-  expect_identical(unname(p$upper[c("class1", "class2", "nf", "CMDsm")]), c(25, 25, 9, 9))
-  expect_identical(unname(p$lower[c("class1", "class2", "nf", "youngAge")]), c(-25, -25, -9, -9))
+  expect_identical(unname(p$upper[c("class1", "class2", "nf", "CMDsm")]), c(25, 25, 50, 50))
+  expect_identical(unname(p$lower[c("class1", "class2", "nf", "youngAge")]), c(-25, -25, -50, -50))
 })
 
 test_that("upperAndLowerVal sets the size of the default bounds", {
   p <- P1(prepared(list(upperAndLowerVal = 4)))
   expect_identical(unname(p$upper[c("CMDsm", "nf")]), c(4, 4))
-  expect_identical(unname(p$upper["class1"]), 60)   # fuel has its own parameter
+  expect_identical(unname(p$upper["class1"]), 100)   # fuel has its own parameter
   expect_identical(unname(p$lower[c("youngAge", "nf")]), c(-4, -4))
 })
 
@@ -35,7 +35,7 @@ test_that("supplied bounds are kept; only the missing one is filled", {
           CMDsm = 1, youngAge = 0, class1 = 2, class2 = 3, nf = 4)
   p <- P1(prepared(list(upper = up)))
   expect_identical(p$upper, up)
-  expect_identical(unname(p$lower[c("class1", "nf")]), c(-60, -9))
+  expect_identical(unname(p$lower[c("class1", "nf")]), c(-100, -50))
   ## the supplied upper has no yearSpreadSD, so the filled-in lower has none either
   expect_identical(names(p$lower), names(up))
 })

@@ -1,5 +1,16 @@
 # fireSense_SpreadFit (development version)
 
+- `estimateSpreadParams()` (fireSense_SpreadFit.R:886-889 pre-fix) set the sign of a covariate's
+  DEoptim bound by whether its name appeared in the annual covariates table, so a non-drought
+  annual covariate (e.g. `PPT_sm`) was wrongly floored at 0 like a drought index, and the default
+  bounds (`upperAndLowerVal = 9`, `upperAndLowerValFuel = 60`) were narrow enough to bind: a
+  held-out experiment (7 ELFs x 2 folds) found climate estimates up to 25.7, youngAge top-10
+  medians down to -23.0, fuel estimates up to 54.5 (29 of 82 above 25), and non-forest classes
+  reaching +-9. Sign is now decided by term name: drought-index terms (`CMD` or `MDC` anywhere in
+  the name) get a lower bound of 0, `youngAge` gets an upper bound of 0, and every other term,
+  including any other annual covariate, is symmetric. `upperAndLowerVal` defaults to 50 and
+  `upperAndLowerValFuel` to 100, wide enough that they constrain sign, not magnitude. Version
+  1.0.6.9016.
 - `runSpreadWithoutDEoptim()` drew its threshold-calibration parameter sets unnamed, so
   `fireSenseUtils:::.objfunSpreadFit` (which tells a trailing `yearSpreadSD` bound apart from a
   logistic parameter only by name) miscounted the logistic parameters and every trial errored;

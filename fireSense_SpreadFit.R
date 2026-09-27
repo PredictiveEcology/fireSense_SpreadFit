@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9015"),
+  version = list(fireSense_SpreadFit = "1.0.6.9016"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -235,13 +235,16 @@ defineModule(sim, list(
                                  "distribution. `NA` turns it off.")),
     defineParameter("upperTailBounds", "numeric", default = c(-1, 1),
                     desc = "Bounds of `upperTail1` when `link` is 'logistic3pUpper' and `lower`/`upper` are not supplied."),
-    defineParameter("upperAndLowerVal", "numeric", default = 9,
-                    desc = "Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or `lower` is not supplied."),
-    defineParameter("upperAndLowerValFuel", "numeric", default = 60,
+    defineParameter("upperAndLowerVal", "numeric", default = 50,
+                    desc = paste("Bound given to each covariate coefficient (`upper` = this, `lower` = minus this) when `upper` or",
+                                 "`lower` is not supplied. Bounds should be wide enough that they do not influence the fitted",
+                                 "value; only the sign of drought-index and `youngAge` terms is constrained (see",
+                                 "`estimateSpreadParams()`). A held-out experiment (7 ELFs x 2 folds) found estimates up to",
+                                 "25.7 and youngAge medians down to -23.0 with the previous default of 9.")),
+    defineParameter("upperAndLowerValFuel", "numeric", default = 100,
                     desc = paste("As `upperAndLowerVal`, for the fuel biomass covariates. They are biomass / 1e4, so their",
-                                 "coefficients are larger than those of covariates rescaled to [0, 1]: with a bound of 9",
-                                 "the fuel coefficient sat on the bound (fitted 4.57 in a +-9 box on the log scale, 11.07",
-                                 "once widened; 31.7 on the linear scale). 60 did not bind in any of 36 fits."))
+                                 "coefficients are larger than those of covariates rescaled to [0, 1]. The same held-out",
+                                 "experiment found fuel estimates up to 54.5 (29 of 82 above 25) with the previous default of 60."))
   ),
   inputObjects = rbind(
     expectsInput(".runName", "character", "Some descriptive, short name for this fitting, e.g., ELF14.1"),
@@ -856,11 +859,17 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
 
 #' Default `upper` or `lower` bounds for DEoptim
 #'
-#' Covariate coefficients get +/- `upperAndLower`, except annual covariates (lower bound 0) and
-#' `youngAge` (upper bound 0). The three logistic parameters get fixed bounds.
+#' Bounds should be wide enough that they do not influence the fitted value, except to constrain
+#' sign. Covariate coefficients get +/- `upperAndLower`, except drought-index terms (name matches
+#' `droughtIndexPattern`, e.g. `CMD`, `CMD_sm`, `cumMDC` -- lower bound 0, since drought should not
+#' increase spread probability) and `youngAge` (upper bound 0, to prevent self-propagating fires).
+#' Every other term, including any other annual covariate, is symmetric. The three logistic
+#' parameters get fixed bounds.
 #'
 #' @param fireSense_spreadFormula character; the spread formula.
-#' @param anyAnnualCovariates list of annual covariate `data.table`s; only column names are used.
+#' @param anyAnnualCovariates list of annual covariate `data.table`s; kept for call-site
+#'   compatibility but no longer used -- bound sign is now decided by term name, not by annual
+#'   table membership.
 #' @param whichBound "upper" or "lower".
 #' @param upperAndLower numeric; absolute bound for covariate coefficients.
 #' @param upperTailBounds numeric; if not `NULL`, the bounds of `upperTail1`, which is added after
@@ -883,10 +892,10 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
   newParams <- as.vector(newParams)
   ## fuel biomass is biomass / 1e4, not [0, 1], so its coefficients need a wider box
   newParams[formulaTerms %in% fuelTerms] <- if (whichBound == "upper") upperAndLowerFuel else -upperAndLowerFuel
-  whAnnual <- formulaTerms %in% colnames(anyAnnualCovariates[[1]])
-  whYA <- formulaTerms[whAnnual] %in% youngAge
-  newParams[whAnnual] <- ifelse(whichBound == "upper", upperAndLower, 0)
-  newParams[whAnnual][whYA] <- ifelse(whichBound == "upper", 0, -(upperAndLower))
+  whDrought <- grepl(droughtIndexPattern, formulaTerms)
+  whYA <- formulaTerms %in% youngAge
+  newParams[whDrought] <- ifelse(whichBound == "upper", upperAndLower, 0)
+  newParams[whYA] <- ifelse(whichBound == "upper", 0, -(upperAndLower))
 
   names(newParams) <- formulaTerms
 
@@ -960,3 +969,7 @@ estimateSpreadParams <- function(fireSense_spreadFormula, anyAnnualCovariates, w
 
 ## name of the young-age covariate
 youngAge <- fireSenseUtils::youngAgeTxt
+
+## drought-index terms (CMD or MDC anywhere in the name, e.g. CMD, CMD_sm, CMD_sp, CMDsm, cumMDC,
+## MDC): wetter conditions should not increase spread probability, so these get a lower bound of 0
+droughtIndexPattern <- "CMD|MDC"

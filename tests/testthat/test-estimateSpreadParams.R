@@ -10,7 +10,7 @@ test_that("upper bounds: +B for covariates, 0 for youngAge, fixed logistic bound
       CMDsm = 9, youngAge = 0, class1 = 9, nf = 9))
 })
 
-test_that("lower bounds: -B for non-annual covariates and youngAge, 0 for other annual covariates", {
+test_that("lower bounds: -B for non-drought covariates and youngAge, 0 for drought-index terms", {
   expect_identical(
     estimateSpreadParams(form, annual, whichBound = "lower", upperAndLower = 9),
     c(maxAsymptote = 0.25, hillSlope1 = 0.2, inflectionPoint1 = 0.1,
@@ -26,12 +26,27 @@ test_that("the bound scales with upperAndLower and every lower bound is <= its u
   expect_true(all(lo <= up))
 })
 
-test_that("a term is 'annual' only if it is a column of the annual covariates", {
-  ## youngAge absent from the annual table: it is bounded like any other covariate
+test_that("a term is bounded by name, not by annual-table membership", {
+  ## a non-drought term that IS in the annual table stays symmetric, not floored at 0
+  form2 <- "~ 0 + CMD + cumMDC + PPT_sm + youngAge + fuel1 + nf"
+  annual2 <- list(year2001 = data.table::data.table(pixelID = 1L, CMD = 1, cumMDC = 1,
+                                                     PPT_sm = 1, youngAge = 0))
+  up <- estimateSpreadParams(form2, annual2, "upper", upperAndLower = 50,
+                             fuelTerms = "fuel1", upperAndLowerFuel = 100)
+  lo <- estimateSpreadParams(form2, annual2, "lower", upperAndLower = 50,
+                             fuelTerms = "fuel1", upperAndLowerFuel = 100)
+  expect_identical(unname(c(lo["CMD"], up["CMD"])), c(0, 50))
+  expect_identical(unname(c(lo["cumMDC"], up["cumMDC"])), c(0, 50))
+  expect_identical(unname(c(lo["PPT_sm"], up["PPT_sm"])), c(-50, 50))
+  expect_identical(unname(c(lo["youngAge"], up["youngAge"])), c(-50, 0))
+  expect_identical(unname(c(lo["fuel1"], up["fuel1"])), c(-100, 100))
+  expect_identical(unname(c(lo["nf"], up["nf"])), c(-50, 50))
+
+  ## youngAge absent from the annual table: still bounded as youngAge, by name
   noYA <- list(year2001 = data.table::data.table(pixelID = 1L, CMDsm = 1))
-  expect_identical(unname(estimateSpreadParams(form, noYA, "upper", 9)["youngAge"]), 9)
+  expect_identical(unname(estimateSpreadParams(form, noYA, "upper", 9)["youngAge"]), 0)
   expect_identical(unname(estimateSpreadParams(form, noYA, "lower", 9)["youngAge"]), -9)
-  ## no annual term in the formula at all
+  ## no drought or youngAge term in the formula at all
   expect_identical(estimateSpreadParams("~ 0 + class1", annual, "lower", 3),
                    c(maxAsymptote = 0.25, hillSlope1 = 0.2, inflectionPoint1 = 0.1, class1 = -3))
 })
@@ -58,4 +73,3 @@ test_that("the per-year random effect's sd is bounded last, after an upper-tail 
   ## off: no yearSpreadSD at all
   expect_false("yearSpreadSD" %in% names(estimateSpreadParams(form, annual, "upper", 9)))
 })
-
