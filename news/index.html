@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9013</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9014</span>
       </span>
     </div>
 
@@ -53,7 +53,9 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="development version" id="firesense_spreadfit-development-version">fireSense_SpreadFit (development version)<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-development-version"></a></h2>
-<ul><li>New parameters for fireSenseUtils &gt;= 0.2.3.9045’s objective options, ON by default: <code>yearAreaWeight = "auto"</code> (annual area burned scored against each year’s simulated totals), <code>areaDistWeight = "auto"</code> (area-weighted size distribution), and <code>jumpTries = 20</code>/<code>jumpMeanDist = 3</code> (a fire stuck below the escape size may jump to nearby burnable land). They reach the fit and both threshold calibrations. This changes the objective, and so the cache key, of every fit; set the weights and <code>jumpTries</code> to 0 for the previous objective.</li>
+<ul><li>
+<code><a href="../reference/histOfCovariates.html">histOfCovariates()</a></code> plotted a hard-coded <code>CMDsm</code> column regardless of which annual climate covariate the ELF actually used, so any ELF with a different column (e.g. <code>CMD</code>, <code>CMD_sp</code>, <code>cumMDC</code>-derived columns) failed inside <code>spreadFitPrepare</code> with “object ‘CMDsm’ not found” as soon as the plot was drawn. It now plots every annual covariate column, faceted by covariate and year, and no longer uses the deprecated <code>aes_string()</code>. Version 1.0.6.9014.</li>
+<li>New parameters for fireSenseUtils &gt;= 0.2.3.9045’s objective options, ON by default: <code>yearAreaWeight = "auto"</code> (annual area burned scored against each year’s simulated totals), <code>areaDistWeight = "auto"</code> (area-weighted size distribution), and <code>jumpTries = 20</code>/<code>jumpMeanDist = 3</code> (a fire stuck below the escape size may jump to nearby burnable land). They reach the fit and both threshold calibrations. This changes the objective, and so the cache key, of every fit; set the weights and <code>jumpTries</code> to 0 for the previous objective.</li>
 <li>The threshold calibration now uses the fit’s objective settings: <code>weighted</code>, <code>sizeLik</code>, <code>sizeLikDf</code>, <code>adWeight</code> and <code>link</code> were not passed, so it ran with <code>weighted = TRUE</code> and the “kde” likelihood whatever the fit used. Calibrated thresholds change, and so does the <code>estimateThreshold</code> cache key. <code>weighted = "sqrt"</code> no longer errors in the rough threshold estimate. Version 1.0.6.9013.</li>
 <li>New parameter <code>escapeSizeHa</code> (default 50): the spread model is fitted to escaped fires only, fires that reached that size, and each simulated fire burns that area first before spreading normally. Before, any fire over 1 pixel counted, and many simulated fires never left their first pixel. It reaches the fit (<code>runDEoptim()</code>) and the threshold calibration (<code><a href="../reference/runSpreadWithoutDEoptim.html">runSpreadWithoutDEoptim()</a></code>), so both evaluate the same objective. <code>NULL</code>/<code>NA</code> gives the old fit. Needs fireSenseUtils &gt;= 0.2.3.9044. Version 1.0.6.9012.</li>
 </ul><div class="section level3">
