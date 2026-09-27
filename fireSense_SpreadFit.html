@@ -2994,7 +2994,7 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">fireSense_SpreadFit Manual</h1>
-<h3 class="subtitle">v.1.0.6.9016</h3>
+<h3 class="subtitle">v.1.0.6.9017</h3>
 <h4 class="date">Last updated: 2026-09-27</h4>
 
 </div>
@@ -3580,7 +3580,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Options: debug, fit, visualize, validate. Can use multiples. ‘debug’ runs the objective function with visuals instead of DEoptim; ‘fit’ runs DEoptim; ‘visualize’ adds the <code>debug</code> and <code>plot</code> events after the fit; ‘validate’ adds <code>crossValidate</code>, two more fits, each on half the years, predicting the other half (<code>sim$spreadFitHeldOut</code>). Validation never writes the ledger.
+Options: debug, fit, visualize, validate. Can use multiples. ‘debug’ runs the objective function with visuals instead of DEoptim; ‘fit’ runs DEoptim; ‘visualize’ adds the <code>debug</code> and <code>plot</code> events after the fit; ‘validate’ adds <code>crossValidate</code>, two more fits, each on half the years, predicting the other half (<code>sim$spreadFitHeldOut</code>). Validation never writes the ledger, but does write <code>sim$spreadFitHeldOut</code> to <code>outputPath(sim)</code>, since a batch run typically stops after <code>crossValidate</code> and the simList is discarded.
 </td>
 </tr>
 <tr>
@@ -4454,7 +4454,7 @@ spreadFitHeldOut
 list
 </td>
 <td style="text-align:left;">
-mode ‘validate’ only: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code>fireSenseUtils::scoreFireSizes()</code>.
+mode ‘validate’ only: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code>fireSenseUtils::scoreFireSizes()</code>. Also written to <code>file.path(outputPath(sim), currentModule(sim), &quot;spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds&quot;)</code>.
 </td>
 </tr>
 </tbody>
