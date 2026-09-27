@@ -1,5 +1,11 @@
 # fireSense_SpreadFit (development version)
 
+- The `crossValidate` event (fireSense_SpreadFit.R:476-477 pre-fix) put mode "validate"'s result in
+  `sim$spreadFitHeldOut` but never wrote it to disk. Batch runs stop after `crossValidate`
+  (`events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`), so the simList is
+  discarded and the held-out validation was lost. `crossValidate` now also writes
+  `sim$spreadFitHeldOut` to `file.path(outputPath(sim), currentModule(sim),
+  "spreadFitHeldOut_<.runName>.rds")`. Version 1.0.6.9017.
 - `estimateSpreadParams()` (fireSense_SpreadFit.R:886-889 pre-fix) set the sign of a covariate's
   DEoptim bound by whether its name appeared in the annual covariates table, so a non-drought
   annual covariate (e.g. `PPT_sm`) was wrongly floored at 0 like a drought index, and the default
