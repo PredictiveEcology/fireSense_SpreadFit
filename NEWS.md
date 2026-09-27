@@ -1,5 +1,10 @@
 # fireSense_SpreadFit (development version)
 
+- `histOfCovariates()` plotted a hard-coded `CMDsm` column regardless of which annual climate
+  covariate the ELF actually used, so any ELF with a different column (e.g. `CMD`, `CMD_sp`,
+  `cumMDC`-derived columns) failed inside `spreadFitPrepare` with "object 'CMDsm' not found" as
+  soon as the plot was drawn. It now plots every annual covariate column, faceted by covariate and
+  year, and no longer uses the deprecated `aes_string()`. Version 1.0.6.9014.
 - New parameters for fireSenseUtils >= 0.2.3.9045's objective options, ON by default: `yearAreaWeight = "auto"`
   (annual area burned scored against each year's simulated totals), `areaDistWeight = "auto"` (area-weighted
   size distribution), and `jumpTries = 20`/`jumpMeanDist = 3` (a fire stuck below the escape size may jump to
