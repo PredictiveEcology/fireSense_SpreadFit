@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9013"),
+  version = list(fireSense_SpreadFit = "1.0.6.9014"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -677,9 +677,10 @@ deriveCovMinMax <- function(annualList, nonAnnualList, fuelCols, fixedRange = li
 
 #' Histograms of the spread-fit covariates
 #'
-#' @param annualList list of `data.table`s of annual covariates, one per year; must have `CMDsm`.
+#' @param annualList list of `data.table`s of annual covariates, one per year.
 #' @param nonAnnualList list of `data.table`s of non-annual (log biomass) covariates.
-#' @return list of two `ggplot`s: `annual` (`CMDsm` by year) and `nonAnnual` (biomass by fuel and year).
+#' @return list of two `ggplot`s: `annual` (every annual covariate by covariate and year) and
+#'   `nonAnnual` (biomass by fuel and year).
 histOfCovariates <- function(annualList, nonAnnualList) {
   annualCols <- colnames(annualList[[1]])
   annualColsToPlot <- setdiff(annualCols, "pixelID")
@@ -696,16 +697,30 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   ann <- rbindlist(annualList, idcol = yr, use.names = TRUE, fill = TRUE)
   set(ann, NULL, "pixelID", NULL)
 
+  cv <- "Covariate"
+  vAnn <- "value"
+  annDT <- melt(
+    ann,
+    id.vars = yr,             # keep year as an identifier
+    variable.name = cv,        # new column holding the old column names
+    value.name = vAnn         # numeric values
+  )
+
   # 1. Create a clean environment
   clean_env <- new.env(parent = .GlobalEnv)
   # 2. "Inject" only the necessary objects
-  clean_env$ann <- ann
+  clean_env$annDT <- annDT
   clean_env$yr  <- yr
+  clean_env$cv  <- cv
+  clean_env$vAnn <- vAnn
   # 3. Evaluate the plot inside that environment
   annHists <- local({
-    ggplot(ann) + 
-      geom_histogram(aes_string("CMDsm")) +
-      facet_wrap(yr) + 
+    ggplot(annDT, aes(x = .data[[vAnn]])) +
+      geom_histogram(bins = 20) +
+      facet_grid(
+        rows = vars(.data[[yr]]),     # one strip per row, showing year
+        cols = vars(.data[[cv]])      # one strip per column, showing covariate
+      ) +
       ggplot2::theme_bw()
   }, envir = clean_env)
 

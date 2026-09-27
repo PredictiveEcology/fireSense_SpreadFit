@@ -17,9 +17,40 @@ test_that("the annual plot holds every annual row, labelled by year, and drops p
   out <- hists(annualList = annual, nonAnnualList = nonAnnual)
   expect_identical(names(out), c("annual", "nonAnnual"))
   d <- out$annual$data
-  expect_identical(names(d), c("year", "CMDsm"))
+  expect_identical(names(d), c("year", "Covariate", "value"))
   expect_identical(d$year, rep(c("year2001", "year2002"), c(3, 2)))
-  expect_identical(d$CMDsm, c(10, 20, 30, 15, 25))
+  expect_identical(as.character(d$Covariate), rep("CMDsm", 5))
+  expect_identical(d$value, c(10, 20, 30, 15, 25))
+})
+
+## real ELFs use CMD, CMD_sp, cumMDC-derived columns, etc., not CMDsm; a plot hard-coded to CMDsm
+## built without error but failed as soon as it was drawn (as `Plots()` does), with
+## "object 'CMDsm' not found", stopping spreadFitPrepare() for every one of them
+annualCMD <- list(year2001 = dt(pixelID = 1:3, CMD = c(10, 20, 30)),
+                   year2002 = dt(pixelID = 1:2, CMD = c(15, 25)))
+
+test_that("the annual plot renders for a climate covariate other than CMDsm", {
+  out <- hists(annualList = annualCMD, nonAnnualList = nonAnnual)
+  expect_no_error(ggplot2::ggplot_build(out$annual))
+})
+
+test_that("the annual plot works whatever the climate covariate is named, not just CMDsm", {
+  out <- hists(annualList = annualCMD, nonAnnualList = nonAnnual)
+  d <- out$annual$data
+  expect_identical(names(d), c("year", "Covariate", "value"))
+  expect_identical(as.character(d$Covariate), rep("CMD", 5))
+  expect_identical(d$value, c(10, 20, 30, 15, 25))
+})
+
+test_that("the annual plot facets by covariate when there is more than one annual column", {
+  annual2 <- list(year2001 = dt(pixelID = 1:2, CMD = c(10, 20), youngAge = c(1, 2)),
+                  year2002 = dt(pixelID = 1:2, CMD = c(15, 25), youngAge = c(3, 4)))
+  out <- hists(annualList = annual2, nonAnnualList = nonAnnual)
+  d <- out$annual$data
+  expect_identical(names(d), c("year", "Covariate", "value"))
+  expect_setequal(unique(as.character(d$Covariate)), c("CMD", "youngAge"))
+  expect_identical(d$value[as.character(d$Covariate) == "CMD"], c(10, 20, 15, 25))
+  expect_identical(d$value[as.character(d$Covariate) == "youngAge"], c(1, 2, 3, 4))
 })
 
 test_that("the non-annual plot is long format, back-transformed from log, one row per pixel x fuel", {
