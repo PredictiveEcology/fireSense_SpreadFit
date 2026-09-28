@@ -1,5 +1,16 @@
 # fireSense_SpreadFit (development version)
 
+- `hillSlope1` (the spread link's slope) is fixed at 1, not fitted by `DEoptim`.
+  `estimateSpreadParams()` (fireSense_SpreadFit.R:886-921 pre-fix) put it in the default `upper`/
+  `lower` bounds with `[0.2, 2]`, but with the link's linear predictor `x = covariates %*% beta`,
+  `hillSlope1` enters only as `hillSlope1 * x`, so scaling every covariate coefficient by `k` and
+  dividing `hillSlope1` by `k` leaves every prediction unchanged: it was never identifiable, and let
+  every coefficient drift along that 10x ridge. `estimateSpreadParams()` no longer emits
+  `hillSlope1`; `fireSenseUtils::.objfunSpreadFit()` (>= 0.2.3.9049) reinserts `hillSlope1 = 1`
+  before evaluating the fit, and the `run` event's ledger row gets it back too
+  (`addHillSlope1ToLedger()`), so an old ledger row keeps predicting with its own fitted
+  `hillSlope1` and a new one predicts with 1. A supplied `upper`/`lower` naming `hillSlope1` is now
+  an error. Requires `fireSenseUtils@development (>= 0.2.3.9049)`. Version 1.0.6.9020.
 - `spreadFitPrep()` (fireSense_SpreadFit.R:519-526 pre-fix) appended every non-annual covariate
   name to youngAge's own `mutuallyExclusiveCols` entry, including `youngAge` itself when it is a
   non-annual column. `fireSenseUtils::makeMutuallyExclusive()` then zeroed `youngAge` on young
