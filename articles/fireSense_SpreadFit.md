@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9019"
+subtitle: "v.1.0.6.9020"
 date: "Last updated: 2026-09-28"
 output:
   bookdown::html_document2:
@@ -267,7 +267,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> see `?DEoptim`. Lower limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (named in the order they appear in the formula). </td>
+   <td style="text-align:left;"> see `?DEoptim`. Lower limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (named in the order they appear in the formula). Do not include `hillSlope1`: it is fixed at 1, not fitted (see `estimateSpreadParams()`); supplying it is an error. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> maxFireSpread </td>
@@ -507,7 +507,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> see `?DEoptim`. Upper limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (named in the order they appear in the formula). </td>
+   <td style="text-align:left;"> see `?DEoptim`. Upper limits for the logistic function parameters (lower bound, upper bound, slope, asymmetry) and the statistical model parameters (named in the order they appear in the formula). Do not include `hillSlope1`: it is fixed at 1, not fitted (see `estimateSpreadParams()`); supplying it is an error. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> useCache_DE </td>
