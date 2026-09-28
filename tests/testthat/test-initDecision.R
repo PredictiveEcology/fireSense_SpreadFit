@@ -104,3 +104,26 @@ test_that("events are scheduled at .runInitialTime", {
   ev <- SpaDES.core::events(sim)
   expect_identical(unique(ev$eventTime[ev$moduleName == moduleName]), 1)
 })
+
+test_that("heldOutFold NA (the default) leaves scheduling unchanged", {
+  expect_identical(queued(initOnly(list(stopIfNoPreRunFit = FALSE))),
+                   queued(initOnly(list(stopIfNoPreRunFit = FALSE, heldOutFold = NA))))
+})
+
+test_that("heldOutFold 1 or 2 schedules ONLY prepare, threshold and crossValidate", {
+  ## no full fit ("run"), no postFitDiagnostics -- and it bypasses stopIfNoPreRunFit entirely,
+  ## which would otherwise stop a bare module (see the first test in this file)
+  expect_identical(queued(initOnly(list(heldOutFold = 1L))),
+                   c("spreadFitPrepare", "estimateThreshold", "crossValidate"))
+  expect_identical(queued(initOnly(list(heldOutFold = 2L))),
+                   c("spreadFitPrepare", "estimateThreshold", "crossValidate"))
+  ## still true with a ledger row present and refitExisting set: heldOutFold does not consult either
+  objs <- list(studyAreaWithSpreadParams = toyLedger("9.9"))
+  expect_identical(queued(initOnly(list(heldOutFold = 1L, refitExisting = TRUE), objs)),
+                   c("spreadFitPrepare", "estimateThreshold", "crossValidate"))
+})
+
+test_that("heldOutFold rejects values other than NA, 1 or 2", {
+  expect_error(initOnly(list(heldOutFold = 3L)), "heldOutFold.*NA, 1L or 2L")
+  expect_error(initOnly(list(heldOutFold = "a")))
+})

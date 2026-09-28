@@ -13,7 +13,7 @@ test_that("parameter classes", {
     (function(x) x[sort(names(x), method = "radix")])(c(.c = "numeric", .plots = "character|logical", .plotSize = "list", .runInitialTime = "numeric",
       .studyAreaName = "character", .useCache = "logical|character",
       cores = "integer", DEoptimControl = "list", DEoptimTests = "character",
-      doObjFunAssertions = "logical", initialpop = "numeric", iterDEoptim = "integer",
+      doObjFunAssertions = "logical", heldOutFold = "integer", initialpop = "numeric", iterDEoptim = "integer",
       iterThresh = "integer", libPathDEoptim = "character", lower = "numeric",
       maxFireSpread = "numeric", mode = "character", mutuallyExclusiveCols = "list",
       nCoresNeeded = "integer", objFunCoresInternal = "integer",
@@ -101,6 +101,8 @@ test_that("defaults that are 'not set'", {
     expect_null(def[[nm]], label = nm)
   for (nm in c("lower", "upper"))
     expect_identical(def[[nm]], NA, label = nm)
+  ## heldOutFold NA is the "unchanged behaviour" default; see test-initDecision.R
+  expect_identical(def$heldOutFold, NA)
 })
 
 test_that("the ledger's location", {

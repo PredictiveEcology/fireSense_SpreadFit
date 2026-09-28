@@ -130,6 +130,33 @@ cvFolds <- function(years) {
   fold
 }
 
+#' Fit one cross-validation fold's complement and score its held-out years
+#'
+#' The per-fold work shared by [crossValidateSpread()] (both folds, one job) and
+#' [crossValidateSpreadOneFold()] (one fold, one job -- the `heldOutFold` parameter). The fit's
+#' `runName` (and so its `Cache` key, see `fitSpread()`) is suffixed by `k`, so fold 1, fold 2 and
+#' a full fit (plain `sim$.runName`, no suffix) never share a cache entry.
+#'
+#' @param sim a `simList`.
+#' @param covs `mod$covsX1000`.
+#' @param thresh `mod$thresh`.
+#' @param fold integer vector, one element per year in `names(covs$historicalFires)`, from `cvFolds()`.
+#' @param k integer; the fold (1 or 2) to hold out.
+#' @return `data.table`: this fold's simulated held-out years (`fireSenseUtils::simulateFireSizes()`), with `fold`.
+fitAndScoreFold <- function(sim, covs, thresh, fold, k) {
+  yearLists <- c("annualDTx1000", "fireBufferedListDT", "historicalFires")
+  years <- names(covs$historicalFires)
+  fitCovs <- heldCovs <- covs
+  fitCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold != k]])
+  heldCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold == k]])
+  DE <- fitSpread(sim, fitCovs, thresh, runName = paste0(sim$.runName, "_cvFold", k), diagnostics = FALSE)
+  best <- bestParamSets(DE, names(P(sim)$lower), n = max(1L, P(sim)$simulateMembers))
+  s <- Cache(fireSenseUtils::simulateFireSizes, pop = best$params,
+             fnArgs = spreadObjFunArgs(sim, heldCovs),
+             .functionName = paste0("simulateHeldOut_", sim$.runName, "_cvFold", k))
+  data.table(fold = k, s)
+}
+
 #' Two-fold cross-validation of the spread fit
 #'
 #' Fits the model to every other year and simulates the held-out years from the `simulateMembers`
@@ -142,21 +169,27 @@ cvFolds <- function(years) {
 #' @return list: `sims` (from `fireSenseUtils::simulateFireSizes()`, with `fold`) and `score` (from
 #'   `fireSenseUtils::scoreFireSizes()` on both folds together, so every year is predicted once).
 crossValidateSpread <- function(sim, covs, thresh) {
-  yearLists <- c("annualDTx1000", "fireBufferedListDT", "historicalFires")
   years <- names(covs$historicalFires)
   fold <- cvFolds(years)
-  sims <- lapply(sort(unique(fold)), function(k) {
-    fitCovs <- heldCovs <- covs
-    fitCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold != k]])
-    heldCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold == k]])
-    DE <- fitSpread(sim, fitCovs, thresh, runName = paste0(sim$.runName, "_cvFold", k), diagnostics = FALSE)
-    best <- bestParamSets(DE, names(P(sim)$lower), n = max(1L, P(sim)$simulateMembers))
-    s <- Cache(fireSenseUtils::simulateFireSizes, pop = best$params,
-               fnArgs = spreadObjFunArgs(sim, heldCovs),
-               .functionName = paste0("simulateHeldOut_", sim$.runName, "_cvFold", k))
-    data.table(fold = k, s)
-  })
+  sims <- lapply(sort(unique(fold)), function(k) fitAndScoreFold(sim, covs, thresh, fold, k))
   sims <- rbindlist(sims)
+  list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
+}
+
+#' One cross-validation fold, run on its own (`heldOutFold`)
+#'
+#' Fits fold `k`'s complement and scores fold `k`'s held-out years only -- the other fold is never
+#' run. Used by the `heldOutFold` parameter so the two folds can be separate jobs.
+#'
+#' @param sim a `simList`.
+#' @param covs `mod$covsX1000`.
+#' @param thresh `mod$thresh`.
+#' @param k integer; the fold (1 or 2) to hold out.
+#' @return list: `sims` (this fold only) and `score` (from `fireSenseUtils::scoreFireSizes()`).
+crossValidateSpreadOneFold <- function(sim, covs, thresh, k) {
+  years <- names(covs$historicalFires)
+  fold <- cvFolds(years)
+  sims <- fitAndScoreFold(sim, covs, thresh, fold, k)
   list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
 }
 
