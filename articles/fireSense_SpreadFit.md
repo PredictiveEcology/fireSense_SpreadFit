@@ -1,7 +1,7 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9017"
-date: "Last updated: 2026-09-27"
+subtitle: "v.1.0.6.9018"
+date: "Last updated: 2026-09-28"
 output:
   bookdown::html_document2:
     toc: true
@@ -246,14 +246,6 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> integer defining the maximum number of iterations allowed (DEoptim optimizer). A ceiling: clusters (&gt;= 0.0.46) stops the fit earlier, once the population's median value has stopped improving. </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> iterStep </td>
-   <td style="text-align:left;"> integer </td>
-   <td style="text-align:left;"> 25 </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> DEoptim runs its `iterDEoptim` iterations in blocks of this many; each block is cached and, if `visualizeDEoptim` is a path, plotted. </td>
-  </tr>
-  <tr>
    <td style="text-align:left;"> iterThresh </td>
    <td style="text-align:left;"> integer </td>
    <td style="text-align:left;"> 96 </td>
@@ -435,7 +427,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> the `c` argument passed to DEoptim.control. With `iterStep` &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with `c = 0` instead: DEoptim's adaptation can make every trial NaN when one call runs several generations. With `iterStep = 1` the adaptation restarts every generation, so `c` has no effect either way. </td>
+   <td style="text-align:left;"> the `c` argument passed to DEoptim.control. `iterStep` is hard-coded to 1, so DEoptim's adaptation restarts every generation, and `c` has no effect either way. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> DEoptimControl </td>
@@ -539,7 +531,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> /tmp/Rtm.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each `iterStep` block. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
+   <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each generation. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> covFixedRange </td>
@@ -589,14 +581,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
 - `init`: schedules `spreadFitPrepare` and, if the polygon needs a fit, `estimateThreshold` then `run` (or `debug` when `mode` includes `"debug"`; `debug` and `plot` after `run` when it includes `"visualize"`);
 - `spreadFitPrepare`: sets default `lower`/`upper`, computes `covMinMax_spread` and `lociList`, converts covariates to integers (x 1000);
 - `estimateThreshold`: uses `SNLL_FS_thresh`, or calibrates it from `iterThresh` random parameter sets (cached, with a seed derived from `.ELFind`);
-- `run`: runs DEoptim (cached per `iterStep` block) and writes the polygon's row to the ledger;
+- `run`: runs DEoptim (cached per generation) and writes the polygon's row to the ledger;
 - `debug`: evaluates the objective function without DEoptim;
 - `plot`: histograms of the final population;
 
 ### Plotting
 
 With `.plots` set, histograms of the annual and non-annual covariates.
-During the fit, `runDEoptim()` saves parameter histograms and trace plots to `visualizeDEoptim` after each `iterStep` block.
+During the fit, `runDEoptim()` saves parameter histograms and trace plots to `visualizeDEoptim` after each generation.
 
 ### Saving
 
@@ -624,7 +616,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> DE </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> list of `DEoptim` objects, one per `iterStep` block, ordered by best objective value </td>
+   <td style="text-align:left;"> list of `DEoptim` objects, one per generation, ordered by best objective value </td>
   </tr>
   <tr>
    <td style="text-align:left;"> studyAreaWithSpreadParams </td>
@@ -692,7 +684,7 @@ params <- list(fireSense_SpreadFit = list(
   stopIfNoPreRunFit = FALSE,          # allow a fit to start
   cores = rep(c("hostA", "hostB"), each = 20), # host name repeated once per worker; or a number for localhost
   nCoresNeeded = 40,                  # = DEoptim population size (NP)
-  iterDEoptim = 500, iterStep = 25,
+  iterDEoptim = 500,
   mode = "fit"
 ))
 objects <- list(.ELFind = "6.1.1")    # polygon id used as the ledger key

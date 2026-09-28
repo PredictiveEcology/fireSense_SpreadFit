@@ -32,7 +32,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9017</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9018</span>
       </span>
     </div>
 
@@ -71,9 +71,9 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>fireSense_SpreadFit Manual</h1>
-            <h3 data-toc-skip class="subtitle">v.1.0.6.9017</h3>
+            <h3 data-toc-skip class="subtitle">v.1.0.6.9018</h3>
             
-            <h4 data-toc-skip class="date">Last updated: 2026-09-27</h4>
+            <h4 data-toc-skip class="date">Last updated: 2026-09-28</h4>
       
 
       <div class="hidden name"><code>fireSense_SpreadFit.Rmd</code></div>
@@ -526,26 +526,6 @@ NA
 </td>
 <td style="text-align:left;">
 integer defining the maximum number of iterations allowed (DEoptim optimizer). A ceiling: clusters (&gt;= 0.0.46) stops the fit earlier, once the population’s median value has stopped improving.
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-iterStep
-</td>
-<td style="text-align:left;">
-integer
-</td>
-<td style="text-align:left;">
-25
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-DEoptim runs its <code>iterDEoptim</code> iterations in blocks of this many; each block is cached and, if <code>visualizeDEoptim</code> is a path, plotted.
 </td>
 </tr>
 <tr>
@@ -1004,7 +984,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-the <code>c</code> argument passed to DEoptim.control. With <code>iterStep</code> &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with <code>c = 0</code> instead: DEoptim’s adaptation can make every trial NaN when one call runs several generations. With <code>iterStep = 1</code> the adaptation restarts every generation, so <code>c</code> has no effect either way.
+the <code>c</code> argument passed to DEoptim.control. <code>iterStep</code> is hard-coded to 1, so DEoptim’s adaptation restarts every generation, and <code>c</code> has no effect either way.
 </td>
 </tr>
 <tr>
@@ -1263,7 +1243,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Directory where <code>runDEoptim</code> saves parameter plots after each <code>iterStep</code> block. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
+Directory where <code>runDEoptim</code> saves parameter plots after each generation. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
 </td>
 </tr>
 <tr>
@@ -1380,7 +1360,7 @@ As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biom
 <li>
 <code>estimateThreshold</code>: uses <code>SNLL_FS_thresh</code>, or calibrates it from <code>iterThresh</code> random parameter sets (cached, with a seed derived from <code>.ELFind</code>);</li>
 <li>
-<code>run</code>: runs DEoptim (cached per <code>iterStep</code> block) and writes the polygon’s row to the ledger;</li>
+<code>run</code>: runs DEoptim (cached per generation) and writes the polygon’s row to the ledger;</li>
 <li>
 <code>debug</code>: evaluates the objective function without DEoptim;</li>
 <li>
@@ -1391,7 +1371,7 @@ As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biom
 <h4 id="plotting">Plotting<a class="anchor" aria-label="anchor" href="#plotting"></a>
 </h4>
 <p>With <code>.plots</code> set, histograms of the annual and non-annual covariates.
-During the fit, <code>runDEoptim()</code> saves parameter histograms and trace plots to <code>visualizeDEoptim</code> after each <code>iterStep</code> block.</p>
+During the fit, <code>runDEoptim()</code> saves parameter histograms and trace plots to <code>visualizeDEoptim</code> after each generation.</p>
 </div>
 <div class="section level4">
 <h4 id="saving">Saving<a class="anchor" aria-label="anchor" href="#saving"></a>
@@ -1437,7 +1417,7 @@ DE
 data.table
 </td>
 <td style="text-align:left;">
-list of <code>DEoptim</code> objects, one per <code>iterStep</code> block, ordered by best objective value
+list of <code>DEoptim</code> objects, one per generation, ordered by best objective value
 </td>
 </tr>
 <tr>
@@ -1567,7 +1547,7 @@ mode ‘validate’ only: <code>sims</code>, the held-out years simulated from t
 <span>  stopIfNoPreRunFit <span class="op">=</span> <span class="cn">FALSE</span>,          <span class="co"># allow a fit to start</span></span>
 <span>  cores <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hostA"</span>, <span class="st">"hostB"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>, <span class="co"># host name repeated once per worker; or a number for localhost</span></span>
 <span>  nCoresNeeded <span class="op">=</span> <span class="fl">40</span>,                  <span class="co"># = DEoptim population size (NP)</span></span>
-<span>  iterDEoptim <span class="op">=</span> <span class="fl">500</span>, iterStep <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>  iterDEoptim <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  mode <span class="op">=</span> <span class="st">"fit"</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">objects</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.ELFind <span class="op">=</span> <span class="st">"6.1.1"</span><span class="op">)</span>    <span class="co"># polygon id used as the ledger key</span></span></code></pre></div>
