@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9020"
+subtitle: "v.1.0.6.9021"
 date: "Last updated: 2026-09-28"
 output:
   bookdown::html_document2:
@@ -289,7 +289,15 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> fit </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write `sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops after `crossValidate` and the simList is discarded. </td>
+   <td style="text-align:left;"> Options: debug, fit, visualize, validate. Can use multiples. 'debug' runs the objective function with visuals instead of DEoptim; 'fit' runs DEoptim; 'visualize' adds the `debug` and `plot` events after the fit; 'validate' adds `crossValidate`, two more fits, each on half the years, predicting the other half (`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write `sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops after `crossValidate` and the simList is discarded. See `heldOutFold` to run a single fold as its own job instead of both folds together. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> heldOutFold </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA (default): unchanged behaviour, governed by `mode`. `1` or `2`: run ONLY that cross-validation fold, as its own job. `init` then schedules `spreadFitPrepare`, `estimateThreshold` and `crossValidate` -- never `run`, so the full fit and the ledger write never happen, and the ledger (`stopIfNoPreRunFit`/`refitExisting`) is not consulted. `crossValidate` fits on the OTHER fold's years and scores this fold's held-out years (`cvFolds()` in `R/fitSpread.R`), and writes `spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds` instead of `spreadFitHeldOut_&lt;.runName&gt;.rds`. A run script stops after `crossValidate`: `events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`. Any other value is an error. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> profileReps </td>
@@ -664,7 +672,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
   <tr>
    <td style="text-align:left;"> spreadFitHeldOut </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> mode 'validate' only: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")`. </td>
+   <td style="text-align:left;"> mode 'validate', or `heldOutFold` in `1:2`: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. With `heldOutFold`, `sims` holds only that fold. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")` (mode 'validate') or `"...spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds"` (`heldOutFold`). </td>
   </tr>
 </tbody>
 </table>
