@@ -14,7 +14,7 @@ test_that("parameter classes", {
       .studyAreaName = "character", .useCache = "logical|character",
       cores = "integer", DEoptimControl = "list", DEoptimTests = "character",
       doObjFunAssertions = "logical", initialpop = "numeric", iterDEoptim = "integer",
-      iterStep = "integer", iterThresh = "integer", libPathDEoptim = "character", lower = "numeric",
+      iterThresh = "integer", libPathDEoptim = "character", lower = "numeric",
       maxFireSpread = "numeric", mode = "character", mutuallyExclusiveCols = "list",
       nCoresNeeded = "integer", objFunCoresInternal = "integer",
       objfunFireReps = "integer", refitExisting = "logical",
@@ -43,8 +43,8 @@ test_that("DEoptim defaults are the tuning study's best and a production fit's s
   ## Tuning study (ELF 13.1, NP 110, 150 generations, 3 seeds each, 2026-09-15): strategy 6 with p = 0.1 had the
   ## lowest median best value and stayed lowest after re-scoring the best members 10 times. Provisional.
   expect_identical(def$strategy, 6L)
-  ## c = 0: with iterStep > 1, clusters (>= 0.0.42) runs DEoptim with c = 0 whatever .c says, and with
-  ## iterStep = 1 the adaptation restarts every generation, so c > 0 would describe a run that never happens
+  ## c = 0: `iterStep` is hard-coded to 1, so the adaptation restarts every generation, and c > 0 would
+  ## describe a run that never happens
   expect_identical(def$.c, 0)
   ## a ceiling: clusters (>= 0.0.46) stops a fit once its population median stops improving
   expect_identical(def$iterDEoptim, 5000L)
@@ -64,7 +64,6 @@ test_that("defaults that decide whether and how a fit runs", {
 })
 
 test_that("numeric defaults", {
-  expect_identical(def$iterStep, 25L)
   expect_identical(def$iterThresh, 96L)
   expect_identical(def$objFunCoresInternal, 1L)
   expect_identical(def$cores, 1L)

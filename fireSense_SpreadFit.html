@@ -2994,7 +2994,7 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">fireSense_SpreadFit Manual</h1>
-<h3 class="subtitle">v.1.0.6.9017</h3>
+<h3 class="subtitle">v.1.0.6.9018</h3>
 <h4 class="date">Last updated: 2026-09-27</h4>
 
 </div>
@@ -3441,26 +3441,6 @@ NA
 </td>
 <td style="text-align:left;">
 integer defining the maximum number of iterations allowed (DEoptim optimizer). A ceiling: clusters (&gt;= 0.0.46) stops the fit earlier, once the population’s median value has stopped improving.
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-iterStep
-</td>
-<td style="text-align:left;">
-integer
-</td>
-<td style="text-align:left;">
-25
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-DEoptim runs its <code>iterDEoptim</code> iterations in blocks of this many; each block is cached and, if <code>visualizeDEoptim</code> is a path, plotted.
 </td>
 </tr>
 <tr>
@@ -3919,7 +3899,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-the <code>c</code> argument passed to DEoptim.control. With <code>iterStep</code> &gt; 1, clusters (&gt;= 0.0.42) runs DEoptim with <code>c = 0</code> instead: DEoptim’s adaptation can make every trial NaN when one call runs several generations. With <code>iterStep = 1</code> the adaptation restarts every generation, so <code>c</code> has no effect either way.
+the <code>c</code> argument passed to DEoptim.control. <code>iterStep</code> is hard-coded to 1, so DEoptim’s adaptation restarts every generation, and <code>c</code> has no effect either way.
 </td>
 </tr>
 <tr>
@@ -4178,7 +4158,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Directory where <code>runDEoptim</code> saves parameter plots after each <code>iterStep</code> block. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
+Directory where <code>runDEoptim</code> saves parameter plots after each generation. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
 </td>
 </tr>
 <tr>
@@ -4290,7 +4270,7 @@ As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biom
 <li><code>init</code>: schedules <code>spreadFitPrepare</code> and, if the polygon needs a fit, <code>estimateThreshold</code> then <code>run</code> (or <code>debug</code> when <code>mode</code> includes <code>&quot;debug&quot;</code>; <code>debug</code> and <code>plot</code> after <code>run</code> when it includes <code>&quot;visualize&quot;</code>);</li>
 <li><code>spreadFitPrepare</code>: sets default <code>lower</code>/<code>upper</code>, computes <code>covMinMax_spread</code> and <code>lociList</code>, converts covariates to integers (x 1000);</li>
 <li><code>estimateThreshold</code>: uses <code>SNLL_FS_thresh</code>, or calibrates it from <code>iterThresh</code> random parameter sets (cached, with a seed derived from <code>.ELFind</code>);</li>
-<li><code>run</code>: runs DEoptim (cached per <code>iterStep</code> block) and writes the polygon’s row to the ledger;</li>
+<li><code>run</code>: runs DEoptim (cached per generation) and writes the polygon’s row to the ledger;</li>
 <li><code>debug</code>: evaluates the objective function without DEoptim;</li>
 <li><code>plot</code>: histograms of the final population;</li>
 </ul>
@@ -4298,7 +4278,7 @@ As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biom
 <div id="plotting" class="section level3">
 <h3>Plotting</h3>
 <p>With <code>.plots</code> set, histograms of the annual and non-annual covariates.
-During the fit, <code>runDEoptim()</code> saves parameter histograms and trace plots to <code>visualizeDEoptim</code> after each <code>iterStep</code> block.</p>
+During the fit, <code>runDEoptim()</code> saves parameter histograms and trace plots to <code>visualizeDEoptim</code> after each generation.</p>
 </div>
 <div id="saving" class="section level3">
 <h3>Saving</h3>
@@ -4344,7 +4324,7 @@ DE
 data.table
 </td>
 <td style="text-align:left;">
-list of <code>DEoptim</code> objects, one per <code>iterStep</code> block, ordered by best objective value
+list of <code>DEoptim</code> objects, one per generation, ordered by best objective value
 </td>
 </tr>
 <tr>
@@ -4471,7 +4451,7 @@ params &lt;- list(fireSense_SpreadFit = list(
   stopIfNoPreRunFit = FALSE,          # allow a fit to start
   cores = rep(c(&quot;hostA&quot;, &quot;hostB&quot;), each = 20), # host name repeated once per worker; or a number for localhost
   nCoresNeeded = 40,                  # = DEoptim population size (NP)
-  iterDEoptim = 500, iterStep = 25,
+  iterDEoptim = 500,
   mode = &quot;fit&quot;
 ))
 objects &lt;- list(.ELFind = &quot;6.1.1&quot;)    # polygon id used as the ledger key</code></pre>
