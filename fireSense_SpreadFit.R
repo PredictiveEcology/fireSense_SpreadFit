@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9018"),
+  version = list(fireSense_SpreadFit = "1.0.6.9019"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.46)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9045)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9048)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -518,6 +518,8 @@ spreadFitPrep <- function(sim) {
   if (identical(Par[[mec]], defaultMutuallyExclusive)) {
     sp_lcc <- colnames(sim$fireSense_nonAnnualSpreadFitCovariates[[1]])
     sp_lcc <- grep("pixel", sp_lcc, invert = TRUE, value = TRUE)
+    sp_lcc <- setdiff(sp_lcc, youngAge) ## youngAge is a non-annual column for some ELFs; it must
+    ## never be one of its own mutually-exclusive patterns, or makeMutuallyExclusive() zeroes it
     P(sim)[[mec]] <- Map(l = Par[[mec]], nam = names(Par[[mec]]), function(l, nam) {
       if (identical(nam, youngAge))
         c(l, sp_lcc)

@@ -1,5 +1,12 @@
 # fireSense_SpreadFit (development version)
 
+- `spreadFitPrep()` (fireSense_SpreadFit.R:519-526 pre-fix) appended every non-annual covariate
+  name to youngAge's own `mutuallyExclusiveCols` entry, including `youngAge` itself when it is a
+  non-annual column. `fireSenseUtils::makeMutuallyExclusive()` then zeroed `youngAge` on young
+  pixels instead of leaving it at 1, and once zeroed, later columns (e.g. `nfLCC_*`) were left
+  un-zeroed too. `youngAge` is now excluded from its own pattern list. Requires
+  `fireSenseUtils@development (>= 0.2.3.9048)`, which fixes the same root cause inside
+  `makeMutuallyExclusive()`. Version 1.0.6.9019.
 - The `iterStep` parameter (fireSense_SpreadFit.R:63, default 25L) is removed; `iterStep` is now
   hard-coded to 1 in `fitSpread()`. `iterStep` is supposed to always be 1: with more than one
   generation per DEoptim call, the `run` event's `vapply(sim$DE, function(D) D$member$bestvalit, ...)`
