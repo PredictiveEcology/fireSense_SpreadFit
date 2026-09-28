@@ -1,5 +1,16 @@
 # fireSense_SpreadFit (development version)
 
+- `hillSlope1` (the spread link's slope) is fixed at 1, not fitted by `DEoptim`.
+  `estimateSpreadParams()` (fireSense_SpreadFit.R:886-921 pre-fix) put it in the default `upper`/
+  `lower` bounds with `[0.2, 2]`, but with the link's linear predictor `x = covariates %*% beta`,
+  `hillSlope1` enters only as `hillSlope1 * x`, so scaling every covariate coefficient by `k` and
+  dividing `hillSlope1` by `k` leaves every prediction unchanged: it was never identifiable, and let
+  every coefficient drift along that 10x ridge. `estimateSpreadParams()` no longer emits
+  `hillSlope1`; `fireSenseUtils::.objfunSpreadFit()` (>= 0.2.3.9047) reinserts `hillSlope1 = 1`
+  before evaluating the fit, and the `run` event's ledger row gets it back too
+  (`addHillSlope1ToLedger()`), so an old ledger row keeps predicting with its own fitted
+  `hillSlope1` and a new one predicts with 1. A supplied `upper`/`lower` naming `hillSlope1` is now
+  an error. Requires `fireSenseUtils@development (>= 0.2.3.9047)`. Version 1.0.6.9019.
 - The `iterStep` parameter (fireSense_SpreadFit.R:63, default 25L) is removed; `iterStep` is now
   hard-coded to 1 in `fitSpread()`. `iterStep` is supposed to always be 1: with more than one
   generation per DEoptim call, the `run` event's `vapply(sim$DE, function(D) D$member$bestvalit, ...)`
