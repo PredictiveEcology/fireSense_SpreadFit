@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9020"),
+  version = list(fireSense_SpreadFit = "1.0.6.9021"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -90,7 +90,20 @@ defineModule(sim, list(
                                  "two more fits, each on half the years, predicting the other half",
                                  "(`sim$spreadFitHeldOut`). Validation never writes the ledger, but does write",
                                  "`sim$spreadFitHeldOut` to `outputPath(sim)`, since a batch run typically stops",
-                                 "after `crossValidate` and the simList is discarded.")),
+                                 "after `crossValidate` and the simList is discarded. See `heldOutFold` to run a",
+                                 "single fold as its own job instead of both folds together.")),
+    defineParameter("heldOutFold", "integer", default = NA,
+                    desc = paste("NA (default): unchanged behaviour, governed by `mode`. `1` or `2`: run ONLY",
+                                 "that cross-validation fold, as its own job. `init` then schedules",
+                                 "`spreadFitPrepare`, `estimateThreshold` and `crossValidate` -- never `run`, so",
+                                 "the full fit and the ledger write never happen, and the ledger",
+                                 "(`stopIfNoPreRunFit`/`refitExisting`) is not consulted. `crossValidate` fits on",
+                                 "the OTHER fold's years and scores this fold's held-out years (`cvFolds()` in",
+                                 "`R/fitSpread.R`), and writes",
+                                 "`spreadFitHeldOut_<.runName>_fold<heldOutFold>.rds` instead of",
+                                 "`spreadFitHeldOut_<.runName>.rds`. A run script stops after `crossValidate`:",
+                                 "`events = list(.stopAfter = list(fireSense_SpreadFit = \"crossValidate\"))`.",
+                                 "Any other value is an error.")),
     defineParameter("profileReps", "integer", default = 10L,
                     desc = paste("After the fit, each covariate coefficient in turn is set to 0 and to 5 values",
                                  "across the final population, the others held at the best member, and each point",
@@ -314,10 +327,13 @@ defineModule(sim, list(
                   desc = paste("Per member, the share of pixel-years at the spread-probability ceiling and the",
                                "quantiles of spread probability (`fireSenseUtils::linkSaturation()`).")),
     createsOutput("spreadFitHeldOut", "list",
-                  desc = paste("mode 'validate' only: `sims`, the held-out years simulated from the fit to the",
-                               "other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`.",
-                               "Also written to",
-                               "`file.path(outputPath(sim), currentModule(sim), \"spreadFitHeldOut_<.runName>.rds\")`."))
+                  desc = paste("mode 'validate', or `heldOutFold` in `1:2`: `sims`, the held-out years simulated",
+                               "from the fit to the other years (column `fold`), and `score`, from",
+                               "`fireSenseUtils::scoreFireSizes()`. With `heldOutFold`, `sims` holds only that",
+                               "fold. Also written to",
+                               "`file.path(outputPath(sim), currentModule(sim), \"spreadFitHeldOut_<.runName>.rds\")`",
+                               "(mode 'validate') or `\"...spreadFitHeldOut_<.runName>_fold<heldOutFold>.rds\"`",
+                               "(`heldOutFold`)."))
   )
 ))
 
@@ -325,6 +341,9 @@ defineModule(sim, list(
 #'
 #' `init` schedules `spreadFitPrepare`, and, unless the ledger already holds a fit for this polygon
 #' (or `refitExisting` is TRUE), `estimateThreshold` then `run` (or `debug` when `mode` has "debug").
+#' When `heldOutFold` is 1 or 2, `init` instead schedules only `spreadFitPrepare`,
+#' `estimateThreshold` and `crossValidate` (that one fold): never `run`, so the full fit and the
+#' ledger write never happen.
 #'
 #' @param sim a `simList`.
 #' @param eventTime numeric; current simulation time.
@@ -344,8 +363,24 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       if (!is.null(sim$parsKnown)) {
         params(sim)[[moduleName]][["mode"]] <- unique(c(P(sim)$mode, "debug"))
       }
+
+      if (!isTRUE(is.na(Par$heldOutFold))) {
+        if (!(length(Par$heldOutFold) == 1L && !is.na(Par$heldOutFold) && Par$heldOutFold %in% 1:2))
+          stop("fireSense_SpreadFit: parameter 'heldOutFold' must be NA, 1L or 2L; got: ",
+               paste(format(Par$heldOutFold), collapse = ", "))
+        # A held-out-fold job runs ONE cross-validation fold as its own job: `crossValidate`
+        # fits on the OTHER fold's years and scores this fold's held-out years
+        # (R/fitSpread.R crossValidateSpreadOneFold()). It never runs the full fit or writes
+        # the ledger, so it does not consult the ledger (hasPreRunFitForThisPolygon()) or
+        # `stopIfNoPreRunFit`: those decide whether to run the full fit, which this job never does.
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "estimateThreshold")
+        sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "crossValidate")
+        return(invisible(sim))
+      }
+
       sim <- scheduleEvent(sim, P(sim)$.runInitialTime, moduleName, "spreadFitPrepare")
-      
+
       # Fit unless the ledger already holds parameters for THIS polygon. The object
       # may exist and be a data.frame while holding only neighbours' rows, or none.
       # `refitExisting` overrides that: the stored row is stale when the inputs have changed.
@@ -480,9 +515,15 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       sim <- makeFitDiagnostics(sim, mod$fitDE)
     },
     crossValidate = {
-      sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000, mod$thresh)
-      heldOutPath <- file.path(outputPath(sim), currentModule(sim),
-                               paste0("spreadFitHeldOut_", sim$.runName, ".rds"))
+      if (isTRUE(is.na(Par$heldOutFold))) {
+        sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000, mod$thresh)
+        heldOutPath <- file.path(outputPath(sim), currentModule(sim),
+                                 paste0("spreadFitHeldOut_", sim$.runName, ".rds"))
+      } else {
+        sim$spreadFitHeldOut <- crossValidateSpreadOneFold(sim, mod$covsX1000, mod$thresh, Par$heldOutFold)
+        heldOutPath <- file.path(outputPath(sim), currentModule(sim),
+                                 paste0("spreadFitHeldOut_", sim$.runName, "_fold", Par$heldOutFold, ".rds"))
+      }
       checkPath(dirname(heldOutPath), create = TRUE)
       saveRDS(sim$spreadFitHeldOut, heldOutPath)
       message("fireSense_SpreadFit: wrote held-out validation to ", heldOutPath)

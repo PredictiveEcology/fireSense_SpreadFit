@@ -1,5 +1,13 @@
 # fireSense_SpreadFit (development version)
 
+- New parameter `heldOutFold` (default `NA`, unchanged behaviour). Set to `1` or `2` to run that
+  cross-validation fold as its own job: `init` schedules only `spreadFitPrepare`,
+  `estimateThreshold` and `crossValidate`, never the full fit or the ledger write, and
+  `crossValidate` fits on the other fold's years and scores this fold's held-out years, writing
+  `spreadFitHeldOut_<.runName>_fold<heldOutFold>.rds`. A run script stops after `crossValidate`
+  (`events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`), same as mode
+  "validate". Lets the two folds of a held-out experiment run as separate jobs instead of one job
+  doing both. Version 1.0.6.9021.
 - `hillSlope1` (the spread link's slope) is fixed at 1, not fitted by `DEoptim`.
   `estimateSpreadParams()` (fireSense_SpreadFit.R:886-921 pre-fix) put it in the default `upper`/
   `lower` bounds with `[0.2, 2]`, but with the link's linear predictor `x = covariates %*% beta`,
