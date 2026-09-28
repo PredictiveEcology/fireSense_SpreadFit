@@ -6,11 +6,18 @@
   `hillSlope1` enters only as `hillSlope1 * x`, so scaling every covariate coefficient by `k` and
   dividing `hillSlope1` by `k` leaves every prediction unchanged: it was never identifiable, and let
   every coefficient drift along that 10x ridge. `estimateSpreadParams()` no longer emits
-  `hillSlope1`; `fireSenseUtils::.objfunSpreadFit()` (>= 0.2.3.9048) reinserts `hillSlope1 = 1`
+  `hillSlope1`; `fireSenseUtils::.objfunSpreadFit()` (>= 0.2.3.9049) reinserts `hillSlope1 = 1`
   before evaluating the fit, and the `run` event's ledger row gets it back too
   (`addHillSlope1ToLedger()`), so an old ledger row keeps predicting with its own fitted
   `hillSlope1` and a new one predicts with 1. A supplied `upper`/`lower` naming `hillSlope1` is now
-  an error. Requires `fireSenseUtils@development (>= 0.2.3.9048)`. Version 1.0.6.9019.
+  an error. Requires `fireSenseUtils@development (>= 0.2.3.9049)`. Version 1.0.6.9020.
+- `spreadFitPrep()` (fireSense_SpreadFit.R:519-526 pre-fix) appended every non-annual covariate
+  name to youngAge's own `mutuallyExclusiveCols` entry, including `youngAge` itself when it is a
+  non-annual column. `fireSenseUtils::makeMutuallyExclusive()` then zeroed `youngAge` on young
+  pixels instead of leaving it at 1, and once zeroed, later columns (e.g. `nfLCC_*`) were left
+  un-zeroed too. `youngAge` is now excluded from its own pattern list. Requires
+  `fireSenseUtils@development (>= 0.2.3.9048)`, which fixes the same root cause inside
+  `makeMutuallyExclusive()`. Version 1.0.6.9019.
 - The `iterStep` parameter (fireSense_SpreadFit.R:63, default 25L) is removed; `iterStep` is now
   hard-coded to 1 in `fitSpread()`. `iterStep` is supposed to always be 1: with more than one
   generation per DEoptim call, the `run` event's `vapply(sim$DE, function(D) D$member$bestvalit, ...)`
