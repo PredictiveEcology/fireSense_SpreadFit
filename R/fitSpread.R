@@ -30,7 +30,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    fireBufferedListDT = covs$fireBufferedListDT,
                    historicalFires = covs$historicalFires,
                    itermax = P(sim)$iterDEoptim,
-                   iterStep = P(sim)$iterStep,
+                   iterStep = 1L, ## hard-coded: iterStep > 1 crashed fits (clusters' c = 0 adaptation, see NEWS)
                    ## the cluster's size is the population size; see the parameter's doc
                    nCoresNeeded = P(sim)$nCoresNeeded,
                    trace = P(sim)$trace,

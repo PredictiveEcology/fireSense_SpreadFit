@@ -53,12 +53,11 @@ test_that("the simList's own covariate tables are not multiplied by 1000", {
 })
 
 test_that("runDEoptim() receives the parameters, bounds, threshold and formula", {
-  out <- fitted(list(iterDEoptim = 40L, iterStep = 10L, nCoresNeeded = 12L, cores = c("hostA", "hostB"),
+  out <- fitted(list(iterDEoptim = 40L, nCoresNeeded = 12L, cores = c("hostA", "hostB"),
                      objfunFireReps = 9L, rep = 3L, DEoptimControl = list(CR = 0.7), .c = 0.4,
                      SNLL_FS_thresh = 321L))
   a <- out$rec$deArgs
   expect_identical(a$itermax, 40L)
-  expect_identical(a$iterStep, 10L)
   expect_identical(a$nCoresNeeded, 12L)
   expect_identical(a$cores, c("hostA", "hostB"))
   expect_identical(a$Nreps, 9L)
@@ -75,6 +74,11 @@ test_that("runDEoptim() receives the parameters, bounds, threshold and formula",
   expect_identical(a$covMinMax, out$sim$covMinMax_spread)
   expect_identical(a$tests, c("adTest", "SNLL_FS"))
   expect_identical(a$maxFireSpread, 0.28)
+})
+
+test_that("runDEoptim() always receives iterStep = 1, even if a user still sets the (now unknown) parameter", {
+  a <- suppressWarnings(fitted(list(iterStep = 10L)))$rec$deArgs
+  expect_identical(a$iterStep, 1L)
 })
 
 test_that("years without fires, or without a fire buffer, are dropped from every annual list", {

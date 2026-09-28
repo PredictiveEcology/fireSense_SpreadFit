@@ -1,5 +1,12 @@
 # fireSense_SpreadFit (development version)
 
+- The `iterStep` parameter (fireSense_SpreadFit.R:63, default 25L) is removed; `iterStep` is now
+  hard-coded to 1 in `fitSpread()`. `iterStep` is supposed to always be 1: with more than one
+  generation per DEoptim call, the `run` event's `vapply(sim$DE, function(D) D$member$bestvalit, ...)`
+  and its `numIterations <- length(sim$DE)` both assume one generation per block, so a fit with
+  `iterStep = 25` crashed after converging ("values must be length 1, but FUN(X[[1]]) result is length
+  25"). Projects used to set `iterStep = 1` themselves; that setting was dropped somewhere along the
+  way. Version 1.0.6.9018.
 - The `crossValidate` event (fireSense_SpreadFit.R:476-477 pre-fix) put mode "validate"'s result in
   `sim$spreadFitHeldOut` but never wrote it to disk. Batch runs stop after `crossValidate`
   (`events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`), so the simList is

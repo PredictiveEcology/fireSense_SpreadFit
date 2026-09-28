@@ -96,14 +96,14 @@ knitr::kable(df_params, caption = "List of (ref:fireSense-SpreadFit) parameters 
 - `init`: schedules `spreadFitPrepare` and, if the polygon needs a fit, `estimateThreshold` then `run` (or `debug` when `mode` includes `"debug"`; `debug` and `plot` after `run` when it includes `"visualize"`);
 - `spreadFitPrepare`: sets default `lower`/`upper`, computes `covMinMax_spread` and `lociList`, converts covariates to integers (x 1000);
 - `estimateThreshold`: uses `SNLL_FS_thresh`, or calibrates it from `iterThresh` random parameter sets (cached, with a seed derived from `.ELFind`);
-- `run`: runs DEoptim (cached per `iterStep` block) and writes the polygon's row to the ledger;
+- `run`: runs DEoptim (cached per generation) and writes the polygon's row to the ledger;
 - `debug`: evaluates the objective function without DEoptim;
 - `plot`: histograms of the final population;
 
 ### Plotting
 
 With `.plots` set, histograms of the annual and non-annual covariates.
-During the fit, `runDEoptim()` saves parameter histograms and trace plots to `visualizeDEoptim` after each `iterStep` block.
+During the fit, `runDEoptim()` saves parameter histograms and trace plots to `visualizeDEoptim` after each generation.
 
 ### Saving
 
@@ -131,7 +131,7 @@ params <- list(fireSense_SpreadFit = list(
   stopIfNoPreRunFit = FALSE,          # allow a fit to start
   cores = rep(c("hostA", "hostB"), each = 20), # host name repeated once per worker; or a number for localhost
   nCoresNeeded = 40,                  # = DEoptim population size (NP)
-  iterDEoptim = 500, iterStep = 25,
+  iterDEoptim = 500,
   mode = "fit"
 ))
 objects <- list(.ELFind = "6.1.1")    # polygon id used as the ledger key

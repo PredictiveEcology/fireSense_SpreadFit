@@ -109,8 +109,8 @@ mockInModule <- function(sim, ...) {
   invisible(sim)
 }
 
-## A DEoptim result as runDEoptim() returns it: one element per iterStep block. `bestvalit` differs by
-## block so the ordering of sim$DE is checkable; the final population is 7 members whose first
+## A DEoptim result as runDEoptim() returns it: one element per generation (iterStep is hard-coded to 1).
+## `bestvalit` differs by generation so the ordering of sim$DE is checkable; the final population is 7 members whose first
 ## parameter is the member number, with values 7..1 so that members 7, 6, 5, 4, 3 are the 5 best.
 toyDE <- function(nPar = 8L) {
   pop <- cbind(c(1, 2, 3, 4, 5, 6, 7), matrix(0, 7, nPar - 1L))
