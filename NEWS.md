@@ -1,5 +1,17 @@
 # fireSense_SpreadFit (development version)
 
+- After a fit (`run`) and for each held-out fold (`crossValidate`, `heldOutFold`), two figures
+  compare the fit with its data, through `Plots()` under `figurePath(sim)`, when `.plots` asks for
+  them (default `NULL`: none, and nothing extra is simulated). `spreadFitObservedVsSimulated_<run>`
+  shows, per covariate, the share of pixel-years that burned against the share that burned in
+  simulations from the best parameter set (`fireSenseUtils::plotSpreadFitValidation()`); the
+  fold's figure uses only its held-out years. `spreadFitResponseCurves_<run>` shows the fitted
+  response curves, titled as the model's response (`fireSenseUtils::plotSpreadFitResponse()`).
+  Both come from one simulation of `objfunFireReps` replicates (18 s on ELF 5.3.2). Requires
+  `fireSenseUtils@development (>= 0.2.3.9063)`. Version 1.0.6.9022.
+- Fixed: the held-out simulation (`spreadObjFunArgs()`, R/fitSpread.R) left out `escapeSizeHa`,
+  `jumpTries` and `jumpMeanDist`, so held-out years were simulated without the escape rule the fit
+  used (the default `escapeSizeHa` is 50 ha). The in-sample simulations already had it.
 - New parameter `heldOutFold` (default `NA`, unchanged behaviour). Set to `1` or `2` to run that
   cross-validation fold as its own job: `init` schedules only `spreadFitPrepare`,
   `estimateThreshold` and `crossValidate`, never the full fit or the ledger write, and
