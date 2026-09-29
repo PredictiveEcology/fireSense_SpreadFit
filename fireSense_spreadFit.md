@@ -1,5 +1,5 @@
 ---
-title: "fireSense_SpreadFit Manual"
+title: "fireSense_spreadFit Manual"
 subtitle: "v.1.0.6.9024"
 date: "Last updated: 2026-09-29"
 output:
@@ -12,15 +12,15 @@ output:
     keep_md: yes
 editor_options:
   chunk_output_type: console
-bibliography: citations/references_fireSense_SpreadFit.bib
+bibliography: citations/references_fireSense_spreadFit.bib
 link-citations: true
 always_allow_html: true
 ---
 
-# fireSense_SpreadFit Module
+# fireSense_spreadFit Module
 
 <!-- the following are text references used in captions for LaTeX compatibility -->
-(ref:fireSense-SpreadFit) *fireSense_SpreadFit*
+(ref:fireSense-spreadFit) *fireSense_spreadFit*
 
 
 
@@ -65,10 +65,10 @@ full DEoptim run (see `cores` and `nCoresNeeded`), which is not practical on a s
 The covariate tables, fire buffers, fire points and formula are made by `fireSense_dataPrepFit`.
 `fireSense_spreadFormula` must be supplied; `.ELFind` defaults to `.runName`.
 
-Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module inputs.
+Table \@ref(tab:moduleInputs-fireSense-spreadFit) shows the full list of module inputs.
 
 <table class="table" style="margin-left: auto; margin-right: auto;">
-<caption>(\#tab:moduleInputs-fireSense-SpreadFit)(\#tab:moduleInputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) input objects and their description.</caption>
+<caption>(\#tab:moduleInputs-fireSense-spreadFit)(\#tab:moduleInputs-fireSense-spreadFit)List of (ref:fireSense-spreadFit) input objects and their description.</caption>
  <thead>
   <tr>
    <th style="text-align:left;"> objectName </th>
@@ -147,11 +147,11 @@ Table \@ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module 
 </tbody>
 </table>
 
-Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-SpreadFit))
+Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-spreadFit))
 
 
 <table class="table" style="margin-left: auto; margin-right: auto;">
-<caption>(\#tab:moduleParams-fireSense-SpreadFit)(\#tab:moduleParams-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) parameters and their description.</caption>
+<caption>(\#tab:moduleParams-fireSense-spreadFit)(\#tab:moduleParams-fireSense-spreadFit)List of (ref:fireSense-spreadFit) parameters and their description.</caption>
  <thead>
   <tr>
    <th style="text-align:left;"> paramName </th>
@@ -305,7 +305,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA (default): unchanged behaviour, governed by `mode`. `1` or `2`: run ONLY that cross-validation fold, as its own job. `init` then schedules `spreadFitPrepare`, `estimateThreshold` and `crossValidate` -- never `run`, so the full fit and the ledger write never happen, and the ledger (`stopIfNoPreRunFit`/`refitExisting`) is not consulted. `crossValidate` fits on the OTHER fold's years and scores this fold's held-out years (`cvFolds()` in `R/fitSpread.R`), and writes `spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds` instead of `spreadFitHeldOut_&lt;.runName&gt;.rds`. A run script stops after `crossValidate`: `events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))`. Any other value is an error. </td>
+   <td style="text-align:left;"> NA (default): unchanged behaviour, governed by `mode`. `1` or `2`: run ONLY that cross-validation fold, as its own job. `init` then schedules `spreadFitPrepare`, `estimateThreshold` and `crossValidate` -- never `run`, so the full fit and the ledger write never happen, and the ledger (`stopIfNoPreRunFit`/`refitExisting`) is not consulted. `crossValidate` fits on the OTHER fold's years and scores this fold's held-out years (`cvFolds()` in `R/fitSpread.R`), and writes `spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds` instead of `spreadFitHeldOut_&lt;.runName&gt;.rds`. A run script stops after `crossValidate`: `events = list(.stopAfter = list(fireSense_spreadFit = "crossValidate"))`. Any other value is an error. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> profileReps </td>
@@ -553,7 +553,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> c(0, 100.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`, so an ELF that picks one of them gets the same fixed scale. </td>
+   <td style="text-align:left;"> Named list of `c(min, max)`: covariates rescaled with this FIXED range and not with the range of this polygon's data. `CMDsm = c(0, 100)` makes the covariate CMDsm / 100 in every polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. `fireSense_spreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`, so an ELF that picks one of them gets the same fixed scale. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> yearSpreadSDBounds </td>
@@ -610,10 +610,10 @@ The fit's row in the cloud ledger, and the DEoptim cache entries. Nothing else i
 
 ### Module outputs
 
-Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-SpreadFit)).
+Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-spreadFit)).
 
 <table class="table" style="margin-left: auto; margin-right: auto;">
-<caption>(\#tab:moduleOutputs-fireSense-SpreadFit)(\#tab:moduleOutputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) outputs and their description.</caption>
+<caption>(\#tab:moduleOutputs-fireSense-spreadFit)(\#tab:moduleOutputs-fireSense-spreadFit)List of (ref:fireSense-spreadFit) outputs and their description.</caption>
  <thead>
   <tr>
    <th style="text-align:left;"> objectName </th>
@@ -687,14 +687,14 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-Sprea
 
 ### Links to other modules
 
-Inputs come from `fireSense_dataPrepFit`. `fireSense_SpreadPredict` uses `studyAreaWithSpreadParams` (the ledger rows) to predict spread probabilities.
+Inputs come from `fireSense_dataPrepFit`. `fireSense_spreadPredict` uses `studyAreaWithSpreadParams` (the ledger rows) to predict spread probabilities.
 
 ### Usage
 
 
 ``` r
 ## in a project that also runs fireSense_dataPrepFit
-params <- list(fireSense_SpreadFit = list(
+params <- list(fireSense_spreadFit = list(
   stopIfNoPreRunFit = FALSE,          # allow a fit to start
   cores = rep(c("hostA", "hostB"), each = 20), # host name repeated once per worker; or a number for localhost
   nCoresNeeded = 40,                  # = DEoptim population size (NP)
@@ -706,7 +706,7 @@ objects <- list(.ELFind = "6.1.1")    # polygon id used as the ledger key
 
 ### Getting help
 
-- <https://github.com/PredictiveEcology/fireSense_SpreadFit/issues>
+- <https://github.com/PredictiveEcology/fireSense_spreadFit/issues>
 
 ## References
 

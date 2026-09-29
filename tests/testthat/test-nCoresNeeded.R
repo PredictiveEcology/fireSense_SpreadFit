@@ -11,7 +11,7 @@
 ## parameter of this module.
 
 test_that("the module declares an nCoresNeeded parameter", {
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- parse(testthat::test_path("..", "..", "fireSense_spreadFit.R"), keep.source = FALSE)
   code <- paste(vapply(exprs, function(e) paste(deparse(e), collapse = "\n"), character(1)),
                 collapse = "\n")
   expect_match(code, "defineParameter\\(\"nCoresNeeded\"")

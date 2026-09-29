@@ -7,7 +7,7 @@
 
 ## pkgload sources helpers into the package namespace, where setup.R's `moduleName` and `testPaths`
 ## are not visible, so the helpers carry their own.
-toyModule <- "fireSense_SpreadFit"
+toyModule <- "fireSense_spreadFit"
 toyEnv <- new.env()
 toyPaths <- function() {
   if (is.null(toyEnv$paths)) {
@@ -138,7 +138,7 @@ mockFitAndLedger <- function(sim, rec = new.env()) {
 ## The module's source, parsed: the main file and its R/ helpers. For the tests that check a call by
 ## reading it, because running it needs a full simList.
 moduleSource <- function() {
-  files <- c(testthat::test_path("..", "..", "fireSense_SpreadFit.R"),
+  files <- c(testthat::test_path("..", "..", "fireSense_spreadFit.R"),
              list.files(testthat::test_path("..", "..", "R"), "\\.R$", full.names = TRUE))
   do.call(c, lapply(files, parse, keep.source = FALSE))
 }

@@ -1,7 +1,7 @@
 ## youngAge must stay mutually exclusive with every other non-annual covariate even when youngAge
 ## itself is a non-annual column (true for ELFs where youngAge comes from cohort fuel classes, not
 ## an annual layer). test-spreadFitPrep.R's fixture always has youngAge annual (helper-toyInputs.R),
-## which is why fireSense_SpreadFit.R:519-526 appending every non-annual column name to youngAge's
+## which is why fireSense_spreadFit.R:519-526 appending every non-annual column name to youngAge's
 ## own mutuallyExclusiveCols entry -- including "youngAge" itself -- was never caught: with youngAge
 ## annual, it is never one of the non-annual names appended.
 

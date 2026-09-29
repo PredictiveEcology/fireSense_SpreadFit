@@ -7,7 +7,7 @@
 ## The call needs a full simList, so this checks the function's source instead of running
 ## it: parsed, not sourced, so no module machinery is needed.
 test_that("the SNLL threshold cache key does not omit mode or objfunFireReps", {
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- parse(testthat::test_path("..", "..", "fireSense_spreadFit.R"), keep.source = FALSE)
   def <- Filter(function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
                   identical(x[[2]], as.name("estimateSNLLThresholdPostLargeFires")), exprs)
   expect_length(def, 1L)

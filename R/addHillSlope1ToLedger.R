@@ -3,7 +3,7 @@
 #' `hillSlope1` (the spread link's slope) is fixed at 1, not fitted (see `estimateSpreadParams()`):
 #' it is not identifiable together with the covariate coefficients, so it is no longer part of
 #' `DEoptim`'s parameter space, and `paramsBest` (from `bestParamSets()`) does not include it either.
-#' `fireSense_SpreadPredict` splits a ledger row's parameters from its covariates BY NAME, and the
+#' `fireSense_spreadPredict` splits a ledger row's parameters from its covariates BY NAME, and the
 #' spread link (`fireSenseUtils::logistic3p()`/`logistic3pUpper()`) reads the result BY POSITION --
 #' `maxAsymptote`, `hillSlope1`, `inflectionPoint1`, and (with the upper-tail link) `upperTail1`.
 #' This restores that position for
