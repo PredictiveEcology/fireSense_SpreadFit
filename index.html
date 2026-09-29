@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9022</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9023</span>
       </span>
     </div>
 
@@ -322,6 +322,26 @@ NA
 </td>
 <td style="text-align:left;">
 Plot types passed to <code>Plots()</code>, e.g. ‘png’ or ‘screen’; NULL or NA for none.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+.plotInterval
+</td>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+25
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+DEoptim generations between DEoptim progress figures; the final figures are always drawn. Passed to <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code> as <code>plotEvery</code>.
 </td>
 </tr>
 <tr>
@@ -1238,7 +1258,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Directory where <code>runDEoptim</code> saves parameter plots after each generation. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
+Directory where <code>runDEoptim</code> saves parameter plots every <code>.plotInterval</code> generations. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
 </td>
 </tr>
 <tr>
