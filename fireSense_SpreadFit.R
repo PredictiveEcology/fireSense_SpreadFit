@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9022"),
+  version = list(fireSense_SpreadFit = "1.0.6.9023"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -25,13 +25,16 @@ defineModule(sim, list(
                   "ggplot2", "scales", "kSamples", "munsell",
                   "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
-                  "PredictiveEcology/clusters@main (>= 0.0.46)",
+                  "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9063)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9064)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
                     desc = "Plot types passed to `Plots()`, e.g. 'png' or 'screen'; NULL or NA for none."),
+    defineParameter(".plotInterval", "numeric", default = 25, NA, NA,
+                    desc = paste("DEoptim generations between DEoptim progress figures; the final figures",
+                                 "are always drawn. Passed to `fireSenseUtils::runDEoptim()` as `plotEvery`.")),
     defineParameter(".plotSize", "list", default = list(height = 1600, width = 2000),
                     desc = paste("List specifying height and width of plotting device (in pixels)",
                                  "used to plot DEoptim histograms when `visualizeDEoptim` is TRUE.")),
@@ -229,7 +232,7 @@ defineModule(sim, list(
                                   "normal reproducible (e.g., Cache), level 2 includes objective function ",
                                   "e.g., print median of spreadProb during calculations")),
     defineParameter("visualizeDEoptim", "Path", default = asPath(figurePath(sim)),
-                    desc = paste("Directory where `runDEoptim` saves parameter plots after each generation.",
+                    desc = paste("Directory where `runDEoptim` saves parameter plots every `.plotInterval` generations.",
                                  "Reset to `figurePath(sim)` unless its last folder is the module name.")),
     defineParameter("covFixedRange", "list", default = list(CMDsm = c(0, 100), CMD = c(0, 100), CMDsp = c(0, 100),
                                                             cumMDC = c(0, 100)),

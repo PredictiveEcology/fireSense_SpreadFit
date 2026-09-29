@@ -1,5 +1,10 @@
 # fireSense_SpreadFit (development version)
 
+- New parameter `.plotInterval` (default 25): DEoptim generations between the DEoptim progress
+  figures, passed to `fireSenseUtils::runDEoptim()` as `plotEvery`; the final figures are always drawn.
+  Drawing them after every generation took 8.3 s of each 53 s generation (16% of a fit's wall time)
+  with every worker idle. It is left out of the `runDEoptim()` cache key, so changing it does not refit.
+  Needs fireSenseUtils >= 0.2.3.9064 and clusters >= 0.0.52 (now from its `development` branch).
 - After a fit (`run`) and for each held-out fold (`crossValidate`, `heldOutFold`), two figures
   compare the fit with its data, through `Plots()` under `figurePath(sim)`, when `.plots` asks for
   them (default `NULL`: none, and nothing extra is simulated). `spreadFitObservedVsSimulated_<run>`

@@ -10,7 +10,7 @@ def <- stats::setNames(p$default, p$paramName)
 test_that("parameter classes", {
   expect_identical(
     cls[sort(names(cls), method = "radix")],
-    (function(x) x[sort(names(x), method = "radix")])(c(.c = "numeric", .plots = "character|logical", .plotSize = "list", .runInitialTime = "numeric",
+    (function(x) x[sort(names(x), method = "radix")])(c(.c = "numeric", .plotInterval = "numeric", .plots = "character|logical", .plotSize = "list", .runInitialTime = "numeric",
       .studyAreaName = "character", .useCache = "logical|character",
       cores = "integer", DEoptimControl = "list", DEoptimTests = "character",
       doObjFunAssertions = "logical", heldOutFold = "integer", initialpop = "numeric", iterDEoptim = "integer",
@@ -93,6 +93,7 @@ test_that("defaults of the objective and of the post-fit diagnostics", {
   expect_identical(def$upperTailBounds, c(-1, 1))
   expect_identical(def$yearSpreadSDBounds, c(0, 1))   # the per-year random effect is on by default
   expect_identical(def$profileReps, 10L)
+  expect_identical(def$.plotInterval, 25)       # DEoptim generations between progress figures
   expect_identical(def$simulateMembers, 10L)
 })
 

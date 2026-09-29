@@ -81,6 +81,13 @@ test_that("runDEoptim() always receives iterStep = 1, even if a user still sets 
   expect_identical(a$iterStep, 1L)
 })
 
+## 2026-09-28: DEoptim progress figures drawn after every generation took 16% of a fit's wall time;
+## .plotInterval (default 25) sets how many generations pass between them.
+test_that("runDEoptim() receives .plotInterval as plotEvery", {
+  expect_identical(fitted()$rec$deArgs$plotEvery, 25)
+  expect_identical(fitted(list(.plotInterval = 5))$rec$deArgs$plotEvery, 5)
+})
+
 test_that("years without fires, or without a fire buffer, are dropped from every annual list", {
   objs <- toyObjects()
   dt <- data.table::data.table
