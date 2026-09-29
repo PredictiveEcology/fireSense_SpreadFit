@@ -1,5 +1,5 @@
 ## `heldOutFold` runs ONE cross-validation fold as its own job, instead of both folds in the same
-## job (mode "validate"'s `crossValidate`). See fireSense_SpreadFit.R init and R/fitSpread.R
+## job (mode "validate"'s `crossValidate`). See fireSense_spreadFit.R init and R/fitSpread.R
 ## crossValidateSpreadOneFold().
 
 heldOutFoldRun <- function(k, params = list()) {

@@ -1,5 +1,6 @@
-# fireSense_SpreadFit (development version)
+# fireSense_spreadFit 1.1.0
 
+- Renamed from `fireSense_SpreadFit` to `fireSense_spreadFit` (module naming convention `<model>_<camelCaseComponent>`); projects must rename the module and its `params` key. Version 1.1.0.
 - `fitSpread()` no longer calls `termsInDEoptim()`, which printed "logit1, logit2, ..." for
   maxAsymptote, inflectionPoint1 and the other non-formula parameters. `fireSenseUtils::runDEoptim()`
   now prints the real names from `names(lower)`. Requires `fireSenseUtils@development (>= 0.2.3.9066)`.

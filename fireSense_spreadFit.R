@@ -1,5 +1,5 @@
 defineModule(sim, list(
-  name = "fireSense_SpreadFit",
+  name = "fireSense_spreadFit",
   description = paste("Fit statistical models that can be used to parameterize the",
                       "fire spread component of simulation models (e.g. fireSense).",
                       "This module implement a Pattern Oriented Modelling (POM)",
@@ -15,11 +15,11 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9024"),
+  version = list(fireSense_spreadFit = "1.1.0"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
-  documentation = list("README.txt", "fireSense_SpreadFit.Rmd"),
+  documentation = list("README.txt", "fireSense_spreadFit.Rmd"),
   loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_ignitionFit")),
   reqdPkgs = list("data.table", "DEoptim", "fpCompare", "future",
                   "ggplot2", "scales", "kSamples", "munsell",
@@ -105,7 +105,7 @@ defineModule(sim, list(
                                  "`R/fitSpread.R`), and writes",
                                  "`spreadFitHeldOut_<.runName>_fold<heldOutFold>.rds` instead of",
                                  "`spreadFitHeldOut_<.runName>.rds`. A run script stops after `crossValidate`:",
-                                 "`events = list(.stopAfter = list(fireSense_SpreadFit = \"crossValidate\"))`.",
+                                 "`events = list(.stopAfter = list(fireSense_spreadFit = \"crossValidate\"))`.",
                                  "Any other value is an error.")),
     defineParameter("profileReps", "integer", default = 10L,
                     desc = paste("After the fit, each covariate coefficient in turn is set to 0 and to 5 values",
@@ -241,7 +241,7 @@ defineModule(sim, list(
                                  "polygon. With the data's range, 1 meant a CMDsm of 104 in one polygon and 297 in another,",
                                  "so the coefficient could not be compared across polygons, and a polygon that never gets",
                                  "dry stretched its small range over [0, 1]. Names not among the covariates are ignored.",
-                                 "`fireSense_SpreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and",
+                                 "`fireSense_spreadPredict` rescales with the stored `covMinMax_spread`, so it follows. CMD, CMDsp and",
                                  "cumMDC (also mm) are the other candidates of fireSense_dataPrepFit's `spread = 'auto'`,",
                                  "so an ELF that picks one of them gets the same fixed scale.")),
     defineParameter("yearSpreadSDBounds", "numeric", default = c(0, 1),
@@ -340,7 +340,7 @@ defineModule(sim, list(
   )
 ))
 
-#' Event dispatcher for fireSense_SpreadFit
+#' Event dispatcher for fireSense_spreadFit
 #'
 #' `init` schedules `spreadFitPrepare`, and, unless the ledger already holds a fit for this polygon
 #' (or `refitExisting` is TRUE), `estimateThreshold` then `run` (or `debug` when `mode` has "debug").
@@ -354,7 +354,7 @@ defineModule(sim, list(
 #'   `debug`, `plot`, `postFitDiagnostics` (after every fit), `crossValidate` (mode "validate").
 #' @param debug not used.
 #' @return the `simList`, invisibly.
-doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE) {
+doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE) {
   moduleName <- current(sim)$moduleName
   switch(
     eventType,
@@ -369,7 +369,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
 
       if (!isTRUE(is.na(Par$heldOutFold))) {
         if (!(length(Par$heldOutFold) == 1L && !is.na(Par$heldOutFold) && Par$heldOutFold %in% 1:2))
-          stop("fireSense_SpreadFit: parameter 'heldOutFold' must be NA, 1L or 2L; got: ",
+          stop("fireSense_spreadFit: parameter 'heldOutFold' must be NA, 1L or 2L; got: ",
                paste(format(Par$heldOutFold), collapse = ", "))
         # A held-out-fold job runs ONE cross-validation fold as its own job: `crossValidate`
         # fits on the OTHER fold's years and scores this fold's held-out years
@@ -485,7 +485,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
         polygonID <- sim$.ELFind
         if (!is.character(polygonID) || length(polygonID) != 1L ||
             is.na(polygonID) || !nzchar(polygonID))
-          stop("fireSense_SpreadFit: `sim$.ELFind` must be a single non-empty character ",
+          stop("fireSense_spreadFit: `sim$.ELFind` must be a single non-empty character ",
                "identifying the polygon being fit; got: ",
                paste(format(polygonID), collapse = ", "))
         df <- data.frame(df, "polygonID" = polygonID)
@@ -531,7 +531,7 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
       }
       checkPath(dirname(heldOutPath), create = TRUE)
       saveRDS(sim$spreadFitHeldOut, heldOutPath)
-      message("fireSense_SpreadFit: wrote held-out validation to ", heldOutPath)
+      message("fireSense_spreadFit: wrote held-out validation to ", heldOutPath)
     },
     plot = {
       DEpop_df <- as.data.frame(sim$DE[[1]]$member$pop)
@@ -566,7 +566,7 @@ spreadFitPrep <- function(sim) {
   #   youngAge class. Inside the optimization function, the covariates are set to zero if
   #   youngAge is 1
   mec <- "mutuallyExclusiveCols"
-  defaults <- depends(sim)@dependencies$fireSense_SpreadFit@parameters
+  defaults <- depends(sim)@dependencies$fireSense_spreadFit@parameters
   defaultMutuallyExclusive <- defaults[defaults$paramName %in% mec, "default"][[1]]
   if (identical(Par[[mec]], defaultMutuallyExclusive)) {
     sp_lcc <- colnames(sim$fireSense_nonAnnualSpreadFitCovariates[[1]])
@@ -588,7 +588,7 @@ spreadFitPrep <- function(sim) {
   ## spread model takes it on the LINEAR scale, divided by a fixed 1e4 -- see
   ## fireSenseUtils::fuelLogToLinear() for why, and why the log is undone here and not at its source.
   ## The input is left as it is; everything below that feeds the fit uses this copy.
-  ## fireSense_SpreadPredict applies the same function, recognising a linear fit by covMinMax_spread.
+  ## fireSense_spreadPredict applies the same function, recognising a linear fit by covMinMax_spread.
   fuelCols <- fuelColumns(sim$fireSense_nonAnnualSpreadFitCovariates)
   nonAnnualLinear <- lapply(sim$fireSense_nonAnnualSpreadFitCovariates, function(dt) {
     dt <- data.table::copy(dt)
@@ -629,7 +629,7 @@ spreadFitPrep <- function(sim) {
   ## 'lower' naming it would silently be fitted and then ignored downstream (fixHillSlope1()
   ## overwrites it before the objective runs), so refuse instead of misleading the caller.
   if ("hillSlope1" %in% c(names(P(sim)$upper), names(P(sim)$lower)))
-    stop("fireSense_SpreadFit: 'hillSlope1' found in the supplied 'upper'/'lower'. hillSlope1 is ",
+    stop("fireSense_spreadFit: 'hillSlope1' found in the supplied 'upper'/'lower'. hillSlope1 is ",
          "fixed at 1, not fitted; remove it from 'upper' and 'lower'.")
 
   ## sanity check parameters + inputs

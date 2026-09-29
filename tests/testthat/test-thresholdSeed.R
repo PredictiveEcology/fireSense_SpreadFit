@@ -32,7 +32,7 @@ test_that("a given seed reproduces the same parameter draws", {
 
 test_that("the production caller passes a deterministic seed derived from the ELF", {
   ## Parsed, not run: estimateSNLLThresholdPostLargeFires() needs a full simList.
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- parse(testthat::test_path("..", "..", "fireSense_spreadFit.R"), keep.source = FALSE)
   def <- Filter(function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
                   identical(x[[2]], as.name("estimateSNLLThresholdPostLargeFires")), exprs)
   expect_length(def, 1L)
@@ -45,7 +45,7 @@ test_that("the production caller passes a deterministic seed derived from the EL
 
 test_that("the same ELF gives the same seed, a different ELF a different one", {
   ## whatever derivation is used, it must be a pure function of the identifier
-  exprs <- parse(testthat::test_path("..", "..", "fireSense_SpreadFit.R"), keep.source = FALSE)
+  exprs <- parse(testthat::test_path("..", "..", "fireSense_spreadFit.R"), keep.source = FALSE)
   def <- Filter(function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
                   identical(x[[2]], as.name(".elfSeed")), exprs)
   expect_length(def, 1L)

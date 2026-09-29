@@ -1,7 +1,7 @@
-## fireSense_SpreadPredict reads a ledger row's parameters by splitting `sa$params[[1]][ind, ]` into
+## fireSense_spreadPredict reads a ledger row's parameters by splitting `sa$params[[1]][ind, ]` into
 ## `covPars` (names matching the formula's covariates) and `logisticPars` (everything else), then
 ## calls `fireSenseUtils::logisticAll(logisticPars, mat, covPars, lowerSpreadProb)`
-## (fireSense_SpreadPredict.R). That split is by NAME, so an OLD ledger row (fitted before hillSlope1
+## (fireSense_spreadPredict.R). That split is by NAME, so an OLD ledger row (fitted before hillSlope1
 ## was fixed, carrying its own fitted `hillSlope1`) and a NEW one (via `addHillSlope1ToLedger()`,
 ## `hillSlope1 = 1`) both predict correctly, each with its own value -- reproduced here without a
 ## full SpreadPredict simList.
@@ -25,7 +25,7 @@ test_that("an old ledger row keeps predicting with its own fitted hillSlope1", {
 
 test_that("a new ledger row (addHillSlope1ToLedger()) predicts with hillSlope1 = 1", {
   paramsBest <- data.table::data.table(maxAsymptote = 0.27, inflectionPoint1 = 4, cov = 2)
-  ## as fireSense_SpreadPredict.R reads a ledger row: `sa$params[[1]][ind,] |> as.vector() |> unlist()`
+  ## as fireSense_spreadPredict.R reads a ledger row: `sa$params[[1]][ind,] |> as.vector() |> unlist()`
   newRow <- addHillSlope1ToLedger(paramsBest)[1, ] |> as.vector() |> unlist()
   expect_equal(unname(newRow["hillSlope1"]), 1)
   expect_identical(predictRow(newRow),
