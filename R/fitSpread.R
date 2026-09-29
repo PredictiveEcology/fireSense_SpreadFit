@@ -154,6 +154,8 @@ fitAndScoreFold <- function(sim, covs, thresh, fold, k) {
   s <- Cache(fireSenseUtils::simulateFireSizes, pop = best$params,
              fnArgs = spreadObjFunArgs(sim, heldCovs),
              .functionName = paste0("simulateHeldOut_", sim$.runName, "_cvFold", k))
+  ## the held-out years only: observed against simulated burning from the other fold's fit
+  spreadFitValidationFigures(sim, as.matrix(best$params)[1L, ], heldCovs, paste0(sim$.runName, "_cvFold", k, "_heldOut"))
   data.table(fold = k, s)
 }
 
@@ -193,7 +195,8 @@ crossValidateSpreadOneFold <- function(sim, covs, thresh, k) {
   list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
 }
 
-## The objective's arguments for simulating `covs`' years; the likelihood options do not matter
+## The objective's arguments for simulating `covs`' years; the likelihood options do not matter, the
+## escape rule does (the fit simulates every fire from its escape size)
 spreadObjFunArgs <- function(sim, covs) {
   list(landscape = sim$rasterToMatch,
        annualDTx1000 = covs$annualDTx1000, nonAnnualDTx1000 = covs$nonAnnualDTx1000,
@@ -202,5 +205,6 @@ spreadObjFunArgs <- function(sim, covs) {
        tests = P(sim)$DEoptimTests, maxFireSpread = P(sim)$maxFireSpread,
        objFunCoresInternal = P(sim)$objFunCoresInternal, Nreps = P(sim)$objfunFireReps,
        mutuallyExclusive = P(sim)$mutuallyExclusiveCols, doAssertions = FALSE, verbose = 0,
-       link = spreadLink(P(sim)$link))
+       link = spreadLink(P(sim)$link), escapeSizeHa = escapeSizeHaOrNULL(P(sim)$escapeSizeHa),
+       jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist)
 }

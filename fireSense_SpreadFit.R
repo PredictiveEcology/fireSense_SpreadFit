@@ -15,7 +15,7 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_SpreadFit = "1.0.6.9021"),
+  version = list(fireSense_SpreadFit = "1.0.6.9022"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
@@ -27,7 +27,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/clusters@main (>= 0.0.46)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9049)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9063)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -509,6 +509,8 @@ doEvent.fireSense_SpreadFit = function(sim, eventTime, eventType, debug = FALSE)
                                                   le = le, purge = 7,
                                                   studyAreaFireSense = sim$studyAreaWithSpreadParams,
                                                   action = "update")
+        ## observed against simulated burning, and the response curves, for the best parameter set
+        spreadFitValidationFigures(sim, as.matrix(best$params)[1L, ], mod$covsX1000, sim$.runName)
       }
     },
     postFitDiagnostics = {
