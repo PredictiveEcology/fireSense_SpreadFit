@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>fireSense_SpreadFit • fireSense_SpreadFit</title>
+<title>fireSense_spreadFit • fireSense_spreadFit</title>
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script><!-- bootstrap-toc --><link rel="stylesheet" href="bootstrap-toc.css">
 <script src="bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="pkgdown.css" rel="stylesheet">
-<script src="pkgdown.js"></script><meta property="og:title" content="fireSense_SpreadFit">
+<script src="pkgdown.js"></script><meta property="og:title" content="fireSense_spreadFit">
 <meta property="og:description" content="Fit statistical models that can be used to parameterize the fire spread component of simulation models (e.g. fireSense). This module implement a Pattern Oriented Modelling (POM) approach to derive spread probabilities from final fire sizes. Spread probabilities can vary between pixels, and thus reflect local heterogeneity in environmental conditions.">
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
@@ -32,8 +32,8 @@
         <span class="icon-bar"></span>
       </button>
       <span class="navbar-brand">
-        <a class="navbar-link" href="index.html">fireSense_SpreadFit</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.0.6.9024</span>
+        <a class="navbar-link" href="index.html">fireSense_spreadFit</a>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
       </span>
     </div>
 
@@ -50,7 +50,7 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="articles/fireSense_SpreadFit.html">fireSense_SpreadFit Manual</a>
+      <a href="articles/fireSense_spreadFit.html">fireSense_spreadFit Manual</a>
     </li>
   </ul>
 </li>
@@ -71,10 +71,10 @@
       </header><div class="row">
   <div class="contents col-md-9">
 <div class="section level1">
-<div class="page-header"><h1 id="firesense_spreadfit-module">fireSense_SpreadFit Module<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-module"></a>
+<div class="page-header"><h1 id="firesense_spreadfit-module">fireSense_spreadFit Module<a class="anchor" aria-label="anchor" href="#firesense_spreadfit-module"></a>
 </h1></div>
 <!-- the following are text references used in captions for LaTeX compatibility -->
-<p>(ref:fireSense-SpreadFit) <em>fireSense_SpreadFit</em></p>
+<p>(ref:fireSense-spreadFit) <em>fireSense_spreadFit</em></p>
 <p><a href="https://commonmark.org" class="external-link"><img src="figures/markdownBadge.png" alt="made-with-Markdown"></a></p>
 <!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
 <div class="section level4">
@@ -103,10 +103,10 @@
 <h3 id="module-inputs-and-parameters">Module inputs and parameters<a class="anchor" aria-label="anchor" href="#module-inputs-and-parameters"></a>
 </h3>
 <p>The covariate tables, fire buffers, fire points and formula are made by <code>fireSense_dataPrepFit</code>. <code>fireSense_spreadFormula</code> must be supplied; <code>.ELFind</code> defaults to <code>.runName</code>.</p>
-<p>Table @ref(tab:moduleInputs-fireSense-SpreadFit) shows the full list of module inputs.</p>
+<p>Table @ref(tab:moduleInputs-fireSense-spreadFit) shows the full list of module inputs.</p>
 <table class="table table" style="margin-left: auto; margin-right: auto;">
 <caption>
-(#tab:moduleInputs-fireSense-SpreadFit)(#tab:moduleInputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) input objects and their description.
+(#tab:moduleInputs-fireSense-spreadFit)(#tab:moduleInputs-fireSense-spreadFit)List of (ref:fireSense-spreadFit) input objects and their description.
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -279,10 +279,10 @@ Polygon being fit; its geometry and crs go in the ledger row. Defaults to NWT.
 </tr>
 </tbody>
 </table>
-<p>Summary of user-visible parameters (Table @ref(tab:moduleParams-fireSense-SpreadFit))</p>
+<p>Summary of user-visible parameters (Table @ref(tab:moduleParams-fireSense-spreadFit))</p>
 <table class="table table" style="margin-left: auto; margin-right: auto;">
 <caption>
-(#tab:moduleParams-fireSense-SpreadFit)(#tab:moduleParams-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) parameters and their description.
+(#tab:moduleParams-fireSense-spreadFit)(#tab:moduleParams-fireSense-spreadFit)List of (ref:fireSense-spreadFit) parameters and their description.
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -660,7 +660,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-NA (default): unchanged behaviour, governed by <code>mode</code>. <code>1</code> or <code>2</code>: run ONLY that cross-validation fold, as its own job. <code>init</code> then schedules <code>spreadFitPrepare</code>, <code>estimateThreshold</code> and <code>crossValidate</code> – never <code>run</code>, so the full fit and the ledger write never happen, and the ledger (<code>stopIfNoPreRunFit</code>/<code>refitExisting</code>) is not consulted. <code>crossValidate</code> fits on the OTHER fold’s years and scores this fold’s held-out years (<code>cvFolds()</code> in <code>R/fitSpread.R</code>), and writes <code>spreadFitHeldOut_&amp;lt;.runName&amp;gt;_fold&amp;lt;heldOutFold&amp;gt;.rds</code> instead of <code>spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds</code>. A run script stops after <code>crossValidate</code>: <code>events = list(.stopAfter = list(fireSense_SpreadFit = "crossValidate"))</code>. Any other value is an error.
+NA (default): unchanged behaviour, governed by <code>mode</code>. <code>1</code> or <code>2</code>: run ONLY that cross-validation fold, as its own job. <code>init</code> then schedules <code>spreadFitPrepare</code>, <code>estimateThreshold</code> and <code>crossValidate</code> – never <code>run</code>, so the full fit and the ledger write never happen, and the ledger (<code>stopIfNoPreRunFit</code>/<code>refitExisting</code>) is not consulted. <code>crossValidate</code> fits on the OTHER fold’s years and scores this fold’s held-out years (<code>cvFolds()</code> in <code>R/fitSpread.R</code>), and writes <code>spreadFitHeldOut_&amp;lt;.runName&amp;gt;_fold&amp;lt;heldOutFold&amp;gt;.rds</code> instead of <code>spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds</code>. A run script stops after <code>crossValidate</code>: <code>events = list(.stopAfter = list(fireSense_spreadFit = "crossValidate"))</code>. Any other value is an error.
 </td>
 </tr>
 <tr>
@@ -1278,7 +1278,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Named list of <code>c(min, max)</code>: covariates rescaled with this FIXED range and not with the range of this polygon’s data. <code>CMDsm = c(0, 100)</code> makes the covariate CMDsm / 100 in every polygon. With the data’s range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. <code>fireSense_SpreadPredict</code> rescales with the stored <code>covMinMax_spread</code>, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit’s <code>spread = 'auto'</code>, so an ELF that picks one of them gets the same fixed scale.
+Named list of <code>c(min, max)</code>: covariates rescaled with this FIXED range and not with the range of this polygon’s data. <code>CMDsm = c(0, 100)</code> makes the covariate CMDsm / 100 in every polygon. With the data’s range, 1 meant a CMDsm of 104 in one polygon and 297 in another, so the coefficient could not be compared across polygons, and a polygon that never gets dry stretched its small range over [0, 1]. Names not among the covariates are ignored. <code>fireSense_spreadPredict</code> rescales with the stored <code>covMinMax_spread</code>, so it follows. CMD, CMDsp and cumMDC (also mm) are the other candidates of fireSense_dataPrepFit’s <code>spread = 'auto'</code>, so an ELF that picks one of them gets the same fixed scale.
 </td>
 </tr>
 <tr>
@@ -1395,10 +1395,10 @@ As <code>upperAndLowerVal</code>, for the fuel biomass covariates. They are biom
 <div class="section level3">
 <h3 id="module-outputs">Module outputs<a class="anchor" aria-label="anchor" href="#module-outputs"></a>
 </h3>
-<p>Description of the module outputs (Table @ref(tab:moduleOutputs-fireSense-SpreadFit)).</p>
+<p>Description of the module outputs (Table @ref(tab:moduleOutputs-fireSense-spreadFit)).</p>
 <table class="table table" style="margin-left: auto; margin-right: auto;">
 <caption>
-(#tab:moduleOutputs-fireSense-SpreadFit)(#tab:moduleOutputs-fireSense-SpreadFit)List of (ref:fireSense-SpreadFit) outputs and their description.
+(#tab:moduleOutputs-fireSense-spreadFit)(#tab:moduleOutputs-fireSense-spreadFit)List of (ref:fireSense-spreadFit) outputs and their description.
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -1550,14 +1550,14 @@ mode ‘validate’, or <code>heldOutFold</code> in <code>1:2</code>: <code>sims
 <div class="section level3">
 <h3 id="links-to-other-modules">Links to other modules<a class="anchor" aria-label="anchor" href="#links-to-other-modules"></a>
 </h3>
-<p>Inputs come from <code>fireSense_dataPrepFit</code>. <code>fireSense_SpreadPredict</code> uses <code>studyAreaWithSpreadParams</code> (the ledger rows) to predict spread probabilities.</p>
+<p>Inputs come from <code>fireSense_dataPrepFit</code>. <code>fireSense_spreadPredict</code> uses <code>studyAreaWithSpreadParams</code> (the ledger rows) to predict spread probabilities.</p>
 </div>
 <div class="section level3">
 <h3 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h3>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">## in a project that also runs fireSense_dataPrepFit</span></span>
-<span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fireSense_SpreadFit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fireSense_spreadFit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  stopIfNoPreRunFit <span class="op">=</span> <span class="cn">FALSE</span>,          <span class="co"># allow a fit to start</span></span>
 <span>  cores <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hostA"</span>, <span class="st">"hostB"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>, <span class="co"># host name repeated once per worker; or a number for localhost</span></span>
 <span>  nCoresNeeded <span class="op">=</span> <span class="fl">40</span>,                  <span class="co"># = DEoptim population size (NP)</span></span>
@@ -1570,7 +1570,7 @@ mode ‘validate’, or <code>heldOutFold</code> in <code>1:2</code>: <code>sims
 <h3 id="getting-help">Getting help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
 </h3>
 <ul>
-<li><a href="https://github.com/PredictiveEcology/fireSense_SpreadFit/issues" class="external-link uri">https://github.com/PredictiveEcology/fireSense_SpreadFit/issues</a></li>
+<li><a href="https://github.com/PredictiveEcology/fireSense_spreadFit/issues" class="external-link uri">https://github.com/PredictiveEcology/fireSense_spreadFit/issues</a></li>
 </ul>
 </div>
 </div>
@@ -1594,7 +1594,7 @@ mode ‘validate’, or <code>heldOutFold</code> in <code>1:2</code>: <code>sims
 <div class="citation">
 <h2 data-toc-skip>Citation</h2>
 <ul class="list-unstyled">
-<li><a href="authors.html#citation">Citing fireSense.SpreadFit</a></li>
+<li><a href="authors.html#citation">Citing fireSense.spreadFit</a></li>
 </ul>
 </div>
 
