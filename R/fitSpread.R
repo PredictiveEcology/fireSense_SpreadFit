@@ -57,6 +57,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    visualizeDEoptim = P(sim)$visualizeDEoptim,
                    .plotSize = P(sim)$.plotSize,
                    .plots = P(sim)$.plots,
+                   plotEvery = P(sim)$.plotInterval,
                    rep = P(sim)$rep,
                    runName = runName,
                    sizeLik = P(sim)$sizeLik,
@@ -73,7 +74,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    simulateMembers = if (diagnostics) P(sim)$simulateMembers else 0L),
         .functionName = fnName,
         .cacheExtra = fnName,
-        omitArgs = c(".verbose", "cores", "paths", "logPath"),
+        omitArgs = c(".verbose", "cores", "paths", "logPath", "plotEvery"),
         useCache = P(sim)$useCache_DE
   )
 }

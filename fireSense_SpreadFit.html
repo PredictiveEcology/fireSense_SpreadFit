@@ -2994,7 +2994,7 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">fireSense_SpreadFit Manual</h1>
-<h3 class="subtitle">v.1.0.6.9021</h3>
+<h3 class="subtitle">v.1.0.6.9023</h3>
 <h4 class="date">Last updated: 2026-09-28</h4>
 
 </div>
@@ -3262,6 +3262,26 @@ NA
 </td>
 <td style="text-align:left;">
 Plot types passed to <code>Plots()</code>, e.g. ‘png’ or ‘screen’; NULL or NA for none.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+.plotInterval
+</td>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+25
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+DEoptim generations between DEoptim progress figures; the final figures are always drawn. Passed to <code>fireSenseUtils::runDEoptim()</code> as <code>plotEvery</code>.
 </td>
 </tr>
 <tr>
@@ -4178,7 +4198,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-Directory where <code>runDEoptim</code> saves parameter plots after each generation. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
+Directory where <code>runDEoptim</code> saves parameter plots every <code>.plotInterval</code> generations. Reset to <code>figurePath(sim)</code> unless its last folder is the module name.
 </td>
 </tr>
 <tr>

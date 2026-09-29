@@ -1,6 +1,6 @@
 ---
 title: "fireSense_SpreadFit Manual"
-subtitle: "v.1.0.6.9021"
+subtitle: "v.1.0.6.9023"
 date: "Last updated: 2026-09-28"
 output:
   bookdown::html_document2:
@@ -170,6 +170,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Plot types passed to `Plots()`, e.g. 'png' or 'screen'; NULL or NA for none. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> .plotInterval </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 25 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> DEoptim generations between DEoptim progress figures; the final figures are always drawn. Passed to `fireSenseUtils::runDEoptim()` as `plotEvery`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .plotSize </td>
@@ -537,7 +545,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-Sprea
    <td style="text-align:left;"> /tmp/Rtm.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots after each generation. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
+   <td style="text-align:left;"> Directory where `runDEoptim` saves parameter plots every `.plotInterval` generations. Reset to `figurePath(sim)` unless its last folder is the module name. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> covFixedRange </td>

@@ -55,7 +55,7 @@ test_that("parameters are the expected names", {
   md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
   expect_identical(
     sort(md$parameters$paramName),
-    sort(c(".c", ".plots", ".plotSize", ".runInitialTime", ".studyAreaName",
+    sort(c(".c", ".plotInterval", ".plots", ".plotSize", ".runInitialTime", ".studyAreaName",
            ".useCache", "cores", "covFixedRange", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
            "heldOutFold", "initialpop", "iterDEoptim", "iterThresh", "libPathDEoptim",
            "link", "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
@@ -82,4 +82,6 @@ test_that("the required clusters has the fixes a fit on the fleet needs", {
   ## clusters 0.0.46: DEoptimIterative2() stops a fit when the population median has stopped improving, so
   ## `iterDEoptim` (5000) is a ceiling, not the run length.
   expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.46")
+  ## clusters 0.0.52: DEoptimIterative2(plotEvery), which `.plotInterval` reaches through runDEoptim()
+  expect_true(package_version(sub(".*>=\\s*([0-9.]+).*", "\\1", clustersReq)) >= "0.0.52")
 })
