@@ -1,5 +1,9 @@
 # fireSense_SpreadFit (development version)
 
+- `fitSpread()` no longer calls `termsInDEoptim()`, which printed "logit1, logit2, ..." for
+  maxAsymptote, inflectionPoint1 and the other non-formula parameters. `fireSenseUtils::runDEoptim()`
+  now prints the real names from `names(lower)`. Requires `fireSenseUtils@development (>= 0.2.3.9066)`.
+  Version 1.0.6.9024.
 - New parameter `.plotInterval` (default 25): DEoptim generations between the DEoptim progress
   figures, passed to `fireSenseUtils::runDEoptim()` as `plotEvery`; the final figures are always drawn.
   Drawing them after every generation took 8.3 s of each 53 s generation (16% of a fit's wall time)
