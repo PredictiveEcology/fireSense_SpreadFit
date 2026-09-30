@@ -40,6 +40,7 @@ test_that("the run event records bestParamSets() and covMinMax_spread in the led
     any(grepl("defineModule\\(", readLines(f, warn = FALSE))), logical(1))]
   src <- paste(readLines(mainFile, warn = FALSE), collapse = "\n")
   expect_match(src, "bestParamSets(DE,", fixed = TRUE)
-  expect_match(src, "I(list(sim$covMinMax_spread))", fixed = TRUE)
+  rowSrc <- paste(readLines(file.path(moduleRoot, "R", "spreadFitLedgerRow.R"), warn = FALSE), collapse = "\n")
+  expect_match(rowSrc, "I(list(sim$covMinMax_spread))", fixed = TRUE)   # the builder `run` and the folds share
   expect_false(grepl("head(sim$DE, 5)", src, fixed = TRUE))
 })
