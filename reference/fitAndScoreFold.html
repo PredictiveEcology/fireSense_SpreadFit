@@ -63,7 +63,7 @@ a full fit (plain <code>sim$.runName</code>, no suffix) never share a cache entr
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fitAndScoreFold</span><span class="op">(</span><span class="va">sim</span>, <span class="va">covs</span>, <span class="va">thresh</span>, <span class="va">fold</span>, <span class="va">k</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fitAndScoreFold</span><span class="op">(</span><span class="va">sim</span>, <span class="va">covs</span>, <span class="va">fold</span>, <span class="va">k</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -78,10 +78,6 @@ a full fit (plain <code>sim$.runName</code>, no suffix) never share a cache entr
 <dd><p><code>mod$covsX1000</code>.</p></dd>
 
 
-<dt id="arg-thresh">thresh<a class="anchor" aria-label="anchor" href="#arg-thresh"></a></dt>
-<dd><p><code>mod$thresh</code>.</p></dd>
-
-
 <dt id="arg-fold">fold<a class="anchor" aria-label="anchor" href="#arg-fold"></a></dt>
 <dd><p>integer vector, one element per year in <code>names(covs$historicalFires)</code>, from <code>cvFolds()</code>.</p></dd>
 
@@ -93,6 +89,13 @@ a full fit (plain <code>sim$.runName</code>, no suffix) never share a cache entr
     <div id="value">
     <h2>Value</h2>
     <p><code>data.table</code>: this fold's simulated held-out years (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fitDiagnostics.html" class="external-link">fireSenseUtils::simulateFireSizes()</a></code>), with <code>fold</code>.</p>
+    </div>
+    <div id="details">
+    <h2>Details</h2>
+    <p>The SNLL threshold is calibrated on the fitted years (<code><a href="estimateSNLLThresholdPostLargeFires.html">estimateSNLLThresholdPostLargeFires()</a></code>), not
+taken from the full data: it bounds the SNLL of the two largest fire years, and a fold's two largest
+years are not the full data's. With the full data's threshold, held-out fits of ELFs 4.3 and 5.2.1
+(2026-09-29) never passed it and returned the fail value for all 5000 generations.</p>
     </div>
 
   </div>
