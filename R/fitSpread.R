@@ -10,7 +10,8 @@
 #' @param thresh the objective's early-stop threshold, `mod$thresh`.
 #' @param runName character; labels the run and its cache entry.
 #' @param diagnostics logical; `FALSE` skips the profile and the simulations.
-#' @return the `runDEoptim()` result.
+#' @return the `runDEoptim()` result. Stops if every member of the final population has the
+#'   objective's fail value: no parameter set ever passed `thresh`, so there is no fit.
 fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
   if (!is.null(P(sim)$cores) && !any(is.na(P(sim)$cores)) &&
       identical(sort(unique(P(sim)$cores)), sort(P(sim)$cores))) {
@@ -21,7 +22,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
   }
   messageDF(best$bestCluster)
   fnName <- paste0("runDEoptim_", runName, "_", P(sim)$rep)
-  Cache(runDEoptim(landscape = sim$rasterToMatch,
+  DE <- Cache(runDEoptim(landscape = sim$rasterToMatch,
                    annualDTx1000 = covs$annualDTx1000,
                    nonAnnualDTx1000 = covs$nonAnnualDTx1000,
                    fireBufferedListDT = covs$fireBufferedListDT,
@@ -74,6 +75,13 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
         omitArgs = c(".verbose", "cores", "paths", "logPath", "plotEvery"),
         useCache = P(sim)$useCache_DE
   )
+  ## 1e6 is the objective's fail value (fireSenseUtils::.objfunSpreadFit). A population that is all
+  ## fail values was never fitted; its "best" members are random draws.
+  if (length(DE) && all(as.numeric(DE[[length(DE)]]$member$popval) >= 1e6))
+    stop("fireSense_spreadFit: fit '", runName, "' failed: every member of the final DEoptim ",
+         "population has the fail value 1e6, i.e. no parameter set passed the SNLL threshold (",
+         thresh, ") on the first two fire years.")
+  DE
 }
 
 ## The `link` the objective is given: NULL is its default, logistic3p
@@ -135,18 +143,23 @@ cvFolds <- function(years) {
 #' `runName` (and so its `Cache` key, see `fitSpread()`) is suffixed by `k`, so fold 1, fold 2 and
 #' a full fit (plain `sim$.runName`, no suffix) never share a cache entry.
 #'
+#' The SNLL threshold is calibrated on the fitted years (`estimateSNLLThresholdPostLargeFires()`), not
+#' taken from the full data: it bounds the SNLL of the two largest fire years, and a fold's two largest
+#' years are not the full data's. With the full data's threshold, held-out fits of ELFs 4.3 and 5.2.1
+#' (2026-09-29) never passed it and returned the fail value for all 5000 generations.
+#'
 #' @param sim a `simList`.
 #' @param covs `mod$covsX1000`.
-#' @param thresh `mod$thresh`.
 #' @param fold integer vector, one element per year in `names(covs$historicalFires)`, from `cvFolds()`.
 #' @param k integer; the fold (1 or 2) to hold out.
 #' @return `data.table`: this fold's simulated held-out years (`fireSenseUtils::simulateFireSizes()`), with `fold`.
-fitAndScoreFold <- function(sim, covs, thresh, fold, k) {
+fitAndScoreFold <- function(sim, covs, fold, k) {
   yearLists <- c("annualDTx1000", "fireBufferedListDT", "historicalFires")
   years <- names(covs$historicalFires)
   fitCovs <- heldCovs <- covs
   fitCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold != k]])
   heldCovs[yearLists] <- lapply(covs[yearLists], function(x) x[years[fold == k]])
+  thresh <- estimateSNLLThresholdPostLargeFires(sim, fitCovs)
   DE <- fitSpread(sim, fitCovs, thresh, runName = paste0(sim$.runName, "_cvFold", k), diagnostics = FALSE)
   best <- bestParamSets(DE, names(P(sim)$lower), n = max(1L, P(sim)$simulateMembers))
   s <- Cache(fireSenseUtils::simulateFireSizes, pop = best$params,
@@ -165,13 +178,12 @@ fitAndScoreFold <- function(sim, covs, thresh, fold, k) {
 #'
 #' @param sim a `simList`.
 #' @param covs `mod$covsX1000`.
-#' @param thresh `mod$thresh`.
 #' @return list: `sims` (from `fireSenseUtils::simulateFireSizes()`, with `fold`) and `score` (from
 #'   `fireSenseUtils::scoreFireSizes()` on both folds together, so every year is predicted once).
-crossValidateSpread <- function(sim, covs, thresh) {
+crossValidateSpread <- function(sim, covs) {
   years <- names(covs$historicalFires)
   fold <- cvFolds(years)
-  sims <- lapply(sort(unique(fold)), function(k) fitAndScoreFold(sim, covs, thresh, fold, k))
+  sims <- lapply(sort(unique(fold)), function(k) fitAndScoreFold(sim, covs, fold, k))
   sims <- rbindlist(sims)
   list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
 }
@@ -183,13 +195,12 @@ crossValidateSpread <- function(sim, covs, thresh) {
 #'
 #' @param sim a `simList`.
 #' @param covs `mod$covsX1000`.
-#' @param thresh `mod$thresh`.
 #' @param k integer; the fold (1 or 2) to hold out.
 #' @return list: `sims` (this fold only) and `score` (from `fireSenseUtils::scoreFireSizes()`).
-crossValidateSpreadOneFold <- function(sim, covs, thresh, k) {
+crossValidateSpreadOneFold <- function(sim, covs, k) {
   years <- names(covs$historicalFires)
   fold <- cvFolds(years)
-  sims <- fitAndScoreFold(sim, covs, thresh, fold, k)
+  sims <- fitAndScoreFold(sim, covs, fold, k)
   list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
 }
 

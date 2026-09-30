@@ -441,7 +441,7 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
-      sim <- estimateSNLLThresholdPostLargeFires(sim)
+      mod$thresh <- estimateSNLLThresholdPostLargeFires(sim, mod$covsX1000)
     },
     run = {
       if (isTRUE(Par$refitExisting) || !hasPreRunFitForThisPolygon(sim)) {
@@ -522,11 +522,11 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
     },
     crossValidate = {
       if (isTRUE(is.na(Par$heldOutFold))) {
-        sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000, mod$thresh)
+        sim$spreadFitHeldOut <- crossValidateSpread(sim, mod$covsX1000)
         heldOutPath <- file.path(outputPath(sim), currentModule(sim),
                                  paste0("spreadFitHeldOut_", sim$.runName, ".rds"))
       } else {
-        sim$spreadFitHeldOut <- crossValidateSpreadOneFold(sim, mod$covsX1000, mod$thresh, Par$heldOutFold)
+        sim$spreadFitHeldOut <- crossValidateSpreadOneFold(sim, mod$covsX1000, Par$heldOutFold)
         heldOutPath <- file.path(outputPath(sim), currentModule(sim),
                                  paste0("spreadFitHeldOut_", sim$.runName, "_fold", Par$heldOutFold, ".rds"))
       }
@@ -863,14 +863,17 @@ histOfCovariates <- function(annualList, nonAnnualList) {
   1L + as.integer(sum(bytes * seq_along(bytes) * 7919) %% 1e6)
 }
 
-#' Set `mod$thresh`, the SNLL fire-size threshold of the objective function
+#' The SNLL fire-size threshold of the objective function, for the years in `covs`
 #'
 #' Uses `SNLL_FS_thresh` if supplied; otherwise calibrates it with a cached
-#' `runSpreadWithoutDEoptim()` call.
+#' `runSpreadWithoutDEoptim()` call on `covs`. The threshold bounds the summed SNLL of the two
+#' largest fire years of the data it is used on, so it belongs to those years: a cross-validation
+#' fold calibrates its own (`fitAndScoreFold()`).
 #'
 #' @param sim a `simList`, after `spreadFitPrep()`.
-#' @return the `simList`.
-estimateSNLLThresholdPostLargeFires <- function(sim) {
+#' @param covs `mod$covsX1000`, or the subset of its years that will be fitted.
+#' @return the threshold.
+estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
 
@@ -882,10 +885,10 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
       flammableRTM = sim$rasterToMatch,
       mutuallyExclusive =  P(sim)$mutuallyExclusiveCols,
       doObjFunAssertions = P(sim)$doObjFunAssertions,
-      annualDTx1000 = mod$covsX1000$annualDTx1000,
-      nonAnnualDTx1000 = mod$covsX1000$nonAnnualDTx1000,
-      fireBufferedListDT = mod$covsX1000$fireBufferedListDT,
-      historicalFires = mod$covsX1000$historicalFires,
+      annualDTx1000 = covs$annualDTx1000,
+      nonAnnualDTx1000 = covs$nonAnnualDTx1000,
+      fireBufferedListDT = covs$fireBufferedListDT,
+      historicalFires = covs$historicalFires,
       covMinMax = sim$covMinMax_spread,
       formulaToFit = sim$fireSense_spreadFormula,
       objfunFireReps = P(sim)$objfunFireReps,
@@ -921,8 +924,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim) {
   } else {
     P(sim)$SNLL_FS_thresh
   }
-  mod$thresh <- thresh
-  return(sim)
+  thresh
 }
 
 #' Default `upper` or `lower` bounds for DEoptim
