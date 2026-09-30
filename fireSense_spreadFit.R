@@ -15,16 +15,17 @@ defineModule(sim, list(
     person("Alex M.", "Chubaty", email = "achubaty@for-cast.ca", role = "ctb")
   ),
   childModules = character(),
-  version = list(fireSense_spreadFit = "1.1.0"),
+  version = list(fireSense_spreadFit = "1.1.1"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = NA_character_, # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "fireSense_spreadFit.Rmd"),
   loadOrder = list(after = c("fireSense_dataPrepFit", "fireSense_ignitionFit")),
-  reqdPkgs = list("data.table", "DEoptim", "fpCompare", "future",
+  reqdPkgs = list("data.table", "DEoptim", "dplyr", "fpCompare", "future",
                   "ggplot2", "scales", "kSamples", "munsell",
-                  "logging", "magrittr", "parallel", "raster", "terra", "tidyr", ## TODO: remove magrittr
+                  "logging", "magrittr", "parallel", "raster", "sf", "terra", "tidyr", "withr", ## TODO: remove magrittr
                   "PredictiveEcology/pemisc@development",
+                  "PredictiveEcology/reproducible@development",
                   "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
                   "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9066)",

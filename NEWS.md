@@ -1,3 +1,7 @@
+# fireSense_spreadFit 1.1.1
+
+- reqdPkgs now lists `dplyr`, `sf`, `withr` and `reproducible`, which the module calls (`Cache`, `CacheGeo`, `asPath`) but did not list. Version 1.1.1.
+
 # fireSense_spreadFit 1.1.0
 
 - Renamed from `fireSense_SpreadFit` to `fireSense_spreadFit` (module naming convention `<model>_<camelCaseComponent>`); projects must rename the module and its `params` key. Version 1.1.0.
