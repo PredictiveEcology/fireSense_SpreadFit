@@ -152,7 +152,8 @@ cvFolds <- function(years) {
 #' @param covs `mod$covsX1000`.
 #' @param fold integer vector, one element per year in `names(covs$historicalFires)`, from `cvFolds()`.
 #' @param k integer; the fold (1 or 2) to hold out.
-#' @return `data.table`: this fold's simulated held-out years (`fireSenseUtils::simulateFireSizes()`), with `fold`.
+#' @return list: `sims`, this fold's simulated held-out years (`fireSenseUtils::simulateFireSizes()`), with
+#'   `fold`; and `fit`, the fold's fit as a ledger row (`spreadFitLedgerRow()`) with all `simulateMembers` members.
 fitAndScoreFold <- function(sim, covs, fold, k) {
   yearLists <- c("annualDTx1000", "fireBufferedListDT", "historicalFires")
   years <- names(covs$historicalFires)
@@ -167,7 +168,9 @@ fitAndScoreFold <- function(sim, covs, fold, k) {
              .functionName = paste0("simulateHeldOut_", sim$.runName, "_cvFold", k))
   ## the held-out years only: observed against simulated burning from the other fold's fit
   spreadFitValidationFigures(sim, as.matrix(best$params)[1L, ], heldCovs, paste0(sim$.runName, "_cvFold", k, "_heldOut"))
-  data.table(fold = k, s)
+  fit <- spreadFitLedgerRow(sim, length(DE), best$objFunVal, addHillSlope1ToLedger(best$params))
+  list(sims = data.table(fold = k, s), fit = fit,
+       fitYears = years[fold != k], heldOutYears = years[fold == k])
 }
 
 #' Two-fold cross-validation of the spread fit
@@ -183,7 +186,7 @@ fitAndScoreFold <- function(sim, covs, fold, k) {
 crossValidateSpread <- function(sim, covs) {
   years <- names(covs$historicalFires)
   fold <- cvFolds(years)
-  sims <- lapply(sort(unique(fold)), function(k) fitAndScoreFold(sim, covs, fold, k))
+  sims <- lapply(sort(unique(fold)), function(k) fitAndScoreFold(sim, covs, fold, k)$sims)
   sims <- rbindlist(sims)
   list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
 }
@@ -196,12 +199,15 @@ crossValidateSpread <- function(sim, covs) {
 #' @param sim a `simList`.
 #' @param covs `mod$covsX1000`.
 #' @param k integer; the fold (1 or 2) to hold out.
-#' @return list: `sims` (this fold only) and `score` (from `fireSenseUtils::scoreFireSizes()`).
+#' @return list: `sims` (this fold only), `score` (from `fireSenseUtils::scoreFireSizes()`), `fit` (see
+#'   `fitAndScoreFold()`), `heldOutFold`, `fitYears` and `heldOutYears` (which fold, and its years), and the `formula` and `link` a prediction with `fit` needs.
 crossValidateSpreadOneFold <- function(sim, covs, k) {
   years <- names(covs$historicalFires)
   fold <- cvFolds(years)
-  sims <- fitAndScoreFold(sim, covs, fold, k)
-  list(sims = sims, score = fireSenseUtils::scoreFireSizes(sims))
+  res <- fitAndScoreFold(sim, covs, fold, k)
+  list(sims = res$sims, score = fireSenseUtils::scoreFireSizes(res$sims), fit = res$fit,
+       heldOutFold = k, fitYears = res$fitYears, heldOutYears = res$heldOutYears,
+       formula = sim$fireSense_spreadFormula, link = P(sim)$link)
 }
 
 ## The objective's arguments for simulating `covs`' years; the likelihood options do not matter, the

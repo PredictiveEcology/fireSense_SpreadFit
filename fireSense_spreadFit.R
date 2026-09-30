@@ -334,7 +334,10 @@ defineModule(sim, list(
                   desc = paste("mode 'validate', or `heldOutFold` in `1:2`: `sims`, the held-out years simulated",
                                "from the fit to the other years (column `fold`), and `score`, from",
                                "`fireSenseUtils::scoreFireSizes()`. With `heldOutFold`, `sims` holds only that",
-                               "fold. Also written to",
+                               "fold, and the list also has `fit` (the fold's fitted parameters as a one-row ledger",
+                               "`sf` object, the same columns the `run` event writes, with all `simulateMembers`",
+                               "members in `params`), `heldOutFold`, `fitYears`, `heldOutYears`, `formula` (`fireSense_spreadFormula`) and `link`, so",
+                               "`fireSense_spreadPredict` can predict with the fold's fit. Also written to",
                                "`file.path(outputPath(sim), currentModule(sim), \"spreadFitHeldOut_<.runName>.rds\")`",
                                "(mode 'validate') or `\"...spreadFitHeldOut_<.runName>_fold<heldOutFold>.rds\"`",
                                "(`heldOutFold`)."))
@@ -471,36 +474,8 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
           sim$spreadFitAdditionalColNames <- fireSenseUtils::spreadFitAdditionalColNamesTxt
         }
         
-        ## covMinMax_spread: prediction rescales covariates with it, exactly as this fit did
-        df <- data.frame(I(list(numIterations)),
-                         I(list(objFunValBest)),
-                         I(list(paramsBest)),
-                         I(list(sim$sppEquiv)),
-                         I(list(sim$nonForestedLCCGroups)),
-                         I(list(sim$missingLCCgroup)),
-                         I(list(sim$covMinMax_spread))) |>
-          setNames(fireSenseUtils::spreadFitAdditionalColNamesTxt)
-        # The ledger is keyed by polygon identity, NOT by run label -- see the
-        # `.ELFind` input declaration. This row is shared cloud state that every
-        # other project reads, so validate before writing.
-        polygonID <- sim$.ELFind
-        if (!is.character(polygonID) || length(polygonID) != 1L ||
-            is.na(polygonID) || !nzchar(polygonID))
-          stop("fireSense_spreadFit: `sim$.ELFind` must be a single non-empty character ",
-               "identifying the polygon being fit; got: ",
-               paste(format(polygonID), collapse = ", "))
-        df <- data.frame(df, "polygonID" = polygonID)
-        
-        crses <- terra::crs(sim$studyArea)
-        b <- dplyr::mutate(df, crs = I(crses)) 
-        
-        # need to add crs as an entry in a column
-
-        saHere <- if (is(sim$studyArea, "SpatVector")) sf::st_as_sf(sim$studyArea) else sim$studyArea
-        saHere <- sf::st_as_sf(sf::st_geometry(saHere))
-        sf::st_geometry(saHere) <- "geometry"
-        sim$studyAreaWithSpreadParams <- saHere |>
-          dplyr::mutate(df)
+        sim$studyAreaWithSpreadParams <- spreadFitLedgerRow(sim, numIterations, objFunValBest, paramsBest)
+        saHere <- sim$studyAreaWithSpreadParams[, "geometry"]
         le <- function(x) {x}
         sim$studyAreaWithSpreadParams <- CacheGeo(cloudFolderID = Par$spreadFitGoogleDriveFolder,
                                                   targetFile = ledgerWriteFile(

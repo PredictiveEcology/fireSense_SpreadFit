@@ -59,3 +59,31 @@ test_that("heldOutFold never schedules or runs the full fit ('run') or writes th
   expect_false("run" %in% SpaDES.core::events(out$sim)$eventType)
   expect_null(out$rec$geoArgs)
 })
+
+test_that("the held-out object carries the fold's fit in the ledger row's structure", {
+  out <- heldOutFoldRun(1L)
+  fold <- out$sim$spreadFitHeldOut
+  runSim <- toySim(list(stopIfNoPreRunFit = FALSE))      # the `run` event's ledger row
+  mockFitAndLedger(runSim)
+  run <- suppressMessages(SpaDES.core::spades(runSim))$studyAreaWithSpreadParams
+  fit <- fold$fit
+  expect_identical(names(fit), names(run))                # same columns, same order
+  expect_identical(vapply(fit, function(x) class(x)[1], ""), vapply(run, function(x) class(x)[1], ""))
+  expect_identical(lapply(fit$params, class), lapply(run$params, class))
+  expect_identical(class(fit), class(run))
+  expect_identical(sf::st_crs(fit), sf::st_crs(run))
+  expect_identical(fit$polygonID, run$polygonID)
+  ## all simulateMembers (3) members, parameter columns as the ledger has them
+  expect_identical(names(fit$params[[1]]), names(run$params[[1]]))
+  expect_identical(NROW(fit$params[[1]]), 3L)
+  expect_length(fit$objFunVal[[1]], 3L)
+  expect_identical(fit$covMinMax_spread[[1]], run$covMinMax_spread[[1]])
+  expect_identical(fold$formula, "~ 0 + CMDsm + youngAge + class1 + class2 + nf")
+  expect_identical(fold$link, "logistic3p")
+  heldOutPath <- file.path(SpaDES.core::outputPath(out$sim), moduleName, "spreadFitHeldOut_toyRun_fold1.rds")
+  expect_identical(names(readRDS(heldOutPath)), c("sims", "score", "fit", "heldOutFold", "fitYears", "heldOutYears",
+                                                   "formula", "link"))
+  expect_identical(fold$heldOutFold, 1L)
+  expect_identical(fold$fitYears, "year2002")
+  expect_identical(fold$heldOutYears, "year2001")
+})
