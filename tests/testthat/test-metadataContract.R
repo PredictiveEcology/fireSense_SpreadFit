@@ -26,7 +26,7 @@ test_that("parameter classes", {
       link = "character", profileReps = "integer", simulateMembers = "integer",
       sizeLik = "character", sizeLikDf = "numeric", escapeSizeHa = "numeric", weighted = "logical|character",
       adWeight = "character|numeric", yearAreaWeight = "numeric|character",
-      areaDistWeight = "numeric|character", jumpTries = "numeric", jumpMeanDist = "numeric",
+      areaDistWeight = "numeric|character", penaliseCapHits = "logical", jumpTries = "numeric", jumpMeanDist = "numeric",
       upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )

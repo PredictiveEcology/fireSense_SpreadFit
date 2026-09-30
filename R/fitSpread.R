@@ -68,6 +68,7 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    jumpMeanDist = P(sim)$jumpMeanDist,
                    yearAreaWeight = P(sim)$yearAreaWeight,
                    areaDistWeight = P(sim)$areaDistWeight,
+                   penaliseCapHits = P(sim)$penaliseCapHits,
                    profileReps = if (diagnostics) P(sim)$profileReps else 0L,
                    simulateMembers = if (diagnostics) P(sim)$simulateMembers else 0L),
         .functionName = fnName,
