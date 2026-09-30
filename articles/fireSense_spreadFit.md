@@ -398,6 +398,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> Weight of the area-weighted size-distribution term: simulated and observed fires compared by the share of area burned that fires up to each size make up (`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`). </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> penaliseCapHits </td>
+   <td style="text-align:left;"> logical </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> A simulated fire that reaches its size cap is scored as a runaway (at least that big), not as a fire of the capped size: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape's pixel count. FALSE scores the capped size. Passed to `fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> jumpTries </td>
    <td style="text-align:left;"> numeric </td>
    <td style="text-align:left;"> 20 </td>
