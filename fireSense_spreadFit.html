@@ -4474,7 +4474,7 @@ spreadFitHeldOut
 list
 </td>
 <td style="text-align:left;">
-mode ‘validate’, or <code>heldOutFold</code> in <code>1:2</code>: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code>fireSenseUtils::scoreFireSizes()</code>. With <code>heldOutFold</code>, <code>sims</code> holds only that fold. Also written to <code>file.path(outputPath(sim), currentModule(sim), &quot;spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds&quot;)</code> (mode ‘validate’) or <code>&quot;...spreadFitHeldOut_&amp;lt;.runName&amp;gt;_fold&amp;lt;heldOutFold&amp;gt;.rds&quot;</code> (<code>heldOutFold</code>).
+mode ‘validate’, or <code>heldOutFold</code> in <code>1:2</code>: <code>sims</code>, the held-out years simulated from the fit to the other years (column <code>fold</code>), and <code>score</code>, from <code>fireSenseUtils::scoreFireSizes()</code>. With <code>heldOutFold</code>, <code>sims</code> holds only that fold, and the list also has <code>fit</code> (the fold’s fitted parameters as a one-row ledger <code>sf</code> object, the same columns the <code>run</code> event writes, with all <code>simulateMembers</code> members in <code>params</code>), <code>heldOutFold</code>, <code>fitYears</code>, <code>heldOutYears</code>, <code>formula</code> (<code>fireSense_spreadFormula</code>) and <code>link</code>, so <code>fireSense_spreadPredict</code> can predict with the fold’s fit. Also written to <code>file.path(outputPath(sim), currentModule(sim), &quot;spreadFitHeldOut_&amp;lt;.runName&amp;gt;.rds&quot;)</code> (mode ‘validate’) or <code>&quot;...spreadFitHeldOut_&amp;lt;.runName&amp;gt;_fold&amp;lt;heldOutFold&amp;gt;.rds&quot;</code> (<code>heldOutFold</code>).
 </td>
 </tr>
 </tbody>

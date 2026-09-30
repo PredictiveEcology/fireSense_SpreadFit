@@ -680,7 +680,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-sprea
   <tr>
    <td style="text-align:left;"> spreadFitHeldOut </td>
    <td style="text-align:left;"> list </td>
-   <td style="text-align:left;"> mode 'validate', or `heldOutFold` in `1:2`: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. With `heldOutFold`, `sims` holds only that fold. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")` (mode 'validate') or `"...spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds"` (`heldOutFold`). </td>
+   <td style="text-align:left;"> mode 'validate', or `heldOutFold` in `1:2`: `sims`, the held-out years simulated from the fit to the other years (column `fold`), and `score`, from `fireSenseUtils::scoreFireSizes()`. With `heldOutFold`, `sims` holds only that fold, and the list also has `fit` (the fold's fitted parameters as a one-row ledger `sf` object, the same columns the `run` event writes, with all `simulateMembers` members in `params`), `heldOutFold`, `fitYears`, `heldOutYears`, `formula` (`fireSense_spreadFormula`) and `link`, so `fireSense_spreadPredict` can predict with the fold's fit. Also written to `file.path(outputPath(sim), currentModule(sim), "spreadFitHeldOut_&lt;.runName&gt;.rds")` (mode 'validate') or `"...spreadFitHeldOut_&lt;.runName&gt;_fold&lt;heldOutFold&gt;.rds"` (`heldOutFold`). </td>
   </tr>
 </tbody>
 </table>
