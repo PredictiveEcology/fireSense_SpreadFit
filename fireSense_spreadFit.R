@@ -157,6 +157,12 @@ defineModule(sim, list(
                                  "compared by the share of area burned that fires up to each size make up",
                                  "(`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses",
                                  "the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`).")),
+    defineParameter("penaliseCapHits", "logical", default = TRUE,
+                    desc = paste("A simulated fire that reaches its size cap is scored as a runaway (at least that",
+                                 "big), not as a fire of the capped size: in the size likelihood it has no density",
+                                 "at the observed size, and in the Anderson-Darling and annual-area terms its size is",
+                                 "the landscape's pixel count. FALSE scores the capped size. Passed to",
+                                 "`fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting.")),
     defineParameter("jumpTries", "numeric", default = 20,
                     desc = paste("With `escapeSizeHa`: how many attempts a simulated fire that is still below the",
                                  "escape size, with no burnable neighbour left, may make to jump to burnable land",
@@ -437,6 +443,7 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
         adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
         jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
         yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
+        penaliseCapHits = P(sim)$penaliseCapHits,
         maxFireSpread = P(sim)$maxFireSpread) 
     },
     estimateThreshold = {
@@ -905,6 +912,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
       jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
       yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
+      penaliseCapHits = P(sim)$penaliseCapHits,
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
