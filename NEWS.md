@@ -1,3 +1,8 @@
+# fireSense_spreadFit (development version)
+
+- Fixed: a held-out fold's fit (`crossValidate`, `heldOutFold`) used the SNLL threshold calibrated on all years. The threshold bounds the SNLL of the two largest fire years, and a fold's two largest years are not the full data's, so for ELFs 4.3 (fold 2) and 5.2.1 (fold 1) no parameter set ever passed it: every evaluation returned the fail value 1e6 for 5000 generations. Each fold now calibrates its own threshold on the years it fits (`estimateSNLLThresholdPostLargeFires(sim, covs)`), unless `SNLL_FS_thresh` is set. This changes the DEoptim cache key of fold fits.
+- `fitSpread()` now stops when every member of the final DEoptim population has the fail value. Before, such a fit went on to score or save parameters that were random draws.
+
 # fireSense_spreadFit 1.1.1
 
 - reqdPkgs now lists `dplyr`, `sf`, `withr` and `reproducible`, which the module calls (`Cache`, `CacheGeo`, `asPath`) but did not list. Version 1.1.1.
