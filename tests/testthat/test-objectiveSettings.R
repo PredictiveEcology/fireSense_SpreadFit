@@ -62,24 +62,24 @@ test_that("the new terms and jumping are on by default", {
     expect_identical(a$areaDistWeight, "auto")
     expect_identical(a$jumpTries, 20)
     expect_identical(a$jumpMeanDist, 3)
-    expect_identical(a$penaliseCapHits, TRUE)
+    expect_identical(a$penaliseRunaways, TRUE)
     expect_identical(a$weighted, FALSE)   # the module's default, now also in the calibration
   }
 })
 
-test_that("penaliseCapHits = FALSE reaches the fit, the calibration and the objective", {
+test_that("penaliseRunaways = FALSE reaches the fit, the calibration and the objective", {
   ## FALSE only: the default TRUE is asserted in "the new terms and jumping are on by default", and a
   ## second TRUE call here would hit that test's cached threshold and never reach the mock
   for (value in list(FALSE)) {
     rec <- new.env(); fitRec <- new.env()
-    sim <- toySim(list(stopIfNoPreRunFit = FALSE, SNLL_FS_thresh = NULL, penaliseCapHits = value))
+    sim <- toySim(list(stopIfNoPreRunFit = FALSE, SNLL_FS_thresh = NULL, penaliseRunaways = value))
     mockFitAndLedger(sim, fitRec)
     mockInModule(sim, runSpreadWithoutDEoptim = recordingRSWD(rec, 777))
     sim <- suppressMessages(SpaDES.core::spades(sim))
-    expect_identical(rec$args$penaliseCapHits, value)
-    expect_identical(fitRec$deArgs$penaliseCapHits, value)
+    expect_identical(rec$args$penaliseRunaways, value)
+    expect_identical(fitRec$deArgs$penaliseRunaways, value)
   }
-  expect_identical(formals(runSpreadWithoutDEoptim)$penaliseCapHits, TRUE)
+  expect_identical(formals(runSpreadWithoutDEoptim)$penaliseRunaways, TRUE)
   seen <- list()
   local_mocked_bindings(.objfunSpreadFit = function(par, thresh, ...) {
     seen[[length(seen) + 1L]] <<- list(...)
@@ -92,7 +92,7 @@ test_that("penaliseCapHits = FALSE reaches the fit, the calibration and the obje
     flammableRTM = land, annualDTx1000 = list(), nonAnnualDTx1000 = list(), fireBufferedListDT = list(),
     historicalFires = fires, covMinMax = NULL, objfunFireReps = 2L, maxFireSpread = 0.28,
     tests = "SNLL_FS", formulaToFit = "~ 0 + a", mode = "debug", seed = 1L, escapeSizeHa = 50,
-    penaliseCapHits = FALSE)))
+    penaliseRunaways = FALSE)))
   expect_true(length(seen) > 0)
-  expect_true(all(vapply(seen, function(a) identical(a$penaliseCapHits, FALSE), logical(1))))
+  expect_true(all(vapply(seen, function(a) identical(a$penaliseRunaways, FALSE), logical(1))))
 })
