@@ -28,7 +28,7 @@ defineModule(sim, list(
                   "PredictiveEcology/reproducible@development",
                   "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9075)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9076)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -914,8 +914,13 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       ## The rule lives in pickThreshold() and trialFirstBlock(), callees that Cache() does not
       ## digest: their bodies go in .cacheExtra, so a change of rule is a cache miss, not an old
       ## NA or randomly paired threshold served from the cache.
+      ## The draws are screened by fireSenseUtils::spreadProbGates() (which calls spreadProbGateTest(),
+      ## the objective's own gate) and drawn by drawActivePars(): their bodies are in the key too.
       Cache(.cacheExtra = list(pickThreshold = deparse(pickThreshold),
-                               trialFirstBlock = deparse(trialFirstBlock)))
+                               trialFirstBlock = deparse(trialFirstBlock),
+                               drawActivePars = deparse(drawActivePars),
+                               spreadProbGates = deparse(fireSenseUtils::spreadProbGates),
+                               spreadProbGateTest = deparse(fireSenseUtils::spreadProbGateTest)))
   } else {
     P(sim)$SNLL_FS_thresh
   }
