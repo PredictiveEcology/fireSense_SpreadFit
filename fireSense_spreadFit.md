@@ -260,6 +260,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> Number of random parameter sets tried when calibrating `SNLL_FS_thresh`. </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> thresholdMargin </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 2 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> When calibrating `SNLL_FS_thresh`, the threshold is this multiple of the best usable trial's first-block average annual SNLL (trials run with no early stop; a trial that saturates spreadProb is not usable). Must be &gt;= 1. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
    <td style="text-align:left;"> character </td>
    <td style="text-align:left;"> /home/ru.... </td>
@@ -402,14 +410,6 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> A simulated fire that burns any pixel of the outer edge of its own buffer is scored as a runaway (at least that big), not as a fire of the size it reached: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape's pixel count. Fires are not capped at a size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to `fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting. </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> thresholdMargin </td>
-   <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 2 </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> When calibrating `SNLL_FS_thresh`, the threshold is this multiple of the best usable trial's first-block average annual SNLL (trials run with no early stop; a trial that saturates spreadProb is not usable). Must be >= 1. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> jumpTries </td>
