@@ -28,7 +28,7 @@ defineModule(sim, list(
                   "PredictiveEcology/reproducible@development",
                   "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9072)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9075)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -66,6 +66,10 @@ defineModule(sim, list(
                                  "median value has stopped improving.")),
     defineParameter("iterThresh", "integer", default = 96L,
                     desc = "Number of random parameter sets tried when calibrating `SNLL_FS_thresh`."),
+    defineParameter("thresholdMargin", "numeric", default = 2,
+                    desc = paste("When calibrating `SNLL_FS_thresh`, the threshold is this multiple of the best",
+                                 "usable trial's first-block average annual SNLL (trials run with no early stop;",
+                                 "a trial that saturates spreadProb is not usable). Must be >= 1.")),
     defineParameter("libPathDEoptim", "character", default = .libPaths()[1],
                     desc = paste("Absolute path specifying R package directory location to use when running DEotpim.",
                                  "NOTE: this path must be read/write accessible on ALL machines",
@@ -125,8 +129,8 @@ defineModule(sim, list(
                                  "falls as NP falls, so a smaller NP buys throughput by allowing more fits at",
                                  "once rather than by shortening generations (measured 2026-09-16).")),
     defineParameter("simulateMembers", "integer", default = 10L,
-                    desc = paste("After the fit, this many best members simulate the observed fires without the",
-                                 "size cap, for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the",
+                    desc = paste("After the fit, this many best members simulate the observed fires,",
+                                 "for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the",
                                  "members each `crossValidate` fold predicts with. 0 skips it after the fit.")),
     defineParameter("sizeLik", "character", default = "t",
                     desc = paste("Likelihood of fire size in the objective, 'kde' or 't', passed to",
@@ -157,11 +161,12 @@ defineModule(sim, list(
                                  "compared by the share of area burned that fires up to each size make up",
                                  "(`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses",
                                  "the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`).")),
-    defineParameter("penaliseCapHits", "logical", default = TRUE,
-                    desc = paste("A simulated fire that reaches its size cap is scored as a runaway (at least that",
-                                 "big), not as a fire of the capped size: in the size likelihood it has no density",
-                                 "at the observed size, and in the Anderson-Darling and annual-area terms its size is",
-                                 "the landscape's pixel count. FALSE scores the capped size. Passed to",
+    defineParameter("penaliseRunaways", "logical", default = TRUE,
+                    desc = paste("A simulated fire that burns any pixel of the outer edge of its own buffer is scored",
+                                 "as a runaway (at least that big), not as a fire of the size it reached: in the size",
+                                 "likelihood it has no density at the observed size, and in the Anderson-Darling and",
+                                 "annual-area terms its size is the landscape's pixel count. Fires are not capped at a",
+                                 "size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to",
                                  "`fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting.")),
     defineParameter("jumpTries", "numeric", default = 20,
                     desc = paste("With `escapeSizeHa`: how many attempts a simulated fire that is still below the",
@@ -331,7 +336,7 @@ defineModule(sim, list(
     createsOutput("spreadFitProfile", "data.table",
                   desc = "The one-at-a-time profile around the best member (`fireSenseUtils::profileCoefficients()`)."),
     createsOutput("spreadFitSizes", "data.table",
-                  desc = paste("Observed against simulated fire sizes of the fitted years, without the size cap",
+                  desc = paste("Observed against simulated fire sizes of the fitted years",
                                "(`fireSenseUtils::scoreFireSizes()`): bias, error, quantiles.")),
     createsOutput("spreadFitLinkSaturation", "data.table",
                   desc = paste("Per member, the share of pixel-years at the spread-probability ceiling and the",
@@ -446,8 +451,9 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
         adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
         jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
         yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
-        penaliseCapHits = P(sim)$penaliseCapHits,
-        maxFireSpread = P(sim)$maxFireSpread) 
+        penaliseRunaways = P(sim)$penaliseRunaways,
+        thresholdMargin = P(sim)$thresholdMargin,
+        maxFireSpread = P(sim)$maxFireSpread)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
@@ -888,7 +894,8 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       adWeight = P(sim)$adWeight, link = spreadLink(P(sim)$link),
       jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
       yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
-      penaliseCapHits = P(sim)$penaliseCapHits,
+      penaliseRunaways = P(sim)$penaliseRunaways,
+      thresholdMargin = P(sim)$thresholdMargin,
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
@@ -904,7 +911,11 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       ## threshold's *value* rather than its type: a threshold calibrated at 5
       ## replicates would be served to a caller asking for 25, with nothing to show
       ## that it had been.
-      Cache()
+      ## The rule lives in pickThreshold() and trialFirstBlock(), callees that Cache() does not
+      ## digest: their bodies go in .cacheExtra, so a change of rule is a cache miss, not an old
+      ## NA or randomly paired threshold served from the cache.
+      Cache(.cacheExtra = list(pickThreshold = deparse(pickThreshold),
+                               trialFirstBlock = deparse(trialFirstBlock)))
   } else {
     P(sim)$SNLL_FS_thresh
   }
