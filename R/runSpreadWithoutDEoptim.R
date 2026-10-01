@@ -1,10 +1,13 @@
 #' Evaluate the spread objective function without DEoptim
 #'
 #' In "debug" mode, runs `fireSenseUtils::.objfunSpreadFit()` once per parameter set, with plots.
-#' Otherwise calibrates the SNLL threshold: evaluates `iterThresh` random parameter sets, each with a
-#' random candidate threshold, in forked processes, and returns `pickThreshold()` of the results.
+#' Otherwise calibrates the SNLL threshold: evaluates `iterThresh` random parameter sets with no early
+#' stop, in forked processes, and returns `pickThreshold()` of their first-block SNLLs: `thresholdMargin`
+#' times the best trial that did not saturate.
 #'
-#' @param iterThresh integer; number of random parameter sets (and candidate thresholds).
+#' @param iterThresh integer; number of random parameter sets.
+#' @param thresholdMargin numeric; the threshold is this multiple of the best usable trial's first-block
+#'   average annual SNLL (the unit of `thresh` in the objective).
 #' @param lower,upper numeric; bounds the random parameter sets are drawn between.
 #' @param fireSense_spreadFormula character; passed to `FS_formula`.
 #' @param flammableRTM `SpatRaster`; passed to `landscape`.
@@ -26,7 +29,7 @@
 #' @param sizeLik,sizeLikDf,adWeight,link,jumpTries,jumpMeanDist,yearAreaWeight,areaDistWeight,penaliseCapHits passed to
 #'   `.objfunSpreadFit()`, so the threshold is calibrated on the objective the fit uses. The defaults are
 #'   that function's.
-#' @return the calibrated threshold (numeric, or NA if every trial failed); NULL in "debug" mode.
+#' @return the calibrated threshold (numeric, or NA if no trial was usable); NULL in "debug" mode.
 runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFormula, flammableRTM,
                                     annualDTx1000, nonAnnualDTx1000, fireBufferedListDT,
                                     mutuallyExclusive = list("youngAge" = "vegPC"),
@@ -38,7 +41,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     seed = NULL, escapeSizeHa = NULL,
                                     sizeLik = "kde", sizeLikDf = 5, adWeight = "auto", link = NULL,
                                     jumpTries = 0, jumpMeanDist = 0, yearAreaWeight = 0, areaDistWeight = 0,
-                                    penaliseCapHits = TRUE) {
+                                    penaliseCapHits = TRUE, thresholdMargin = 2) {
   ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
   ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
   ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
@@ -51,28 +54,14 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
 
-  ## the fires the objective fits: over 1 pixel, or escaped ones (escapeSizeHa) when set
-  minPx <- if (is.null(escapeSizeHa)) 2L else fireSenseUtils::escapeSizePixels(escapeSizeHa, flammableRTM)
-  hfs <- rbindlist(historicalFires)[size >= minPx]
-  hfsSizes <- hfs[, list(AAB = sum(size)), by = "date"]
-  setorderv(hfsSizes, "AAB", order = -1L)
-  # next is rough estimate of an SNLL value that should be "decent"
-  largestYear <- hfsSizes$date[1]
-  largestFireInLargestYear <- max(hfs[grep(largestYear, hfs$date)]$size)
-  decentEstimateThreshold <- NROW(hfs[date %in% hfsSizes$date[1:2]]) *
-    (log(largestFireInLargestYear) ^ isTRUE(weighted)) # `weighted` may be FALSE, TRUE or "sqrt"
-
   if (is.null(pars)) {
     ## do NOT re-draw here: that discarded the seed set above, which is what made the threshold
     ## irreproducible even when the caller asked for a specific seed
     print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
     pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
     userPars <- FALSE
-
-    thresholds <- sample(4 * max(n, decentEstimateThreshold), size = n)
   } else {
     userPars <- TRUE
-    thresholds <- 1e8
   }
   if (!is(pars, "list")) pars <- list(pars)
   ## .objfunSpreadFit (fireSenseUtils) tells yearSpreadSD apart from a logistic parameter only by
@@ -89,7 +78,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
     for (i in seq(pars)) {
       print(paste(i, "logit params:", paste(round(pars[[i]], 2), collapse = ", ")))
       a[[i]] <- .objfunSpreadFit(par = pars[[i]],
-                                 thresh = thresholds[i],
+                                 thresh = Inf,
                                  FS_formula = fireSense_spreadFormula,
                                  landscape = flammableRTM,
                                  annualDTx1000 = annualDTx1000,
@@ -142,9 +131,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
     st1 <- system.time({
       objSpreadFit <- mcmapply(mc.cores = coresToUse,
-                    mc.preschedule = FALSE,
-                    par = pars, FUN = .objfunSpreadFit,
-                    thresh = thresholds,
+                    mc.preschedule = FALSE, SIMPLIFY = FALSE,
+                    par = pars, FUN = trialFirstBlock,
                     MoreArgs = list(
                       FS_formula = fireSense_spreadFormula,
                       landscape = flammableRTM,
@@ -164,12 +152,18 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                       jumpTries = jumpTries, jumpMeanDist = jumpMeanDist,
                       yearAreaWeight = yearAreaWeight, areaDistWeight = areaDistWeight,
                       penaliseCapHits = penaliseCapHits,
-                      verbose = TRUE, plot.it = FALSE)
+                      plot.it = FALSE)
       )
     })
 
-    threshToUse <- pickThreshold(thresholds = thresholds, objFun = objSpreadFit)
-    message("  using SNLL_FS_thresh value: ", threshToUse)
+    first <- lapply(objSpreadFit, function(x) if (is.list(x)) x else list(annual = NA_real_, saturated = NA))
+    annual <- vapply(first, function(x) as.numeric(x$annual)[1], numeric(1))
+    saturated <- vapply(first, function(x) isTRUE(x$saturated), logical(1))
+    threshToUse <- suppressWarnings(pickThreshold(annual, saturated, margin = thresholdMargin))
+    nUsable <- sum(is.finite(annual) & !saturated)
+    message("  ", nUsable, " of ", length(pars), " trials usable (first-block avg annual SNLL, no early stop: ",
+            if (nUsable) paste0("best ", min(annual[is.finite(annual) & !saturated])) else "none",
+            "); using SNLL_FS_thresh value: ", threshToUse, " (thresholdMargin ", thresholdMargin, ")")
     return(threshToUse)
   }
 }

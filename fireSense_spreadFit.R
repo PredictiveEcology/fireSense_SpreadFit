@@ -66,6 +66,10 @@ defineModule(sim, list(
                                  "median value has stopped improving.")),
     defineParameter("iterThresh", "integer", default = 96L,
                     desc = "Number of random parameter sets tried when calibrating `SNLL_FS_thresh`."),
+    defineParameter("thresholdMargin", "numeric", default = 2,
+                    desc = paste("When calibrating `SNLL_FS_thresh`, the threshold is this multiple of the best",
+                                 "usable trial's first-block average annual SNLL (trials run with no early stop;",
+                                 "a trial that saturates spreadProb is not usable). Must be >= 1.")),
     defineParameter("libPathDEoptim", "character", default = .libPaths()[1],
                     desc = paste("Absolute path specifying R package directory location to use when running DEotpim.",
                                  "NOTE: this path must be read/write accessible on ALL machines",
@@ -447,7 +451,8 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
         jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
         yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
         penaliseCapHits = P(sim)$penaliseCapHits,
-        maxFireSpread = P(sim)$maxFireSpread) 
+        thresholdMargin = P(sim)$thresholdMargin,
+        maxFireSpread = P(sim)$maxFireSpread)
     },
     estimateThreshold = {
       # Estimate threshold for .objFunSpreadFit
@@ -889,6 +894,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
       yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
       penaliseCapHits = P(sim)$penaliseCapHits,
+      thresholdMargin = P(sim)$thresholdMargin,
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
       ## be omitted change the result.
@@ -904,7 +910,11 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       ## threshold's *value* rather than its type: a threshold calibrated at 5
       ## replicates would be served to a caller asking for 25, with nothing to show
       ## that it had been.
-      Cache()
+      ## The rule lives in pickThreshold() and trialFirstBlock(), callees that Cache() does not
+      ## digest: their bodies go in .cacheExtra, so a change of rule is a cache miss, not an old
+      ## NA or randomly paired threshold served from the cache.
+      Cache(.cacheExtra = list(pickThreshold = deparse(pickThreshold),
+                               trialFirstBlock = deparse(trialFirstBlock)))
   } else {
     P(sim)$SNLL_FS_thresh
   }
