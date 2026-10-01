@@ -178,7 +178,7 @@ fitAndScoreFold <- function(sim, covs, fold, k) {
 #' Two-fold cross-validation of the spread fit
 #'
 #' Fits the model to every other year and simulates the held-out years from the `simulateMembers`
-#' best members of that fit, without the size cap, then the same the other way round. Uses the
+#' best members of that fit, then the same the other way round. Uses the
 #' same objective settings as the `run` event. Writes nothing to the ledger.
 #'
 #' @param sim a `simList`.

@@ -57,7 +57,7 @@ test_that("parameters are the expected names", {
     sort(md$parameters$paramName),
     sort(c(".c", ".plotInterval", ".plots", ".plotSize", ".runInitialTime", ".studyAreaName",
            ".useCache", "cores", "covFixedRange", "DEoptimControl", "DEoptimTests", "doObjFunAssertions",
-           "heldOutFold", "initialpop", "iterDEoptim", "iterThresh", "libPathDEoptim",
+           "heldOutFold", "initialpop", "iterDEoptim", "iterThresh", "thresholdMargin", "libPathDEoptim",
            "link", "lower", "maxFireSpread", "mode", "mutuallyExclusiveCols", "nCoresNeeded",
            "objFunCoresInternal", "objfunFireReps", "rep", "adWeight", "profileReps",
            "simulateMembers", "sizeLik", "sizeLikDf", "escapeSizeHa", "yearAreaWeight", "areaDistWeight", "penaliseRunaways",
