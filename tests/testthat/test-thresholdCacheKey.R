@@ -22,3 +22,15 @@ test_that("the DEoptim fit's cache key omits runawayEdgeFrac and runawayEdgeMin"
   code <- paste(readLines(testthat::test_path("..", "..", "R", "fitSpread.R")), collapse = "\n")
   expect_match(code, "omitArgs\\s*=\\s*c\\([^)]*\"runawayEdgeFrac\"[^)]*\"runawayEdgeMin\"")
 })
+
+## The calibration is passed the rule too (the same objective as the fit) but, like the fit, omits it
+## from its key: thresholds cached under the 1-cell rule stay valid.
+test_that("the threshold calibration passes runawayEdgeFrac and runawayEdgeMin and omits them from its key", {
+  exprs <- parse(testthat::test_path("..", "..", "fireSense_spreadFit.R"), keep.source = FALSE)
+  def <- Filter(function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
+                  identical(x[[2]], as.name("estimateSNLLThresholdPostLargeFires")), exprs)
+  code <- paste(deparse(def[[1]][[3]]), collapse = "\n")
+  expect_match(code, "runawayEdgeFrac = P(sim)$runawayEdgeFrac", fixed = TRUE)
+  expect_match(code, "runawayEdgeMin = P(sim)$runawayEdgeMin", fixed = TRUE)
+  expect_match(code, "omitArgs\\s*=\\s*c\\(\"runawayEdgeFrac\", \"runawayEdgeMin\"\\)")
+})

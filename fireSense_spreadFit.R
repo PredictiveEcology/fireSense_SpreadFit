@@ -168,12 +168,12 @@ defineModule(sim, list(
                                  "annual-area terms its size is the landscape's pixel count. Fires are not capped at a",
                                  "size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to",
                                  "`fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting.")),
-    defineParameter("runawayEdgeFrac", "numeric", default = 0.01,
+    defineParameter("runawayEdgeFrac", "numeric", default = fireSenseUtils::fireSenseRunawayEdgeFrac,
                     desc = paste("A simulated fire is a runaway when it burns at least",
                                  "`max(runawayEdgeMin, ceiling(runawayEdgeFrac * n))` of the `n` pixels of the edge ring of",
                                  "its own buffer (never more than `n`); one touched pixel is luck. Passed to",
                                  "`fireSenseUtils::runDEoptim()`. Not part of the DEoptim cache key.")),
-    defineParameter("runawayEdgeMin", "integer", default = 3L,
+    defineParameter("runawayEdgeMin", "integer", default = fireSenseUtils::fireSenseRunawayEdgeMin,
                     desc = "The least number of edge-ring pixels that makes a fire a runaway; see `runawayEdgeFrac`."),
     defineParameter("jumpTries", "numeric", default = 20,
                     desc = paste("With `escapeSizeHa`: how many attempts a simulated fire that is still below the",
@@ -459,6 +459,7 @@ doEvent.fireSense_spreadFit = function(sim, eventTime, eventType, debug = FALSE)
         jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
         yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
         penaliseRunaways = P(sim)$penaliseRunaways,
+        runawayEdgeFrac = P(sim)$runawayEdgeFrac, runawayEdgeMin = P(sim)$runawayEdgeMin,
         thresholdMargin = P(sim)$thresholdMargin,
         maxFireSpread = P(sim)$maxFireSpread)
     },
@@ -902,6 +903,7 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       jumpTries = P(sim)$jumpTries, jumpMeanDist = P(sim)$jumpMeanDist,
       yearAreaWeight = P(sim)$yearAreaWeight, areaDistWeight = P(sim)$areaDistWeight,
       penaliseRunaways = P(sim)$penaliseRunaways,
+      runawayEdgeFrac = P(sim)$runawayEdgeFrac, runawayEdgeMin = P(sim)$runawayEdgeMin,
       thresholdMargin = P(sim)$thresholdMargin,
       maxFireSpread = P(sim)$maxFireSpread) |>
       ## Nothing is omitted from the key, because both of the arguments that used to
@@ -921,8 +923,12 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
       ## The rule lives in pickThreshold() and trialFirstBlock(), callees that Cache() does not
       ## digest: their bodies go in .cacheExtra, so a change of rule is a cache miss, not an old
       ## NA or randomly paired threshold served from the cache.
+      ## runawayEdgeFrac/Min are passed on but omitted from the key, as in the fit (R/fitSpread.R): the
+      ## rule only changes how quickly DEoptim moves away from an unlucky draw, so thresholds cached
+      ## under the 1-cell rule stay valid and must not rerun.
       Cache(.cacheExtra = list(pickThreshold = deparse(pickThreshold),
-                               trialFirstBlock = deparse(trialFirstBlock)))
+                               trialFirstBlock = deparse(trialFirstBlock)),
+            omitArgs = c("runawayEdgeFrac", "runawayEdgeMin"))
   } else {
     P(sim)$SNLL_FS_thresh
   }

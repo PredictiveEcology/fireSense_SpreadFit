@@ -26,7 +26,7 @@
 #' @param mode character; if it includes "debug", the debug branch runs.
 #' @param seed integer or NULL; `set.seed()` value. NULL draws one at random.
 #' @param escapeSizeHa passed to `.objfunSpreadFit()`: fit escaped fires only (NULL: any fire over 1 pixel).
-#' @param sizeLik,sizeLikDf,adWeight,link,jumpTries,jumpMeanDist,yearAreaWeight,areaDistWeight,penaliseRunaways passed to
+#' @param sizeLik,sizeLikDf,adWeight,link,jumpTries,jumpMeanDist,yearAreaWeight,areaDistWeight,penaliseRunaways,runawayEdgeFrac,runawayEdgeMin passed to
 #'   `.objfunSpreadFit()`, so the threshold is calibrated on the objective the fit uses. The defaults are
 #'   that function's.
 #' @return the calibrated threshold (numeric, or NA if no trial was usable); NULL in "debug" mode.
@@ -41,7 +41,10 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     seed = NULL, escapeSizeHa = NULL,
                                     sizeLik = "kde", sizeLikDf = 5, adWeight = "auto", link = NULL,
                                     jumpTries = 0, jumpMeanDist = 0, yearAreaWeight = 0, areaDistWeight = 0,
-                                    penaliseRunaways = TRUE, thresholdMargin = 2) {
+                                    penaliseRunaways = TRUE,
+                                    runawayEdgeFrac = fireSenseUtils::fireSenseRunawayEdgeFrac,
+                                    runawayEdgeMin = fireSenseUtils::fireSenseRunawayEdgeMin,
+                                    thresholdMargin = 2) {
   ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
   ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
   ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
@@ -99,6 +102,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                  jumpTries = jumpTries, jumpMeanDist = jumpMeanDist,
                                  yearAreaWeight = yearAreaWeight, areaDistWeight = areaDistWeight,
                                  penaliseRunaways = penaliseRunaways,
+                      runawayEdgeFrac = runawayEdgeFrac, runawayEdgeMin = runawayEdgeMin,
+                                 runawayEdgeFrac = runawayEdgeFrac, runawayEdgeMin = runawayEdgeMin,
                                  plot.it = plot.it
       )
     }

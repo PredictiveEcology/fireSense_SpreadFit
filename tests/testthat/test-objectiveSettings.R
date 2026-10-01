@@ -65,8 +65,10 @@ test_that("the new terms and jumping are on by default", {
     expect_identical(a$penaliseRunaways, TRUE)
     expect_identical(a$weighted, FALSE)   # the module's default, now also in the calibration
   }
-  expect_identical(fitRec$deArgs$runawayEdgeFrac, 0.01)   # the fit only: see test-metadataContract.R
-  expect_identical(fitRec$deArgs$runawayEdgeMin, 3L)
+  for (a in list(rec$args, fitRec$deArgs)) {
+    expect_identical(a$runawayEdgeFrac, 0.01)
+    expect_identical(a$runawayEdgeMin, 3L)
+  }
 })
 
 test_that("penaliseRunaways = FALSE reaches the fit, the calibration and the objective", {
@@ -94,7 +96,9 @@ test_that("penaliseRunaways = FALSE reaches the fit, the calibration and the obj
     flammableRTM = land, annualDTx1000 = list(), nonAnnualDTx1000 = list(), fireBufferedListDT = list(),
     historicalFires = fires, covMinMax = NULL, objfunFireReps = 2L, maxFireSpread = 0.28,
     tests = "SNLL_FS", formulaToFit = "~ 0 + a", mode = "debug", seed = 1L, escapeSizeHa = 50,
-    penaliseRunaways = FALSE)))
+    penaliseRunaways = FALSE, runawayEdgeFrac = 0.5, runawayEdgeMin = 7L)))
   expect_true(length(seen) > 0)
+  expect_true(all(vapply(seen, function(a) identical(a$runawayEdgeFrac, 0.5) && identical(a$runawayEdgeMin, 7L),
+                         logical(1))))
   expect_true(all(vapply(seen, function(a) identical(a$penaliseRunaways, FALSE), logical(1))))
 })
