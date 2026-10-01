@@ -95,6 +95,8 @@ times the best trial that did not saturate.</p>
 <span>  yearAreaWeight <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  areaDistWeight <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  penaliseRunaways <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  runawayEdgeFrac <span class="op">=</span> <span class="fu">fireSenseUtils</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/fireSenseUtils/man/fireSenseSharedDefaults.html" class="external-link">fireSenseRunawayEdgeFrac</a></span>,</span>
+<span>  runawayEdgeMin <span class="op">=</span> <span class="fu">fireSenseUtils</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/fireSenseUtils/man/fireSenseSharedDefaults.html" class="external-link">fireSenseRunawayEdgeMin</a></span>,</span>
 <span>  thresholdMargin <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  maxDrawsPerTrial <span class="op">=</span> <span class="fl">100</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -177,7 +179,7 @@ by <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/covsX1000AndSetDF.html"
 <dd><p>passed to <code>.objfunSpreadFit()</code>: fit escaped fires only (NULL: any fire over 1 pixel).</p></dd>
 
 
-<dt id="arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight-penaliserunaways">sizeLik, sizeLikDf, adWeight, link, jumpTries, jumpMeanDist, yearAreaWeight, areaDistWeight, penaliseRunaways<a class="anchor" aria-label="anchor" href="#arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight-penaliserunaways"></a></dt>
+<dt id="arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight-penaliserunaways-runawayedgefrac-runawayedgemin">sizeLik, sizeLikDf, adWeight, link, jumpTries, jumpMeanDist, yearAreaWeight, areaDistWeight, penaliseRunaways, runawayEdgeFrac, runawayEdgeMin<a class="anchor" aria-label="anchor" href="#arg-sizelik-sizelikdf-adweight-link-jumptries-jumpmeandist-yearareaweight-areadistweight-penaliserunaways-runawayedgefrac-runawayedgemin"></a></dt>
 <dd><p>passed to
 <code>.objfunSpreadFit()</code>, so the threshold is calibrated on the objective the fit uses. The defaults are
 that function's.</p></dd>

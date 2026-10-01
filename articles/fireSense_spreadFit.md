@@ -414,6 +414,22 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> A simulated fire that burns any pixel of the outer edge of its own buffer is scored as a runaway (at least that big), not as a fire of the size it reached: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape's pixel count. Fires are not capped at a size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to `fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting. </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> runawayEdgeFrac </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 0.01 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> A simulated fire is a runaway when it burns at least `max(runawayEdgeMin, ceiling(runawayEdgeFrac n))` of the `n` pixels of the edge ring of its own buffer (never more than `n`); one touched pixel is luck. Passed to `fireSenseUtils::runDEoptim()`. Not part of the DEoptim cache key. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> runawayEdgeMin </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> 3 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> The least number of edge-ring pixels that makes a fire a runaway; see `runawayEdgeFrac`. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> jumpTries </td>
    <td style="text-align:left;"> numeric </td>
    <td style="text-align:left;"> 20 </td>
