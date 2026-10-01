@@ -28,7 +28,7 @@ defineModule(sim, list(
                   "PredictiveEcology/reproducible@development",
                   "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9075)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9077)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -168,6 +168,13 @@ defineModule(sim, list(
                                  "annual-area terms its size is the landscape's pixel count. Fires are not capped at a",
                                  "size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to",
                                  "`fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting.")),
+    defineParameter("runawayEdgeFrac", "numeric", default = 0.01,
+                    desc = paste("A simulated fire is a runaway when it burns at least",
+                                 "`max(runawayEdgeMin, ceiling(runawayEdgeFrac * n))` of the `n` pixels of the edge ring of",
+                                 "its own buffer (never more than `n`); one touched pixel is luck. Passed to",
+                                 "`fireSenseUtils::runDEoptim()`. Not part of the DEoptim cache key.")),
+    defineParameter("runawayEdgeMin", "integer", default = 3L,
+                    desc = "The least number of edge-ring pixels that makes a fire a runaway; see `runawayEdgeFrac`."),
     defineParameter("jumpTries", "numeric", default = 20,
                     desc = paste("With `escapeSizeHa`: how many attempts a simulated fire that is still below the",
                                  "escape size, with no burnable neighbour left, may make to jump to burnable land",

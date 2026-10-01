@@ -70,11 +70,15 @@ fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
                    yearAreaWeight = P(sim)$yearAreaWeight,
                    areaDistWeight = P(sim)$areaDistWeight,
                    penaliseRunaways = P(sim)$penaliseRunaways,
+                   runawayEdgeFrac = P(sim)$runawayEdgeFrac,
+                   runawayEdgeMin = P(sim)$runawayEdgeMin,
                    profileReps = if (diagnostics) P(sim)$profileReps else 0L,
                    simulateMembers = if (diagnostics) P(sim)$simulateMembers else 0L),
         .functionName = fnName,
         .cacheExtra = fnName,
-        omitArgs = c(".verbose", "cores", "paths", "logPath", "plotEvery"),
+        ## runawayEdgeFrac/Min only change how quickly DEoptim moves away from an unlucky draw, not what a
+        ## fit means, so fits cached under the 1-cell rule stay valid and must not rerun.
+        omitArgs = c(".verbose", "cores", "paths", "logPath", "plotEvery", "runawayEdgeFrac", "runawayEdgeMin"),
         useCache = P(sim)$useCache_DE
   )
   ## 1e6 is the objective's fail value (fireSenseUtils::.objfunSpreadFit). A population that is all

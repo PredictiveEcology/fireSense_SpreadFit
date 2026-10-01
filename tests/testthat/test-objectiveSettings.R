@@ -65,6 +65,8 @@ test_that("the new terms and jumping are on by default", {
     expect_identical(a$penaliseRunaways, TRUE)
     expect_identical(a$weighted, FALSE)   # the module's default, now also in the calibration
   }
+  expect_identical(fitRec$deArgs$runawayEdgeFrac, 0.01)   # the fit only: see test-metadataContract.R
+  expect_identical(fitRec$deArgs$runawayEdgeMin, 3L)
 })
 
 test_that("penaliseRunaways = FALSE reaches the fit, the calibration and the objective", {

@@ -15,3 +15,10 @@ test_that("the SNLL threshold cache key does not omit mode or objfunFireReps", {
   expect_match(code, "runSpreadWithoutDEoptim", fixed = TRUE)
   expect_false(grepl("omitArgs\\s*=\\s*c\\([^)]*\"(mode|objfunFireReps)\"", code))
 })
+
+## The runaway rule only changes how quickly DEoptim moves away from an unlucky draw, not what a fit
+## means, so fits cached under the 1-cell rule must not rerun: both parameters are omitted from the key.
+test_that("the DEoptim fit's cache key omits runawayEdgeFrac and runawayEdgeMin", {
+  code <- paste(readLines(testthat::test_path("..", "..", "R", "fitSpread.R")), collapse = "\n")
+  expect_match(code, "omitArgs\\s*=\\s*c\\([^)]*\"runawayEdgeFrac\"[^)]*\"runawayEdgeMin\"")
+})

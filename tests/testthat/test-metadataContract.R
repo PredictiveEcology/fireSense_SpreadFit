@@ -26,7 +26,7 @@ test_that("parameter classes", {
       link = "character", profileReps = "integer", simulateMembers = "integer",
       sizeLik = "character", sizeLikDf = "numeric", escapeSizeHa = "numeric", weighted = "logical|character",
       adWeight = "character|numeric", yearAreaWeight = "numeric|character",
-      areaDistWeight = "numeric|character", penaliseRunaways = "logical", jumpTries = "numeric", jumpMeanDist = "numeric",
+      areaDistWeight = "numeric|character", penaliseRunaways = "logical", runawayEdgeFrac = "numeric", runawayEdgeMin = "integer", jumpTries = "numeric", jumpMeanDist = "numeric",
       upperTailBounds = "numeric", yearSpreadSDBounds = "numeric",
       verbose = "numeric", visualizeDEoptim = "Path"))
   )
@@ -61,6 +61,11 @@ test_that("defaults that decide whether and how a fit runs", {
   expect_identical(def$useCache_DE, TRUE)
   expect_identical(def$.useCache, "init")
   expect_identical(def$mutuallyExclusiveCols, list(youngAge = c("class", "nonForest")))
+})
+
+test_that("the runaway rule's parameters exist with their defaults", {
+  expect_identical(def$runawayEdgeFrac, 0.01)
+  expect_identical(def$runawayEdgeMin, 3L)
 })
 
 test_that("numeric defaults", {
