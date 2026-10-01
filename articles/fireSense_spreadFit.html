@@ -570,6 +570,26 @@ Number of random parameter sets tried when calibrating <code>SNLL_FS_thresh</cod
 </tr>
 <tr>
 <td style="text-align:left;">
+thresholdMargin
+</td>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+When calibrating <code>SNLL_FS_thresh</code>, the threshold is this multiple of the best usable trial’s first-block average annual SNLL (trials run with no early stop; a trial that saturates spreadProb is not usable). Must be &gt;= 1.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
 libPathDEoptim
 </td>
 <td style="text-align:left;">
@@ -764,7 +784,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-After the fit, this many best members simulate the observed fires without the size cap, for <code>sim$spreadFitSizes</code> and <code>sim$spreadFitLinkSaturation</code>; also the members each <code>crossValidate</code> fold predicts with. 0 skips it after the fit.
+After the fit, this many best members simulate the observed fires, for <code>sim$spreadFitSizes</code> and <code>sim$spreadFitLinkSaturation</code>; also the members each <code>crossValidate</code> fold predicts with. 0 skips it after the fit.
 </td>
 </tr>
 <tr>
@@ -909,7 +929,7 @@ Weight of the area-weighted size-distribution term: simulated and observed fires
 </tr>
 <tr>
 <td style="text-align:left;">
-penaliseCapHits
+penaliseRunaways
 </td>
 <td style="text-align:left;">
 logical
@@ -924,7 +944,7 @@ NA
 NA
 </td>
 <td style="text-align:left;">
-A simulated fire that reaches its size cap is scored as a runaway (at least that big), not as a fire of the capped size: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape’s pixel count. FALSE scores the capped size. Passed to <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code>; the threshold calibration uses the same setting.
+A simulated fire that burns any pixel of the outer edge of its own buffer is scored as a runaway (at least that big), not as a fire of the size it reached: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape’s pixel count. Fires are not capped at a size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to <code><a href="https://rdrr.io/pkg/fireSenseUtils/man/runDEoptim.html" class="external-link">fireSenseUtils::runDEoptim()</a></code>; the threshold calibration uses the same setting.
 </td>
 </tr>
 <tr>
@@ -1565,7 +1585,7 @@ spreadFitSizes
 data.table
 </td>
 <td style="text-align:left;">
-Observed against simulated fire sizes of the fitted years, without the size cap (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fitDiagnostics.html" class="external-link">fireSenseUtils::scoreFireSizes()</a></code>): bias, error, quantiles.
+Observed against simulated fire sizes of the fitted years (<code><a href="https://rdrr.io/pkg/fireSenseUtils/man/fitDiagnostics.html" class="external-link">fireSenseUtils::scoreFireSizes()</a></code>): bias, error, quantiles.
 </td>
 </tr>
 <tr>

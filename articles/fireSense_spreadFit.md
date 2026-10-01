@@ -262,6 +262,14 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> Number of random parameter sets tried when calibrating `SNLL_FS_thresh`. </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> thresholdMargin </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> 2 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> When calibrating `SNLL_FS_thresh`, the threshold is this multiple of the best usable trial's first-block average annual SNLL (trials run with no early stop; a trial that saturates spreadProb is not usable). Must be &gt;= 1. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> libPathDEoptim </td>
    <td style="text-align:left;"> character </td>
    <td style="text-align:left;"> /home/ru.... </td>
@@ -339,7 +347,7 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> 10 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> After the fit, this many best members simulate the observed fires without the size cap, for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the members each `crossValidate` fold predicts with. 0 skips it after the fit. </td>
+   <td style="text-align:left;"> After the fit, this many best members simulate the observed fires, for `sim$spreadFitSizes` and `sim$spreadFitLinkSaturation`; also the members each `crossValidate` fold predicts with. 0 skips it after the fit. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> sizeLik </td>
@@ -398,12 +406,12 @@ Summary of user-visible parameters (Table \@ref(tab:moduleParams-fireSense-sprea
    <td style="text-align:left;"> Weight of the area-weighted size-distribution term: simulated and observed fires compared by the share of area burned that fires up to each size make up (`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`). </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> penaliseCapHits </td>
+   <td style="text-align:left;"> penaliseRunaways </td>
    <td style="text-align:left;"> logical </td>
    <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> A simulated fire that reaches its size cap is scored as a runaway (at least that big), not as a fire of the capped size: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape's pixel count. FALSE scores the capped size. Passed to `fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting. </td>
+   <td style="text-align:left;"> A simulated fire that burns any pixel of the outer edge of its own buffer is scored as a runaway (at least that big), not as a fire of the size it reached: in the size likelihood it has no density at the observed size, and in the Anderson-Darling and annual-area terms its size is the landscape's pixel count. Fires are not capped at a size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to `fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> jumpTries </td>
@@ -680,7 +688,7 @@ Description of the module outputs (Table \@ref(tab:moduleOutputs-fireSense-sprea
   <tr>
    <td style="text-align:left;"> spreadFitSizes </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> Observed against simulated fire sizes of the fitted years, without the size cap (`fireSenseUtils::scoreFireSizes()`): bias, error, quantiles. </td>
+   <td style="text-align:left;"> Observed against simulated fire sizes of the fitted years (`fireSenseUtils::scoreFireSizes()`): bias, error, quantiles. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> spreadFitLinkSaturation </td>

@@ -129,7 +129,7 @@
       </tr><tr><td>
           <p><code><a href="pickThreshold.html">pickThreshold()</a></code> </p>
         </td>
-        <td><p>The calibrated SNLL threshold: the smallest threshold whose trial did not fail</p></td>
+        <td><p>The calibrated SNLL threshold: <code>margin</code> times the best usable trial's first-block SNLL</p></td>
       </tr><tr><td>
           <p><code><a href="runSpreadWithoutDEoptim.html">runSpreadWithoutDEoptim()</a></code> </p>
         </td>
@@ -150,6 +150,10 @@
           <p><code><a href="thresholdForks.html">thresholdForks()</a></code> </p>
         </td>
         <td><p>How many forks the threshold self-calibration may use</p></td>
+      </tr><tr><td>
+          <p><code><a href="trialFirstBlock.html">trialFirstBlock()</a></code> </p>
+        </td>
+        <td><p>One calibration trial: the objective with no early stop, reporting its first block</p></td>
       </tr></tbody></table></div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
