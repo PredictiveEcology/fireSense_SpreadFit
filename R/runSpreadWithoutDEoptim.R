@@ -2,13 +2,17 @@
 #'
 #' In "debug" mode, runs `fireSenseUtils::.objfunSpreadFit()` once per parameter set, with plots.
 #' Otherwise calibrates the SNLL threshold: evaluates `iterThresh` random parameter sets with no early
-#' stop, in forked processes, and returns `pickThreshold()` of their first-block SNLLs: `thresholdMargin`
+#' stop, in forked processes (drawn from the logistic's active range, see `drawActivePars()`), and returns `pickThreshold()` of their first-block SNLLs: `thresholdMargin`
 #' times the best trial that did not saturate.
 #'
 #' @param iterThresh integer; number of random parameter sets.
 #' @param thresholdMargin numeric; the threshold is this multiple of the best usable trial's first-block
 #'   average annual SNLL (the unit of `thresh` in the objective).
 #' @param lower,upper numeric; bounds the random parameter sets are drawn between.
+#' @param maxDrawsPerTrial integer; the calibration keeps only draws that pass the objective's spreadProb
+#'   gates in the first block of years (`fireSenseUtils::spreadProbGates()`), until `iterThresh` are
+#'   kept or `maxDrawsPerTrial * iterThresh` have been drawn. A constant of the function, not a module
+#'   parameter. With none kept the result is `NA` (no early stop, see `noEarlyStopThreshold()`).
 #' @param fireSense_spreadFormula character; passed to `FS_formula`.
 #' @param flammableRTM `SpatRaster`; passed to `landscape`.
 #' @param annualDTx1000,nonAnnualDTx1000,fireBufferedListDT,historicalFires elements of the list made
@@ -41,7 +45,7 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
                                     seed = NULL, escapeSizeHa = NULL,
                                     sizeLik = "kde", sizeLikDf = 5, adWeight = "auto", link = NULL,
                                     jumpTries = 0, jumpMeanDist = 0, yearAreaWeight = 0, areaDistWeight = 0,
-                                    penaliseRunaways = TRUE, thresholdMargin = 2) {
+                                    penaliseRunaways = TRUE, thresholdMargin = 2, maxDrawsPerTrial = 100) {
   ## The threshold this returns becomes `thresh` in runDEoptim(), so it is part of every cached
   ## DEoptim generation's key. With a seed drawn here, a single cache miss on the estimateThreshold
   ## event re-drew the threshold and invalidated EVERY cached generation for that ELF: on 2026-09-16
@@ -54,23 +58,25 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
 
   n <- iterThresh ## the more you do, the lower the resulting threshold
 
+  ## .objfunSpreadFit (fireSenseUtils) tells yearSpreadSD apart from a logistic parameter only by
+  ## name (it is always the trailing element of lower/upper); name unnamed sets that match `lower`'s
+  ## length, whether drawn above or supplied via `pars`, or every trial with yearSpreadSD errors.
+  namePars <- function(pars) {
+    if (!is(pars, "list")) pars <- list(pars)
+    lapply(pars, function(p) {
+      if (is.null(names(p)) && length(p) == length(lower)) names(p) <- names(lower)
+      p
+    })
+  }
+  drawFromActiveRange <- is.null(pars) && !"debug" %in% mode
   if (is.null(pars)) {
     ## do NOT re-draw here: that discarded the seed set above, which is what made the threshold
     ## irreproducible even when the caller asked for a specific seed
     print(paste("seed used for runSpreadWithoutDEoptim is ", seed))
-    pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
-    userPars <- FALSE
-  } else {
-    userPars <- TRUE
+    ## the fit branch draws below, from the logistic's active range; "debug" evaluates uniform draws
+    if (!drawFromActiveRange) pars <- lapply(1:n, function(x) runif(length(lower), lower, upper))
   }
-  if (!is(pars, "list")) pars <- list(pars)
-  ## .objfunSpreadFit (fireSenseUtils) tells yearSpreadSD apart from a logistic parameter only by
-  ## name (it is always the trailing element of lower/upper); name unnamed sets that match `lower`'s
-  ## length, whether drawn above or supplied via `pars`, or every trial with yearSpreadSD errors.
-  pars <- lapply(pars, function(p) {
-    if (is.null(names(p)) && length(p) == length(lower)) names(p) <- names(lower)
-    p
-  })
+  if (!drawFromActiveRange) pars <- namePars(pars)
 
 
   if ("debug" %in% mode) {
@@ -118,7 +124,8 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
       heapMB <- sum(gc()[, 2])
       availMB <- pemisc::availableMemory()
       availMB <- if (length(availMB)) availMB / 1e6 else NULL
-      coresToUse <- thresholdForks(heapMB = heapMB, availMB = availMB, nPars = length(pars),
+      coresToUse <- thresholdForks(heapMB = heapMB, availMB = availMB,
+                                   nPars = if (drawFromActiveRange) n else length(pars),
                                    detCores = detCores, activeThreads = activeThreads,
                                    mcCores = getOption("mc.cores"))
       withr::local_options("mc.cores" = coresToUse)
@@ -128,6 +135,25 @@ runSpreadWithoutDEoptim <- function(iterThresh, lower, upper, fireSense_spreadFo
               paste0(" (R heap ", round(heapMB / 1024), " GB; host has ",
                      if (length(availMB)) paste(round(availMB / 1024), "GB available") else "unknown memory", ")"),
             ".")
+
+    if (drawFromActiveRange) {
+      maxDraws <- as.integer(maxDrawsPerTrial * n)
+      gates <- function(parList) {
+        spreadProbGates(parList, annualDTx1000 = annualDTx1000, nonAnnualDTx1000 = nonAnnualDTx1000,
+                        historicalFires = historicalFires, formulaToFit = formulaToFit,
+                        covMinMax = covMinMax, mutuallyExclusive = mutuallyExclusive,
+                        maxFireSpread = maxFireSpread, escapeSizeHa = escapeSizeHa,
+                        landscape = flammableRTM, link = link, doAssertions = FALSE)$pass
+      }
+      active <- drawActivePars(n, lower, upper, maxDraws, gates, cores = coresToUse)
+      message("  accepted ", active$accepted, " of ", active$drawn, " draws (cap ", maxDraws, " = ",
+              maxDrawsPerTrial, " x iterThresh) that pass the spreadProb gates of the first block of years")
+      if (!active$accepted) {
+        message("  no draw passed the spreadProb gates; no threshold calibrated")
+        return(NA_real_)
+      }
+      pars <- namePars(active$pars)
+    }
 
     st1 <- system.time({
       objSpreadFit <- mcmapply(mc.cores = coresToUse,
