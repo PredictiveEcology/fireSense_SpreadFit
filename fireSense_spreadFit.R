@@ -854,7 +854,8 @@ histOfCovariates <- function(annualList, nonAnnualList) {
 #'
 #' @param sim a `simList`, after `spreadFitPrep()`.
 #' @param covs `mod$covsX1000`, or the subset of its years that will be fitted.
-#' @return the threshold.
+#' @return the threshold; `Inf` (no early stop) if every calibration trial failed, see
+#'   `noEarlyStopThreshold()`.
 estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
   thresh <- if (is.null(Par$SNLL_FS_thresh) || is.na(Par$SNLL_FS_thresh)) {
     message("Estimating threshold for inside .objFunSpreadFit -- This can be supplied via SNLL_FS_thresh parameter")
@@ -907,7 +908,8 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
   } else {
     P(sim)$SNLL_FS_thresh
   }
-  thresh
+  ## after Cache(), so a cached NA is converted too
+  noEarlyStopThreshold(thresh, runName = sim$.runName, nTrials = P(sim)$iterThresh)
 }
 
 #' Default `upper` or `lower` bounds for DEoptim

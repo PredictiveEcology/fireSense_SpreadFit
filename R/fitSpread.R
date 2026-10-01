@@ -13,6 +13,7 @@
 #' @return the `runDEoptim()` result. Stops if every member of the final population has the
 #'   objective's fail value: no parameter set ever passed `thresh`, so there is no fit.
 fitSpread <- function(sim, covs, thresh, runName, diagnostics = TRUE) {
+  stopifnot("`thresh` is NA: it must be a number, or Inf for no early stop" = !anyNA(thresh))
   if (!is.null(P(sim)$cores) && !any(is.na(P(sim)$cores)) &&
       identical(sort(unique(P(sim)$cores)), sort(P(sim)$cores))) {
     best <- list(cluster = P(sim)$cores)
