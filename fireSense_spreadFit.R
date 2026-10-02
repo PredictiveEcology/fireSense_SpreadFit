@@ -28,7 +28,7 @@ defineModule(sim, list(
                   "PredictiveEcology/reproducible@development",
                   "PredictiveEcology/clusters@development (>= 0.0.52)",
                   "PredictiveEcology/Require@development (>= 0.3.1)",
-                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9077)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.2.3.9079)",
                   "PredictiveEcology/SpaDES.tools@development (>= 2.1.3.9008)"),
   parameters = rbind(
     defineParameter(".plots", "character|logical", default = NULL, ## TODO: use .plotInitialTime etc.
@@ -162,11 +162,11 @@ defineModule(sim, list(
                                  "(`fireSenseUtils::areaWeightedCvM()`). 0 leaves it out; 'auto' (default) uses",
                                  "the Anderson-Darling term's weight (`fireSenseUtils::adWeightAuto()`).")),
     defineParameter("penaliseRunaways", "logical", default = TRUE,
-                    desc = paste("A simulated fire that burns any pixel of the outer edge of its own buffer is scored",
-                                 "as a runaway (at least that big), not as a fire of the size it reached: in the size",
-                                 "likelihood it has no density at the observed size, and in the Anderson-Darling and",
-                                 "annual-area terms its size is the landscape's pixel count. Fires are not capped at a",
-                                 "size; spread is bounded by the buffers. FALSE scores the simulated size. Passed to",
+                    desc = paste("A simulated fire that burns its buffer's outer edge (see `runawayEdgeFrac`) is a",
+                                 "runaway, censored in the size likelihood: it has no density at the observed size.",
+                                 "The Anderson-Darling, annual-area and area-distribution terms score the size it",
+                                 "burned. Fires are not capped at a size; spread is bounded by the buffers. FALSE",
+                                 "scores the simulated size in the likelihood too. Passed to",
                                  "`fireSenseUtils::runDEoptim()`; the threshold calibration uses the same setting.")),
     defineParameter("runawayEdgeFrac", "numeric", default = fireSenseUtils::fireSenseRunawayEdgeFrac,
                     desc = paste("A simulated fire is a runaway when it burns at least",
@@ -932,7 +932,8 @@ estimateSNLLThresholdPostLargeFires <- function(sim, covs) {
                                trialFirstBlock = deparse(trialFirstBlock),
                                drawActivePars = deparse(drawActivePars),
                                spreadProbGates = deparse(fireSenseUtils::spreadProbGates),
-                               spreadProbGateTest = deparse(fireSenseUtils::spreadProbGateTest)),
+                               spreadProbGateTest = deparse(fireSenseUtils::spreadProbGateTest),
+                               objective = objectiveBodies()),
             omitArgs = c("runawayEdgeFrac", "runawayEdgeMin"))
   } else {
     P(sim)$SNLL_FS_thresh
