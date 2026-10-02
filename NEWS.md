@@ -1,6 +1,6 @@
 # fireSense_spreadFit 1.1.2
 
-- The fit's and the threshold calibration's cache keys include the spread objective's bodies (`objectiveBodies()`), so a change in how fireSenseUtils scores a fit is a cache miss. Needed for fireSenseUtils' change to runaway censoring (likelihood only): the earlier fits under-burned held-out years and must not be served from the cache.
+- The fit's and the threshold calibration's cache keys include the spread objective's bodies (`objectiveBodies()`), so a change in how fireSenseUtils scores a fit is a cache miss. Needed for fireSenseUtils' change to runaway censoring (likelihood only): the earlier fits under-burned held-out years and must not be served from the cache. Needs fireSenseUtils >= 0.2.3.9079.
 
 - New parameters `runawayEdgeFrac` (`fireSenseUtils::fireSenseRunawayEdgeFrac`, 0.01) and `runawayEdgeMin` (`fireSenseUtils::fireSenseRunawayEdgeMin`, 3L), passed to `fireSenseUtils::runDEoptim()`: a simulated fire is a runaway only when it burns at least `max(runawayEdgeMin, ceiling(runawayEdgeFrac * ring size))` pixels of its buffer's edge ring, not one. Both are also passed to the threshold calibration, and are in `omitArgs` of the DEoptim and calibration `Cache()` calls: the rule only changes how quickly DEoptim moves away from an unlucky draw, so fits cached under the 1-cell rule stay valid. Needs fireSenseUtils >= 0.2.3.9077.
 
